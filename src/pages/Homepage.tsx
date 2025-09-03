@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Shield,
   Coins,
@@ -13,8 +13,10 @@ import {
   Smartphone,
   Heart,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 function Homepage() {
+  const navigate = useNavigate();
   const [isVisible, setIsVisible] = useState(false);
   const [activeFeature, setActiveFeature] = useState(0);
 
@@ -104,7 +106,10 @@ function Homepage() {
             </a>
           </div>
 
-          <button className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-full font-semibold transition-all hover:scale-105">
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-full font-semibold transition-all hover:scale-105"
+          >
             Join Beta
           </button>
         </nav>
@@ -131,18 +136,24 @@ function Homepage() {
             </span>
           </h1>
 
-          <p className="text-xl sm:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-lg sm:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed">
             Where Nigerian culture meets blockchain transparency. Build wealth
             through Digital Ajo, expose corruption with on-chain accountability,
             and celebrate our heritage with cultural NFTs.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
-            <button className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-full font-semibold text-lg transition-all hover:scale-105 hover:shadow-lg flex items-center space-x-2">
+            <button
+              onClick={() => navigate("/dashboard")}
+              className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-full font-semibold text-lg transition-all hover:scale-105 hover:shadow-lg flex items-center space-x-2"
+            >
               <span>Start Your Ajo Journey</span>
               <ChevronRight className="w-5 h-5" />
             </button>
-            <button className="bg-white hover:bg-gray-50 text-green-600 px-8 py-4 rounded-full font-semibold text-lg border-2 border-green-600 transition-all hover:scale-105 hover:shadow-lg">
+            <button
+              onClick={() => navigate("/dashboard")}
+              className="bg-white hover:bg-gray-50 text-green-600 px-8 py-4 rounded-full font-semibold text-lg border-2 border-green-600 transition-all hover:scale-105 hover:shadow-lg"
+            >
               Explore Transparency
             </button>
           </div>
