@@ -22,18 +22,16 @@ const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="hidden md:block bg-white border-b border-gray-200 sticky top-0 z-40">
+    <div className="  bg-gray-50">
+      {/*  */}
+      <nav className="hidden md:block fixed bg-white border-b border-gray-200 w-full  top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-2">
-              <div className="bg-green-600 text-white p-2 rounded-lg">
-                <Shield className="h-6 w-6" />
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-yellow-500 rounded-lg flex items-center justify-center">
+                <Eye className="w-5 h-5 text-white" />
               </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">NaijaTrust</h1>
-                <p className="text-xs text-gray-600">Dey Play, We See Am</p>
-              </div>
+              <span className="text-xl font-bold text-gray-900">Dey.Play</span>
             </div>
 
             <div className="flex items-center gap-6">
@@ -106,17 +104,14 @@ const Header = () => {
       </nav>
 
       {/* Mobile Navigation */}
-      <nav className="md:hidden bg-white border-b border-gray-200 sticky top-0 z-40">
+      <nav className="md:hidden bg-white border-b border-gray-200 fixed w-full top-0 z-40">
         <div className="px-4 py-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="bg-green-600 text-white p-2 rounded-lg">
-                <Shield className="h-5 w-5" />
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-yellow-500 rounded-lg flex items-center justify-center">
+                <Eye className="w-5 h-5 text-white" />
               </div>
-              <div>
-                <h1 className="text-lg font-bold text-gray-900">NaijaTrust</h1>
-                <p className="text-xs text-gray-600">Dey Play, We See Am</p>
-              </div>
+              <span className="text-xl font-bold text-gray-900">Dey.Play</span>
             </div>
 
             <button

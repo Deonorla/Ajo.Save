@@ -1,3 +1,4 @@
+import Header from "@/components/header/Header";
 import { Shield, Users, Star, ChevronRight } from "lucide-react";
 import { useState } from "react";
 
@@ -95,97 +96,104 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-gradient-to-r from-green-600 to-green-700 text-white p-6 rounded-xl">
-        <h2 className="text-2xl font-bold mb-2">Welcome to NaijaTrust</h2>
-        <p className="text-green-100">Dey Play - We Dey See Your Lies 👀</p>
-        <p className="text-sm text-green-200 mt-2">
-          Transparency on-chain, culture in our DNA
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-sm">Organizations Tracked</p>
-              <p className="text-2xl font-bold text-gray-900">247</p>
-            </div>
-            <Shield className="h-8 w-8 text-green-600" />
+    <div className="min-h-screen bg-gray-50">
+      <Header />
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 h-auto mt-16 lg:px-8 py-6">
+        <div className="space-y-6 mt-8">
+          <div className="bg-gradient-to-r from-green-600 to-green-700 text-white p-6 rounded-xl">
+            <h2 className="text-2xl font-bold mb-2">Welcome </h2>
+            <p className="text-green-100">Dey Play - We Dey See Your Lies 👀</p>
+            <p className="text-sm text-green-200 mt-2">
+              Transparency on-chain, culture in our DNA
+            </p>
           </div>
-        </div>
 
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-sm">Total Ajo Pools</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {formatCurrency(125000000)}
-              </p>
-            </div>
-            <Users className="h-8 w-8 text-blue-600" />
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-sm">Cultural NFTs</p>
-              <p className="text-2xl font-bold text-gray-900">1,429</p>
-            </div>
-            <Star className="h-8 w-8 text-purple-600" />
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-6 border-b border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900">
-            Recent Transparency Reports
-          </h3>
-          <p className="text-gray-600 text-sm">
-            Latest organizations under community review
-          </p>
-        </div>
-        <div className="divide-y divide-gray-100">
-          {mockOrgs.slice(0, 3).map((org) => (
-            <div
-              key={org.id}
-              className="p-4 hover:bg-gray-50 transition-colors cursor-pointer"
-              onClick={() => setSelectedOrg(org)}
-            >
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
               <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3">
-                    <h4 className="font-medium text-gray-900">{org.name}</h4>
-                    <span
-                      className={`px-2 py-1 text-xs font-medium rounded-full ${getTransparencyColor(
-                        org.transparency
-                      )}`}
-                    >
-                      {org.transparency}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-600">
-                    {org.type} • {formatCurrency(org.totalDonations)} total
-                    donations
-                  </p>
+                <div>
+                  <p className="text-gray-600 text-sm">Organizations Tracked</p>
+                  <p className="text-2xl font-bold text-gray-900">247</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div
-                    className={`px-3 py-1 rounded-full text-sm font-medium ${getImpactColor(
-                      org.impactScore
-                    )}`}
-                  >
-                    {org.impactScore}%
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-gray-400" />
-                </div>
+                <Shield className="h-8 w-8 text-green-600" />
               </div>
             </div>
-          ))}
+
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-600 text-sm">Total Ajo Pools</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {formatCurrency(125000000)}
+                  </p>
+                </div>
+                <Users className="h-8 w-8 text-blue-600" />
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-600 text-sm">Cultural NFTs</p>
+                  <p className="text-2xl font-bold text-gray-900">1,429</p>
+                </div>
+                <Star className="h-8 w-8 text-purple-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="p-6 border-b border-gray-100">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Recent Transparency Reports
+              </h3>
+              <p className="text-gray-600 text-sm">
+                Latest organizations under community review
+              </p>
+            </div>
+            <div className="divide-y divide-gray-100">
+              {mockOrgs.slice(0, 3).map((org) => (
+                <div
+                  key={org.id}
+                  className="p-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                  onClick={() => setSelectedOrg(org)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3">
+                        <h4 className="font-medium text-gray-900">
+                          {org.name}
+                        </h4>
+                        <span
+                          className={`px-2 py-1 text-xs font-medium rounded-full ${getTransparencyColor(
+                            org.transparency
+                          )}`}
+                        >
+                          {org.transparency}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        {org.type} • {formatCurrency(org.totalDonations)} total
+                        donations
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div
+                        className={`px-3 py-1 rounded-full text-sm font-medium ${getImpactColor(
+                          org.impactScore
+                        )}`}
+                      >
+                        {org.impactScore}%
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-gray-400" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 };
