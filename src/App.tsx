@@ -2,6 +2,7 @@ import Dashboard from "./pages/Dashboard";
 import Homepage from "./pages/Homepage";
 import { Route, Routes } from "react-router-dom";
 import Profile from "./pages/Profile";
+import { Toaster } from "sonner";
 
 const App = () => {
   return (
@@ -12,6 +13,7 @@ const App = () => {
         <Route path="/profile" element={<Profile />} />
         <Route path="*" element={<div>404 Not Found</div>} />
       </Routes>
+      <Toaster richColors position="top-center" />
     </div>
   );
 };

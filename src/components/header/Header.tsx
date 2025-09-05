@@ -1,32 +1,46 @@
 import {
   Wallet,
-  Shield,
-  TrendingUp,
-  Users,
-  Star,
   Eye,
-  ChevronRight,
   Menu,
   X,
   Home,
   BarChart3,
+  Users,
+  Star,
   Coins,
-  Zap,
+  Copy,
+  LogOut,
+  Check,
 } from "lucide-react";
 import { useState } from "react";
+import { useWallet } from "../../auth/WalletContext";
 
 const Header = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
-  const [isWalletConnected, setIsWalletConnected] = useState(false);
-  const [walletAddress, setWalletAddress] = useState("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const { connected, address, balance, network, connectMetaMask, disconnect } =
+    useWallet();
+
+  const handleCopy = async () => {
+    if (!address) return;
+    try {
+      await navigator.clipboard.writeText(address);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch (err) {
+      console.error("Failed to copy address", err);
+    }
+  };
 
   return (
-    <div className="  bg-gray-50">
-      {/*  */}
-      <nav className="hidden md:block fixed bg-white border-b border-gray-200 w-full  top-0 z-40">
+    <div className="bg-gray-50">
+      {/* Desktop Navigation */}
+      <nav className="hidden md:block fixed bg-white border-b border-gray-200 w-full top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
+            {/* Logo */}
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-yellow-500 rounded-lg flex items-center justify-center">
                 <Eye className="w-5 h-5 text-white" />
@@ -34,65 +48,71 @@ const Header = () => {
               <span className="text-xl font-bold text-gray-900">Dey.Play</span>
             </div>
 
+            {/* Nav Tabs */}
             <div className="flex items-center gap-6">
-              <button
-                onClick={() => setActiveTab("dashboard")}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  activeTab === "dashboard"
-                    ? "bg-green-100 text-green-700"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
-              >
-                <Home className="h-4 w-4" />
-                Dashboard
-              </button>
-              <button
-                onClick={() => setActiveTab("transparency")}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  activeTab === "transparency"
-                    ? "bg-green-100 text-green-700"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
-              >
-                <BarChart3 className="h-4 w-4" />
-                Transparency
-              </button>
-              <button
-                onClick={() => setActiveTab("ajo")}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  activeTab === "ajo"
-                    ? "bg-green-100 text-green-700"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
-              >
-                <Users className="h-4 w-4" />
-                Digital Ajo
-              </button>
-              <button
-                onClick={() => setActiveTab("nft")}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  activeTab === "nft"
-                    ? "bg-green-100 text-green-700"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
-              >
-                <Star className="h-4 w-4" />
-                NFT Market
-              </button>
+              {[
+                { id: "dashboard", label: "Dashboard", icon: Home },
+                { id: "transparency", label: "Transparency", icon: BarChart3 },
+                { id: "ajo", label: "Digital Ajo", icon: Users },
+                { id: "nft", label: "NFT Market", icon: Star },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeTab === tab.id
+                      ? "bg-green-100 text-green-700"
+                      : "text-gray-600 hover:text-gray-900"
+                  }`}
+                >
+                  <tab.icon className="h-4 w-4" />
+                  {tab.label}
+                </button>
+              ))}
             </div>
 
-            <div>
-              {isWalletConnected ? (
-                <div className="flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-lg">
-                  <Wallet className="h-4 w-4" />
-                  <span className="text-sm font-medium">
-                    {/* {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)} */}
+            {/* Wallet Section */}
+            <div className="flex items-center gap-3">
+              {connected && address ? (
+                <div className="flex items-center gap-2 bg-green-50 border border-green-200 px-3 py-2 rounded-lg">
+                  <Wallet className="h-4 w-4 text-green-600" />
+
+                  {/* Address */}
+                  <span className="font-mono text-sm text-gray-800">
+                    {address.slice(0, 6)}...{address.slice(-4)}
                   </span>
+
+                  {/* Copy Button */}
+                  <button
+                    onClick={handleCopy}
+                    className="p-1 hover:bg-gray-200 rounded"
+                    title="Copy Address"
+                  >
+                    {copied ? (
+                      <Check className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <Copy className="h-4 w-4 text-gray-600" />
+                    )}
+                  </button>
+
+                  {/* Balance */}
+                  <span className="text-sm text-gray-700">
+                    {parseFloat(balance ?? "0").toFixed(4)} HBAR
+                  </span>
+
+                  {/* Disconnect */}
+                  <button
+                    onClick={disconnect}
+                    className="p-1 hover:bg-red-100 rounded"
+                    title="Disconnect"
+                  >
+                    <LogOut className="h-4 w-4 text-red-600" />
+                  </button>
                 </div>
               ) : (
                 <button
-                  //   onClick={connectWallet}
-                  className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex items-center gap-2"
+                  onClick={connectMetaMask}
+                  className="flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-green-700"
                 >
                   <Wallet className="h-4 w-4" />
                   Connect MetaMask
@@ -105,106 +125,90 @@ const Header = () => {
 
       {/* Mobile Navigation */}
       <nav className="md:hidden bg-white border-b border-gray-200 fixed w-full top-0 z-40">
-        <div className="px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-yellow-500 rounded-lg flex items-center justify-center">
-                <Eye className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-bold text-gray-900">Dey.Play</span>
+        <div className="px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-yellow-500 rounded-lg flex items-center justify-center">
+              <Eye className="w-5 h-5 text-white" />
             </div>
-
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
-            >
-              {isMobileMenuOpen ? (
-                <X className="h-5 w-5" />
-              ) : (
-                <Menu className="h-5 w-5" />
-              )}
-            </button>
+            <span className="text-xl font-bold text-gray-900">Dey.Play</span>
           </div>
+
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
+          >
+            {isMobileMenuOpen ? (
+              <X className="h-5 w-5" />
+            ) : (
+              <Menu className="h-5 w-5" />
+            )}
+          </button>
         </div>
 
         {isMobileMenuOpen && (
-          <div className="border-t border-gray-200 bg-white">
-            <div className="px-4 py-3 space-y-2">
+          <div className="border-t border-gray-200 bg-white px-4 py-3 space-y-2">
+            {[
+              { id: "dashboard", label: "Dashboard", icon: Home },
+              { id: "transparency", label: "Transparency", icon: BarChart3 },
+              { id: "ajo", label: "Digital Ajo", icon: Users },
+              { id: "nft", label: "NFT Market", icon: Star },
+            ].map((tab) => (
               <button
+                key={tab.id}
                 onClick={() => {
-                  setActiveTab("dashboard");
+                  setActiveTab(tab.id);
                   setIsMobileMenuOpen(false);
                 }}
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  activeTab === "dashboard"
+                  activeTab === tab.id
                     ? "bg-green-100 text-green-700"
                     : "text-gray-600 hover:bg-gray-50"
                 }`}
               >
-                <Home className="h-4 w-4" />
-                Dashboard
+                <tab.icon className="h-4 w-4" />
+                {tab.label}
               </button>
-              <button
-                onClick={() => {
-                  setActiveTab("transparency");
-                  setIsMobileMenuOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  activeTab === "transparency"
-                    ? "bg-green-100 text-green-700"
-                    : "text-gray-600 hover:bg-gray-50"
-                }`}
-              >
-                <BarChart3 className="h-4 w-4" />
-                Transparency
-              </button>
-              <button
-                onClick={() => {
-                  setActiveTab("ajo");
-                  setIsMobileMenuOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  activeTab === "ajo"
-                    ? "bg-green-100 text-green-700"
-                    : "text-gray-600 hover:bg-gray-50"
-                }`}
-              >
-                <Users className="h-4 w-4" />
-                Digital Ajo
-              </button>
-              <button
-                onClick={() => {
-                  setActiveTab("nft");
-                  setIsMobileMenuOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  activeTab === "nft"
-                    ? "bg-green-100 text-green-700"
-                    : "text-gray-600 hover:bg-gray-50"
-                }`}
-              >
-                <Star className="h-4 w-4" />
-                NFT Market
-              </button>
+            ))}
 
-              <div className="pt-3 border-t border-gray-200">
-                {isWalletConnected ? (
-                  <div className="flex items-center gap-2 bg-green-100 text-green-700 px-3 py-2 rounded-lg">
-                    <Wallet className="h-4 w-4" />
-                    <span className="text-sm font-medium">
-                      {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
+            {/* Wallets on Mobile */}
+            <div className="pt-3 border-t border-gray-200 space-y-2">
+              {connected && address ? (
+                <div className="flex flex-col gap-2 p-2 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-sm text-gray-800">
+                      {address.slice(0, 6)}...{address.slice(-4)}
                     </span>
+                    <button
+                      onClick={handleCopy}
+                      className="p-1 hover:bg-gray-200 rounded"
+                    >
+                      {copied ? (
+                        <Check className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <Copy className="h-4 w-4 text-gray-600" />
+                      )}
+                    </button>
                   </div>
-                ) : (
+                  <span className="text-sm text-gray-700">
+                    {parseFloat(balance ?? "0").toFixed(4)} HBAR
+                  </span>
                   <button
-                    // onClick={}
-                    className="w-full bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                    onClick={disconnect}
+                    className="flex items-center justify-center gap-2 bg-red-100 text-red-700 px-3 py-2 rounded-lg text-sm font-medium hover:bg-red-200"
                   >
-                    <Wallet className="h-4 w-4" />
-                    Connect MetaMask
+                    <LogOut className="h-4 w-4" />
+                    Disconnect
                   </button>
-                )}
-              </div>
+                </div>
+              ) : (
+                <button
+                  onClick={connectMetaMask}
+                  className="w-full flex items-center justify-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-green-700"
+                >
+                  <Wallet className="h-4 w-4" />
+                  Connect MetaMask
+                </button>
+              )}
             </div>
           </div>
         )}
