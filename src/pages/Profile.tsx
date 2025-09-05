@@ -7,28 +7,60 @@ import {
   TrendingUp,
   Eye,
   Star,
-  Calendar,
-  MapPin,
-  Edit3,
-  Share2,
   Award,
   Zap,
   ChevronRight,
-  Camera,
-  Settings,
   Users,
+  Wallet,
+  Check,
+  Copy,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useWallet } from "@/auth/WalletContext";
 
 const Profile = () => {
   const naviagte = useNavigate();
   const [isVisible, setIsVisible] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+  const { address, network, balance } = useWallet();
+  const [copied, setCopied] = useState(false);
+  const [hbarPrice, setHbarPrice] = useState<number | null>(null);
+  const [balanceInNGN, setBalanceInNGN] = useState<number | null>(null);
   //   const [profileImage, setProfileImage] = useState('');
 
   useEffect(() => {
     setIsVisible(true);
   }, []);
+
+  useEffect(() => {
+    const fetchHBARPrice = async () => {
+      try {
+        const res = await fetch(
+          "https://api.coingecko.com/api/v3/simple/price?ids=hedera-hashgraph&vs_currencies=ngn"
+        );
+        const data = await res.json();
+        const price = data["hedera-hashgraph"].ngn;
+        setHbarPrice(price);
+
+        if (balance) {
+          const hbarAmount = parseFloat(balance); // make sure balance is a string number
+          setBalanceInNGN(hbarAmount * price);
+        }
+      } catch (error) {
+        console.error("Failed to fetch HBAR price:", error);
+      }
+    };
+
+    fetchHBARPrice();
+  }, [balance]);
+
+  const handleCopy = async () => {
+    if (address) {
+      await navigator.clipboard.writeText(address);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    }
+  };
 
   const userStats = {
     name: "Chidi Okwu",
@@ -116,14 +148,14 @@ const Profile = () => {
             <span>Back to Home</span>
           </button>
 
-          <div className="flex items-center space-x-4">
+          {/* <div className="flex items-center space-x-4">
             <button className="p-2 text-gray-700 hover:text-green-600 transition-colors">
               <Share2 className="w-5 h-5" />
             </button>
             <button className="p-2 text-gray-700 hover:text-green-600 transition-colors">
               <Settings className="w-5 h-5" />
             </button>
-          </div>
+          </div> */}
         </div>
       </header>
 
@@ -138,46 +170,62 @@ const Profile = () => {
             <div className="absolute inset-0 bg-black/20"></div>
             <div className="absolute bottom-6 left-6 right-6">
               <div className="flex flex-col sm:flex-row items-start sm:items-end space-y-4 sm:space-y-0 sm:space-x-6">
-                <div className="relative group">
+                <div className="relative group hidden sm:block">
                   <div className="w-24 h-24 bg-gradient-to-br from-white to-gray-100 rounded-full flex items-center justify-center text-3xl font-bold text-green-600 border-4 border-white shadow-lg">
                     {userStats.name
                       .split(" ")
                       .map((n) => n[0])
                       .join("")}
                   </div>
-                  <button className="absolute bottom-0 right-0 w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                  {/* <button className="absolute bottom-0 right-0 w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
                     <Camera className="w-4 h-4" />
-                  </button>
+                  </button> */}
                 </div>
 
                 <div className="flex-1 text-white">
                   <div className="flex items-center space-x-3 mb-2">
-                    <h1 className="text-2xl sm:text-3xl font-bold">
-                      {userStats.name}
+                    <h1 className="text-lg sm:text-3xl font-bold">
+                      {address?.slice(0, 6)}...{address?.slice(-4)}
                     </h1>
-                    <div className="bg-green-500 px-3 py-1 rounded-full text-sm font-medium">
-                      Truth Seeker
-                    </div>
+                    <button
+                      onClick={handleCopy}
+                      className="p-1  rounded cursor-pointer hover:bg-white/30 transition-colors"
+                      title="Copy Address"
+                    >
+                      {copied ? (
+                        <Check className="w-4 h-4 sm:h-6 sm:w-6 text-white" />
+                      ) : (
+                        <Copy className="w-4 h-4 sm:h-6 sm:w-6 text-white" />
+                      )}
+                    </button>
                   </div>
-                  <p className="text-green-100 text-lg mb-2">
-                    {userStats.username}
+                  <p className="text-green-100 text-sm  sm:text-lg mb-2">
+                    Wallet Balance
                   </p>
-                  <div className="flex items-center space-x-4 text-sm text-green-100">
-                    <div className="flex items-center space-x-1">
-                      <MapPin className="w-4 h-4" />
-                      <span>{userStats.location}</span>
+                  <div className="flex items-center space-x-2 text-sm text-green-100">
+                    <div className="flex items-center text-sm font-semibold  sm:text-xl space-x-1">
+                      <Wallet className="w-6 h-6" />
+                      <span>{balance}</span>
                     </div>
-                    <div className="flex items-center space-x-1">
-                      <Calendar className="w-4 h-4" />
-                      <span>Joined {userStats.joinDate}</span>
+                    <div className="flex items-center text-sm font-semibold  sm:text-xl space-x-1">
+                      <span>HBAR</span>
                     </div>
+                    {balanceInNGN !== null && (
+                      <p className="text-green-200 text-sm  font-semibold sm:text-xl">
+                        ≈ ₦
+                        {balanceInNGN.toLocaleString("en-NG", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </p>
+                    )}
                   </div>
                 </div>
 
-                <button className="bg-white/20 hover:bg-white/30 text-white px-6 py-3 rounded-full font-semibold transition-all hover:scale-105 flex items-center space-x-2">
-                  <Edit3 className="w-4 h-4" />
-                  <span>Edit Profile</span>
-                </button>
+                <div className="bg-white/20 hover:bg-white/30 text-white text-[.9rem] sm:text-lg px-3 py-1 sm:px-6 sm:py-3 rounded-full font-semibold transition-all hover:scale-105 flex items-center space-x-2">
+                  {/* <Edit3 className="w-4 h-4" /> */}
+                  <span>{network}</span>
+                </div>
               </div>
             </div>
           </div>

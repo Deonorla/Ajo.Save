@@ -40,7 +40,6 @@ const Header = () => {
   }, [location]);
 
   const navigateTo = (tabId: string) => {
-    // Implement navigation logic here, e.g., using react-router
     setActiveTab(tabId);
     navigate(`/${tabId}`);
   };

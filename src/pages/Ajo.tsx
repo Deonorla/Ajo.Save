@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import Header from "@/components/header/Header";
 import formatCurrency from "@/utils/formatCurrency";
 import { TrendingUp, Zap } from "lucide-react";
@@ -13,12 +14,26 @@ interface AjoGroup {
 }
 
 const Ajo = () => {
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    // Trigger animation on mount
+    setIsVisible(true);
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 h-auto mt-16 lg:px-8 py-6">
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
+          {/* Page header */}
+          <div
+            className={`flex items-center justify-between transform transition-all duration-1000 ${
+              isVisible
+                ? "translate-y-0 opacity-100"
+                : "translate-y-10 opacity-0"
+            }`}
+          >
             <div>
               <h2 className="text-2xl font-bold text-gray-900">
                 Digital Ajo Groups
@@ -32,7 +47,14 @@ const Ajo = () => {
             </button>
           </div>
 
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-xl">
+          {/* Highlight card */}
+          <div
+            className={`bg-green-600 text-white p-6 rounded-xl transform transition-all duration-1000 delay-200 ${
+              isVisible
+                ? "translate-y-0 opacity-100"
+                : "translate-y-10 opacity-0"
+            }`}
+          >
             <h3 className="text-lg font-semibold mb-2">
               AI-Powered Yield Optimization
             </h3>
@@ -50,11 +72,23 @@ const Ajo = () => {
             </div>
           </div>
 
-          <div className="grid gap-4">
-            {mockAjoGroups.map((ajo) => (
+          {/* Groups grid */}
+          <div
+            className={`grid gap-4 transform transition-all duration-1000 delay-300 ${
+              isVisible
+                ? "translate-y-0 opacity-100"
+                : "translate-y-10 opacity-0"
+            }`}
+          >
+            {mockAjoGroups.map((ajo, index) => (
               <div
                 key={ajo.id}
-                className="bg-white rounded-xl shadow-sm border border-gray-100 p-6"
+                className={`bg-white rounded-xl shadow-sm border border-gray-100 p-6 transition-all duration-700 ${
+                  isVisible
+                    ? "opacity-100 translate-y-0"
+                    : "opacity-0 translate-y-10"
+                }`}
+                style={{ transitionDelay: `${400 + index * 150}ms` }} // stagger animation
               >
                 <div className="flex items-start justify-between mb-4">
                   <div>
@@ -102,7 +136,7 @@ const Ajo = () => {
                   </div>
                 </div>
 
-                <button className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
+                <button className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium">
                   Make Monthly Contribution
                 </button>
               </div>

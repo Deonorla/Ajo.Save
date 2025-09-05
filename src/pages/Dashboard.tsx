@@ -1,6 +1,6 @@
 import Header from "@/components/header/Header";
 import { Shield, Users, Star, ChevronRight } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface Organization {
   id: string;
@@ -14,6 +14,12 @@ interface Organization {
 
 const Dashboard = () => {
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsVisible(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   const mockOrgs: Organization[] = [
     {
@@ -54,14 +60,13 @@ const Dashboard = () => {
     },
   ];
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-NG", {
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat("en-NG", {
       style: "currency",
       currency: "NGN",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
-  };
 
   const getTransparencyColor = (level: string) => {
     switch (level) {
@@ -76,19 +81,6 @@ const Dashboard = () => {
     }
   };
 
-  const getRarityColor = (rarity: string) => {
-    switch (rarity) {
-      case "Legendary":
-        return "border-yellow-400 bg-gradient-to-r from-yellow-50 to-orange-50";
-      case "Rare":
-        return "border-purple-400 bg-gradient-to-r from-purple-50 to-pink-50";
-      case "Common":
-        return "border-gray-300 bg-gray-50";
-      default:
-        return "border-gray-300 bg-gray-50";
-    }
-  };
-
   const getImpactColor = (score: number) => {
     if (score >= 80) return "text-green-600 bg-green-50";
     if (score >= 60) return "text-yellow-600 bg-yellow-50";
@@ -99,17 +91,29 @@ const Dashboard = () => {
     <div className="min-h-screen bg-gray-50">
       <Header />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 h-auto mt-16 lg:px-8 py-6">
-        <div className="space-y-6 mt-8">
-          <div className="bg-gradient-to-r from-green-600 to-green-700 text-white p-6 rounded-xl">
-            <h2 className="text-2xl font-bold mb-2">Welcome </h2>
+        <div
+          className={`space-y-6 mt-8 transform transition-all duration-1000 ${
+            isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
+          }`}
+        >
+          {/* Welcome Banner */}
+          <div className="bg-green-600 text-white p-6 rounded-xl shadow-lg">
+            <h2 className="text-2xl font-bold mb-2">Welcome</h2>
             <p className="text-green-100">Dey Play - We Dey See Your Lies 👀</p>
             <p className="text-sm text-green-200 mt-2">
               Transparency on-chain, culture in our DNA
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          {/* Stats Cards */}
+          <div
+            className={`grid grid-cols-1 md:grid-cols-3 gap-4 transform transition-all duration-1000 delay-200 ${
+              isVisible
+                ? "translate-y-0 opacity-100"
+                : "translate-y-10 opacity-0"
+            }`}
+          >
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all hover:scale-105">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-gray-600 text-sm">Organizations Tracked</p>
@@ -119,7 +123,7 @@ const Dashboard = () => {
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all hover:scale-105">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-gray-600 text-sm">Total Ajo Pools</p>
@@ -131,7 +135,7 @@ const Dashboard = () => {
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all hover:scale-105">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-gray-600 text-sm">Cultural NFTs</p>
@@ -142,7 +146,14 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          {/* Reports */}
+          <div
+            className={`bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transform transition-all duration-1000 delay-400 ${
+              isVisible
+                ? "translate-y-0 opacity-100"
+                : "translate-y-10 opacity-0"
+            }`}
+          >
             <div className="p-6 border-b border-gray-100">
               <h3 className="text-lg font-semibold text-gray-900">
                 Recent Transparency Reports
@@ -152,10 +163,15 @@ const Dashboard = () => {
               </p>
             </div>
             <div className="divide-y divide-gray-100">
-              {mockOrgs.slice(0, 3).map((org) => (
+              {mockOrgs.slice(0, 3).map((org, index) => (
                 <div
                   key={org.id}
-                  className="p-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                  className={`p-4 transition-all cursor-pointer transform duration-700 ${
+                    isVisible
+                      ? "translate-y-0 opacity-100"
+                      : "translate-y-5 opacity-0"
+                  }`}
+                  style={{ transitionDelay: `${600 + index * 150}ms` }}
                   onClick={() => setSelectedOrg(org)}
                 >
                   <div className="flex items-center justify-between">
