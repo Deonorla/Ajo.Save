@@ -20,17 +20,14 @@ const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const { connected, address, balance, network, connectMetaMask, disconnect } =
+  const { connected, address, network, balance, connectMetaMask, disconnect } =
     useWallet();
 
   const handleCopy = async () => {
-    if (!address) return;
-    try {
+    if (address) {
       await navigator.clipboard.writeText(address);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
-    } catch (err) {
-      console.error("Failed to copy address", err);
     }
   };
 
@@ -73,19 +70,18 @@ const Header = () => {
 
             {/* Wallet Section */}
             <div className="flex items-center gap-3">
-              {connected && address ? (
-                <div className="flex items-center gap-2 bg-green-50 border border-green-200 px-3 py-2 rounded-lg">
-                  <Wallet className="h-4 w-4 text-green-600" />
-
-                  {/* Address */}
-                  <span className="font-mono text-sm text-gray-800">
-                    {address.slice(0, 6)}...{address.slice(-4)}
+              {connected ? (
+                <div className="flex items-center gap-2 bg-green-100 px-3 py-2 rounded-lg text-sm font-medium">
+                  <Wallet className="h-4 w-4 text-green-700" />
+                  <span className="text-green-700">
+                    {balance ? `${balance} HBAR` : "Loading..."}
                   </span>
-
-                  {/* Copy Button */}
+                  <span className="text-gray-700">
+                    {address?.slice(0, 6)}...{address?.slice(-4)}
+                  </span>
                   <button
                     onClick={handleCopy}
-                    className="p-1 hover:bg-gray-200 rounded"
+                    className="p-1 hover:bg-green-200 rounded"
                     title="Copy Address"
                   >
                     {copied ? (
@@ -94,19 +90,13 @@ const Header = () => {
                       <Copy className="h-4 w-4 text-gray-600" />
                     )}
                   </button>
-
-                  {/* Balance */}
-                  <span className="text-sm text-gray-700">
-                    {parseFloat(balance ?? "0").toFixed(4)} HBAR
-                  </span>
-
-                  {/* Disconnect */}
+                  <span className="ml-2 text-xs text-gray-500">{network}</span>
                   <button
                     onClick={disconnect}
-                    className="p-1 hover:bg-red-100 rounded"
-                    title="Disconnect"
+                    className="ml-2 flex items-center gap-1 text-red-600 hover:text-red-700"
                   >
-                    <LogOut className="h-4 w-4 text-red-600" />
+                    <LogOut className="h-4 w-4" />
+                    Disconnect
                   </button>
                 </div>
               ) : (
@@ -172,33 +162,30 @@ const Header = () => {
 
             {/* Wallets on Mobile */}
             <div className="pt-3 border-t border-gray-200 space-y-2">
-              {connected && address ? (
-                <div className="flex flex-col gap-2 p-2 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-sm text-gray-800">
-                      {address.slice(0, 6)}...{address.slice(-4)}
-                    </span>
+              {connected ? (
+                <div className="flex flex-col items-start gap-2">
+                  <span className="text-sm text-green-700 font-medium">
+                    Balance: {balance} HBAR
+                  </span>
+                  <span className="text-sm text-gray-700">
+                    {address?.slice(0, 6)}...{address?.slice(-4)}
+                  </span>
+                  <div className="flex gap-2">
                     <button
                       onClick={handleCopy}
-                      className="p-1 hover:bg-gray-200 rounded"
+                      className="flex items-center gap-1 text-gray-600 hover:text-green-600 text-sm"
                     >
-                      {copied ? (
-                        <Check className="h-4 w-4 text-green-600" />
-                      ) : (
-                        <Copy className="h-4 w-4 text-gray-600" />
-                      )}
+                      <Copy className="h-4 w-4" />
+                      {copied ? "Copied" : "Copy"}
+                    </button>
+                    <button
+                      onClick={disconnect}
+                      className="flex items-center gap-1 text-red-600 hover:text-red-700 text-sm"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Disconnect
                     </button>
                   </div>
-                  <span className="text-sm text-gray-700">
-                    {parseFloat(balance ?? "0").toFixed(4)} HBAR
-                  </span>
-                  <button
-                    onClick={disconnect}
-                    className="flex items-center justify-center gap-2 bg-red-100 text-red-700 px-3 py-2 rounded-lg text-sm font-medium hover:bg-red-200"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    Disconnect
-                  </button>
                 </div>
               ) : (
                 <button
