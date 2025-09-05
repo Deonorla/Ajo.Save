@@ -11,11 +11,15 @@ import {
   Copy,
   LogOut,
   Check,
+  User,
 } from "lucide-react";
-import { useState } from "react";
+import { use, useEffect, useState } from "react";
 import { useWallet } from "../../auth/WalletContext";
+import { useLocation, useNavigate } from "react-router-dom";
 
 const Header = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -30,12 +34,22 @@ const Header = () => {
       setTimeout(() => setCopied(false), 1500);
     }
   };
+  useEffect(() => {
+    const currentPath = location.pathname.replace("/", "") || "dashboard";
+    setActiveTab(currentPath || "dashboard");
+  }, [location]);
+
+  const navigateTo = (tabId: string) => {
+    // Implement navigation logic here, e.g., using react-router
+    setActiveTab(tabId);
+    navigate(`/${tabId}`);
+  };
 
   return (
     <div className="bg-gray-50">
       {/* Desktop Navigation */}
       <nav className="hidden md:block fixed bg-white border-b border-gray-200 w-full top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="   mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <div className="flex items-center space-x-2">
@@ -46,16 +60,17 @@ const Header = () => {
             </div>
 
             {/* Nav Tabs */}
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-6 ml-60">
               {[
                 { id: "dashboard", label: "Dashboard", icon: Home },
-                { id: "transparency", label: "Transparency", icon: BarChart3 },
+                // { id: "transparency", label: "Transparency", icon: BarChart3 },
                 { id: "ajo", label: "Digital Ajo", icon: Users },
-                { id: "nft", label: "NFT Market", icon: Star },
+                // { id: "nft", label: "NFT Market", icon: Star },
+                { id: "profile", label: "Profile", icon: User },
               ].map((tab) => (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => navigateTo(tab.id)}
                   className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     activeTab === tab.id
                       ? "bg-green-100 text-green-700"
@@ -139,14 +154,15 @@ const Header = () => {
           <div className="border-t border-gray-200 bg-white px-4 py-3 space-y-2">
             {[
               { id: "dashboard", label: "Dashboard", icon: Home },
-              { id: "transparency", label: "Transparency", icon: BarChart3 },
+              // { id: "transparency", label: "Transparency", icon: BarChart3 },
               { id: "ajo", label: "Digital Ajo", icon: Users },
-              { id: "nft", label: "NFT Market", icon: Star },
+              // { id: "nft", label: "NFT Market", icon: Star },
+              { id: "profile", label: "Profile", icon: User },
             ].map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => {
-                  setActiveTab(tab.id);
+                  navigateTo(tab.id);
                   setIsMobileMenuOpen(false);
                 }}
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -161,26 +177,47 @@ const Header = () => {
             ))}
 
             {/* Wallets on Mobile */}
-            <div className="pt-3 border-t border-gray-200 space-y-2">
+            <div className="pt-4 border-t border-gray-200">
               {connected ? (
-                <div className="flex flex-col items-start gap-2">
-                  <span className="text-sm text-green-700 font-medium">
-                    Balance: {balance} HBAR
-                  </span>
-                  <span className="text-sm text-gray-700">
-                    {address?.slice(0, 6)}...{address?.slice(-4)}
-                  </span>
-                  <div className="flex gap-2">
+                <div className="bg-green-50 border border-green-200 rounded-xl p-4 shadow-sm flex flex-col gap-3">
+                  {/* Balance */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500 text-sm">Balance</span>
+                    <span className="text-green-700 font-semibold">
+                      {balance} HBAR
+                    </span>
+                  </div>
+
+                  {/* Address */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500 text-sm">Wallet</span>
+                    <span className="text-gray-800 font-medium">
+                      {address?.slice(0, 6)}...{address?.slice(-4)}
+                    </span>
+                  </div>
+
+                  {/* Network */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500 text-sm">Network</span>
+                    <span className="text-gray-700 text-sm">{network}</span>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex items-center justify-between gap-3 pt-2">
                     <button
                       onClick={handleCopy}
-                      className="flex items-center gap-1 text-gray-600 hover:text-green-600 text-sm"
+                      className="flex items-center gap-1 px-3 py-2 text-sm rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100"
                     >
-                      <Copy className="h-4 w-4" />
+                      {copied ? (
+                        <Check className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <Copy className="h-4 w-4 text-gray-600" />
+                      )}
                       {copied ? "Copied" : "Copy"}
                     </button>
                     <button
                       onClick={disconnect}
-                      className="flex items-center gap-1 text-red-600 hover:text-red-700 text-sm"
+                      className="flex items-center gap-1 px-3 py-2 text-sm rounded-lg bg-red-50 text-red-600 hover:bg-red-100"
                     >
                       <LogOut className="h-4 w-4" />
                       Disconnect

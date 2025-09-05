@@ -7,15 +7,16 @@ import Testimonials from "@/components/homepage/Testimonials";
 import Footer from "@/components/homepage/Footer";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useWallet } from "@/auth/WalletContext";
 
 function Homepage() {
   const navigate = useNavigate();
+  const { connected } = useWallet();
+  // console.log("Authentication Status:", connected);
 
-  // console.log("Authentication Status:", authenticationStatus);
-
-  // useEffect(() => {
-  //   if (authenticationStatus) navigate("/dashboard");
-  // }, [authenticationStatus, navigate]);
+  useEffect(() => {
+    if (connected) navigate("/dashboard");
+  }, [connected, navigate]);
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-green-50">
       <HomePageHeader />

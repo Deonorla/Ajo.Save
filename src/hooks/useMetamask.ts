@@ -33,6 +33,38 @@ export function useMetaMask(): MetaState {
   const [error, setError] = useState<string | null>(null);
   const [provider, setProvider] = useState<BrowserProvider | null>(null);
 
+  // ---------------------------
+  // Fetch Account Info
+  // ---------------------------
+  const fetchAccountInfo = useCallback(
+    async (customProvider?: BrowserProvider) => {
+      const activeProvider = customProvider ?? provider;
+      if (!activeProvider) return;
+
+      try {
+        const signer = await activeProvider.getSigner();
+        const addr = await signer.getAddress();
+        setAddress(addr);
+        setConnected(true);
+
+        const balBig = await activeProvider.getBalance(addr);
+        setBalance(formatEther(balBig));
+
+        const net = await activeProvider.getNetwork();
+        setNetwork(mapChainIdToName(net.chainId));
+        setError(null);
+      } catch (err: any) {
+        setError(err?.message ?? String(err));
+        setConnected(false);
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    },
+    [provider]
+  );
+
+  // ---------------------------
+  // Effect: Setup + Restore Session
+  // ---------------------------
   useEffect(() => {
     setAvailable(Boolean(window.ethereum));
     if (window.ethereum) {
@@ -66,10 +98,11 @@ export function useMetaMask(): MetaState {
             method: "eth_accounts",
           });
           if (accounts.length > 0) {
-            setProvider(new BrowserProvider(window.ethereum, "any"));
+            const p = new BrowserProvider(window.ethereum, "any");
+            setProvider(p);
             setConnected(true);
             setAddress(getAddress(accounts[0]));
-            fetchAccountInfo();
+            await fetchAccountInfo(p); // ✅ use fresh provider immediately
           }
         } catch {
           localStorage.removeItem(STORAGE_KEY);
@@ -89,28 +122,9 @@ export function useMetaMask(): MetaState {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const fetchAccountInfo = useCallback(async () => {
-    if (!provider) return;
-    try {
-      const signer = await provider.getSigner();
-      const addr = await signer.getAddress();
-      setAddress(addr);
-      setConnected(true);
-
-      const balBig = await provider.getBalance(addr);
-      const balance = formatEther(balBig);
-      setBalance(balance);
-
-      const net = await provider.getNetwork();
-      setNetwork(net.name || `chainId ${net.chainId}`);
-      setError(null);
-    } catch (err: any) {
-      setError(err?.message ?? String(err));
-      setConnected(false);
-      localStorage.removeItem(STORAGE_KEY);
-    }
-  }, [provider]);
-
+  // ---------------------------
+  // Network Switch
+  // ---------------------------
   const switchToHederaTestnet = useCallback(async () => {
     if (!window.ethereum) {
       toast.error(
@@ -154,6 +168,9 @@ export function useMetaMask(): MetaState {
     }
   }, []);
 
+  // ---------------------------
+  // Connect
+  // ---------------------------
   const connect = useCallback(async () => {
     if (!window.ethereum) {
       toast.error(
@@ -182,7 +199,8 @@ export function useMetaMask(): MetaState {
 
       const p = new BrowserProvider(window.ethereum, "any");
       setProvider(p);
-      await fetchAccountInfo();
+      console.log("New provider set", p);
+      await fetchAccountInfo(p); // ✅ use fresh provider
       localStorage.setItem(STORAGE_KEY, "true");
       toast.success("Wallet connected");
       setError(null);
@@ -194,6 +212,9 @@ export function useMetaMask(): MetaState {
     }
   }, [fetchAccountInfo, switchToHederaTestnet]);
 
+  // ---------------------------
+  // Disconnect
+  // ---------------------------
   const handleDisconnect = useCallback(() => {
     setConnected(false);
     setAddress(null);
@@ -217,4 +238,20 @@ export function useMetaMask(): MetaState {
     disconnect,
     switchToHederaTestnet,
   };
+}
+
+// ---------------------------
+// Map ChainId to Network Name
+// ---------------------------
+function mapChainIdToName(chainId: bigint): string {
+  switch (chainId.toString()) {
+    case "295":
+      return "Hedera Mainnet";
+    case "296":
+      return "Hedera Testnet";
+    case "297":
+      return "Hedera Previewnet";
+    default:
+      return `Chain ${chainId}`;
+  }
 }

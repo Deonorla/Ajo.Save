@@ -18,8 +18,10 @@ import {
   Settings,
   Users,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const Profile = () => {
+  const naviagte = useNavigate();
   const [isVisible, setIsVisible] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   //   const [profileImage, setProfileImage] = useState('');
@@ -106,7 +108,10 @@ const Profile = () => {
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <button className="flex items-center space-x-2 text-gray-700 hover:text-green-600 transition-colors">
+          <button
+            onClick={() => naviagte("/dashboard")}
+            className="flex items-center space-x-2 text-gray-700 hover:text-green-600 transition-colors"
+          >
             <ChevronRight className="w-5 h-5 rotate-180" />
             <span>Back to Home</span>
           </button>
