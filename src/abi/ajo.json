@@ -1,0 +1,78 @@
+{
+  "abi": [
+    {
+      "inputs": [{ "type": "uint8", "name": "tokenChoice" }],
+      "name": "joinAjo",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "makePayment",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "distributePayout",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [{ "type": "address", "name": "member" }],
+      "name": "getMemberInfo",
+      "outputs": [
+        {
+          "type": "tuple",
+          "name": "memberInfo",
+          "components": [
+            { "type": "uint256", "name": "queueNumber" },
+            { "type": "uint256", "name": "joinedCycle" },
+            { "type": "uint256", "name": "totalPaid" },
+            { "type": "uint256", "name": "requiredCollateral" },
+            { "type": "uint256", "name": "lockedCollateral" },
+            { "type": "uint256", "name": "lastPaymentCycle" },
+            { "type": "uint256", "name": "defaultCount" },
+            { "type": "bool", "name": "hasReceivedPayout" },
+            { "type": "bool", "name": "isActive" },
+            { "type": "address", "name": "guarantor" },
+            { "type": "uint8", "name": "preferredToken" },
+            { "type": "uint256", "name": "reputationScore" },
+            { "type": "uint256[]", "name": "pastPayments" },
+            { "type": "uint256", "name": "guaranteePosition" }
+          ]
+        },
+        { "type": "uint256", "name": "pendingPenalty" },
+        { "type": "uint256", "name": "effectiveVotingPower" }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getContractStats",
+      "outputs": [
+        { "type": "uint256", "name": "totalMembers" },
+        { "type": "uint256", "name": "activeMembers" },
+        { "type": "uint256", "name": "totalCollateralUSDC" },
+        { "type": "uint256", "name": "totalCollateralHBAR" },
+        { "type": "uint256", "name": "contractBalanceUSDC" },
+        { "type": "uint256", "name": "contractBalanceHBAR" },
+        { "type": "uint256", "name": "currentQueuePosition" },
+        { "type": "uint8", "name": "activeToken" }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [{ "type": "address", "name": "member" }],
+      "name": "needsToPayThisCycle",
+      "outputs": [{ "type": "bool" }],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ]
+}

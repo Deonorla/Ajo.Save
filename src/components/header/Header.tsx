@@ -70,7 +70,7 @@ const Header = () => {
                 <button
                   key={tab.id}
                   onClick={() => navigateTo(tab.id)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  className={`flex cursor-pointer items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     activeTab === tab.id
                       ? "bg-green-100 text-green-700"
                       : "text-gray-600 hover:text-gray-900"
@@ -238,7 +238,7 @@ const Header = () => {
       </nav>
 
       {/* Floating Action Button (Mobile) */}
-      <div className="md:hidden fixed bottom-6 right-6">
+      <div className="md:hidden fixed bottom-6 right-6 z-10">
         <button className="bg-green-600 text-white p-4 rounded-full shadow-lg hover:bg-green-700 transition-colors">
           <Coins className="h-6 w-6" />
         </button>

@@ -84,8 +84,9 @@ export function useMetaMask(): MetaState {
 
       window.ethereum.on?.("chainChanged", () => {
         setTimeout(() => {
+          console.log("function called");
           fetchAccountInfo();
-        }, 100);
+        }, 500);
       });
     }
 

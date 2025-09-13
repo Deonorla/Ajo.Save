@@ -99,7 +99,7 @@ const Dashboard = () => {
           {/* Welcome Banner */}
           <div className="bg-green-600 text-white p-6 rounded-xl shadow-lg">
             <h2 className="text-2xl font-bold mb-2">Welcome</h2>
-            <p className="text-green-100">Dey Play - We Dey See Your Lies 👀</p>
+            <p className="text-green-100">Dey Play </p>
             <p className="text-sm text-green-200 mt-2">
               Transparency on-chain, culture in our DNA
             </p>
