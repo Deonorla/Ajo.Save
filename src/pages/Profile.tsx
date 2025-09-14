@@ -28,6 +28,7 @@ const Profile = () => {
   const [copied, setCopied] = useState(false);
   const [hbarPrice, setHbarPrice] = useState<number | null>(null);
   const [balanceInNGN, setBalanceInNGN] = useState<number | null>(null);
+  const [usdcBalanceInNGN, setUsdcBalanceInNGN] = useState<number | null>(null);
   //   const [profileImage, setProfileImage] = useState('');
 
   useEffect(() => {
@@ -35,26 +36,39 @@ const Profile = () => {
   }, []);
 
   useEffect(() => {
-    const fetchWHBARPrice = async () => {
+    const fetchPrices = async () => {
       try {
-        const res = await fetch(
-          "https://api.coingecko.com/api/v3/simple/price?ids=hedera-hashgraph&vs_currencies=ngn"
-        );
-        const data = await res.json();
-        const price = data["hedera-hashgraph"].ngn;
-        setHbarPrice(price);
+        const [hbarRes, usdcRes] = await Promise.all([
+          fetch(
+            "https://api.coingecko.com/api/v3/simple/price?ids=hedera-hashgraph&vs_currencies=ngn"
+          ),
+          fetch(
+            "https://api.coingecko.com/api/v3/simple/price?ids=usd-coin&vs_currencies=ngn"
+          ),
+        ]);
 
-        if (whbar) {
-          const whbarAmount = parseFloat(whbar ?? "0"); // make sure balance is a string number
-          setBalanceInNGN(whbarAmount * price);
-        }
+        const [hbarData, usdcData] = await Promise.all([
+          hbarRes.json(),
+          usdcRes.json(),
+        ]);
+
+        const hbarPrice = hbarData?.["hedera-hashgraph"]?.ngn ?? 0;
+        const usdcPrice = usdcData?.["usd-coin"]?.ngn ?? 0;
+
+        console.log("HBAR Price NGN:", hbarPrice);
+        console.log("USDC Price NGN:", usdcPrice);
+
+        // if you already have balances
+        if (whbar) setBalanceInNGN(parseFloat(whbar) * hbarPrice);
+        if (usdc)
+          setUsdcBalanceInNGN(parseFloat(usdc) * usdcPrice * Number(usdc));
       } catch (error) {
-        console.error("Failed to fetch HBAR price:", error);
+        console.error("Failed to fetch prices:", error);
       }
     };
 
-    fetchWHBARPrice();
-  }, [whbar]);
+    fetchPrices();
+  }, [whbar, usdc]);
 
   const handleCopy = async () => {
     if (address) {
@@ -170,7 +184,7 @@ const Profile = () => {
         >
           <div className="relative h-48 bg-gradient-to-r from-primary via-yellow-500 to-accent">
             <div className="absolute inset-0 bg-black/20"></div>
-            <div className="absolute bottom-6 left-6 right-6">
+            <div className="absolute bottom-2 sm:bottom-6 left-6 right-6">
               <div className="flex flex-col sm:flex-row items-start sm:items-end space-y-4 sm:space-y-0 sm:space-x-6">
                 <div className="relative group hidden sm:block">
                   <div className="w-24 h-24 bg-gradient-to-br from-white to-gray-100 rounded-full flex items-center justify-center text-3xl font-bold text-primary border-4 border-white shadow-lg">
@@ -206,7 +220,10 @@ const Profile = () => {
                   </p>
                   <div className="flex items-center space-x-2 text-sm text-green-100">
                     <div className="flex items-center text-sm font-semibold  sm:text-xl space-x-1">
-                      <Wallet className="w-6 h-6" />
+                      <img
+                        src="/images/profile/hedera.png"
+                        className="w-6 h-6"
+                      />
                       {loading ? <span>...</span> : <span>{whbar}</span>}
                     </div>
                     <div className="flex items-center text-sm font-semibold  sm:text-xl space-x-1">
@@ -216,6 +233,24 @@ const Profile = () => {
                       <p className="text-green-200 text-sm  font-semibold sm:text-xl">
                         ≈ ₦
                         {balanceInNGN.toLocaleString("en-NG", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center my-1 space-x-2 text-sm text-green-100">
+                    <div className="flex items-center text-sm font-semibold  sm:text-xl space-x-1">
+                      <img src="/images/profile/usdc.png" className="w-6 h-6" />
+                      {loading ? <span>...</span> : <span>{usdc}</span>}
+                    </div>
+                    <div className="flex items-center text-sm font-semibold  sm:text-xl space-x-1">
+                      <span>USDC</span>
+                    </div>
+                    {usdcBalanceInNGN !== null && (
+                      <p className="text-green-200 text-sm  font-semibold sm:text-xl">
+                        ≈ ₦
+                        {usdcBalanceInNGN.toLocaleString("en-NG", {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
                         })}

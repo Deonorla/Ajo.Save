@@ -240,7 +240,7 @@ const Header = () => {
 
       {/* Floating Action Button (Mobile) */}
       <div className="md:hidden fixed bottom-6 right-6 z-10">
-        <button className="bg-green-600 text-white p-4 rounded-full shadow-lg hover:bg-green-700 transition-colors">
+        <button className="bg-primary text-white p-4 rounded-full shadow-lg hover:bg-green-700 transition-colors">
           <Coins className="h-6 w-6" />
         </button>
       </div>

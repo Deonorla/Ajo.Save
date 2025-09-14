@@ -56,7 +56,7 @@ const Features = () => {
           <div className="relative">
             <div className="absolute -top-10 -right-10 opacity-30">
               <img
-                src="/images/coins-illustration.png"
+                src="/images/homepage/coins-illustration.png"
                 alt="Coins"
                 width={100}
                 height={100}

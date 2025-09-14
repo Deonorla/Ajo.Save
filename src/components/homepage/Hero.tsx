@@ -12,7 +12,7 @@ const Hero = () => {
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-[#070101]">
       <div className="absolute inset-0 opacity-20">
         <img
-          src="/images/african-pattern.svg"
+          src="/images/dashboard/african-pattern.svg"
           alt="African pattern"
           className="object-cover  "
         />
@@ -20,14 +20,14 @@ const Hero = () => {
 
       <div className="absolute bottom-0 right-0 opacity-20">
         <img
-          src="/images/coins-illustration.png"
+          src="/images/dashboard/coins-illustration.png"
           alt="Coins illustration"
           className="animate-pulse w-90 h-90"
         />
       </div>
 
       <div className="absolute bottom-[-10rem] left-[-4rem] opacity-30">
-        <img src="/images/ajo-logo.png" alt="Ajo logo" className="" />
+        <img src="/images/dashboard/ajo-logo.png" alt="Ajo logo" className="" />
       </div>
 
       <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10"></div>
