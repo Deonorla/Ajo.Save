@@ -4,14 +4,15 @@ const Testimonials = () => {
   return (
     <section
       id="community"
-      className="py-24 bg-gradient-to-br from-green-900 to-green-800 text-white"
+      className="py-24  relative"
+      style={{ backgroundColor: "#070101" }}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+          <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
             The Community Speaks
           </h2>
-          <p className="text-xl text-green-100">
+          <p className="text-xl text-muted-foreground">
             Real Nigerians, real results, real transparency
           </p>
         </div>
@@ -20,24 +21,25 @@ const Testimonials = () => {
           {testimonials.map((testimonial, index) => (
             <div
               key={index}
-              className="bg-white/10 backdrop-blur-sm rounded-xl p-6 hover:bg-white/20 transition-all hover:scale-105"
+              className="bg-card/80 backdrop-blur-sm rounded-xl p-6 hover:bg-card transition-all hover:scale-105 border border-border"
             >
               <div className="flex mb-4">
                 {[...Array(5)].map((_, i) => (
-                  <Star
-                    key={i}
-                    className="w-5 h-5 text-yellow-400 fill-current"
-                  />
+                  <Star key={i} className="w-5 h-5 text-accent fill-current" />
                 ))}
               </div>
-              <p className="text-lg mb-4 leading-relaxed">{testimonial.text}</p>
+              <p className="text-lg mb-4 leading-relaxed text-foreground">
+                {testimonial.text}
+              </p>
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center text-sm font-bold text-white">
+                <div className="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center text-sm font-bold text-white">
                   {testimonial.author.charAt(0)}
                 </div>
                 <div>
-                  <div className="font-semibold">{testimonial.author}</div>
-                  <div className="text-green-200 text-sm">
+                  <div className="font-semibold text-foreground">
+                    {testimonial.author}
+                  </div>
+                  <div className="text-muted-foreground text-sm">
                     {testimonial.location}
                   </div>
                 </div>

@@ -17,12 +17,14 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useWallet } from "@/auth/WalletContext";
+import { useTokenStore } from "@/store/tokenStore";
 
 const Profile = () => {
   const naviagte = useNavigate();
   const [isVisible, setIsVisible] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const { address, network, balance } = useWallet();
+  const { whbar, usdc, loading } = useTokenStore();
   const [copied, setCopied] = useState(false);
   const [hbarPrice, setHbarPrice] = useState<number | null>(null);
   const [balanceInNGN, setBalanceInNGN] = useState<number | null>(null);
@@ -33,7 +35,7 @@ const Profile = () => {
   }, []);
 
   useEffect(() => {
-    const fetchHBARPrice = async () => {
+    const fetchWHBARPrice = async () => {
       try {
         const res = await fetch(
           "https://api.coingecko.com/api/v3/simple/price?ids=hedera-hashgraph&vs_currencies=ngn"
@@ -42,17 +44,17 @@ const Profile = () => {
         const price = data["hedera-hashgraph"].ngn;
         setHbarPrice(price);
 
-        if (balance) {
-          const hbarAmount = parseFloat(balance); // make sure balance is a string number
-          setBalanceInNGN(hbarAmount * price);
+        if (whbar) {
+          const whbarAmount = parseFloat(whbar ?? "0"); // make sure balance is a string number
+          setBalanceInNGN(whbarAmount * price);
         }
       } catch (error) {
         console.error("Failed to fetch HBAR price:", error);
       }
     };
 
-    fetchHBARPrice();
-  }, [balance]);
+    fetchWHBARPrice();
+  }, [whbar]);
 
   const handleCopy = async () => {
     if (address) {
@@ -136,13 +138,13 @@ const Profile = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-green-50">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200">
+      <header className="sticky top-0 z-50 bg-background backdrop-blur-md border-b border-primary/25">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <button
             onClick={() => naviagte("/dashboard")}
-            className="flex items-center space-x-2 text-gray-700 hover:text-green-600 transition-colors"
+            className="flex items-center space-x-2 text-white hover:primary/90 transition-colors cursor-pointer"
           >
             <ChevronRight className="w-5 h-5 rotate-180" />
             <span>Back to Home</span>
@@ -166,12 +168,12 @@ const Profile = () => {
             isVisible ? "translate-y-0 opacity-100" : "translate-y-20 opacity-0"
           }`}
         >
-          <div className="relative h-48 bg-gradient-to-r from-green-500 via-yellow-500 to-green-600">
+          <div className="relative h-48 bg-gradient-to-r from-primary via-yellow-500 to-accent">
             <div className="absolute inset-0 bg-black/20"></div>
             <div className="absolute bottom-6 left-6 right-6">
               <div className="flex flex-col sm:flex-row items-start sm:items-end space-y-4 sm:space-y-0 sm:space-x-6">
                 <div className="relative group hidden sm:block">
-                  <div className="w-24 h-24 bg-gradient-to-br from-white to-gray-100 rounded-full flex items-center justify-center text-3xl font-bold text-green-600 border-4 border-white shadow-lg">
+                  <div className="w-24 h-24 bg-gradient-to-br from-white to-gray-100 rounded-full flex items-center justify-center text-3xl font-bold text-primary border-4 border-white shadow-lg">
                     {userStats.name
                       .split(" ")
                       .map((n) => n[0])
@@ -205,10 +207,10 @@ const Profile = () => {
                   <div className="flex items-center space-x-2 text-sm text-green-100">
                     <div className="flex items-center text-sm font-semibold  sm:text-xl space-x-1">
                       <Wallet className="w-6 h-6" />
-                      <span>{balance}</span>
+                      {loading ? <span>...</span> : <span>{whbar}</span>}
                     </div>
                     <div className="flex items-center text-sm font-semibold  sm:text-xl space-x-1">
-                      <span>HBAR</span>
+                      <span>WHBAR</span>
                     </div>
                     {balanceInNGN !== null && (
                       <p className="text-green-200 text-sm  font-semibold sm:text-xl">
@@ -237,75 +239,75 @@ const Profile = () => {
             isVisible ? "translate-y-0 opacity-100" : "translate-y-20 opacity-0"
           }`}
         >
-          <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all hover:scale-105 group">
+          <div className="bg-card rounded-xl p-6 shadow-lg hover:shadow-xl transition-all hover:scale-105 group">
             <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center group-hover:bg-green-200 transition-colors">
-                <Shield className="w-6 h-6 text-green-600" />
+              <div className="w-12 h-12 bg-primary/15 rounded-lg flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                <Shield className="w-6 h-6 text-primary" />
               </div>
               <div className="text-right">
-                <div className="text-2xl font-bold text-green-600">
+                <div className="text-2xl font-bold text-primary">
                   {userStats.transparencyScore}
                 </div>
-                <div className="text-sm text-gray-500">Transparency Score</div>
+                <div className="text-sm text-white">Transparency Score</div>
               </div>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div
-                className="bg-green-500 h-2 rounded-full"
+                className="bg-primary h-2 rounded-full"
                 style={{ width: `${userStats.transparencyScore}%` }}
               ></div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all hover:scale-105 group">
+          <div className="bg-card rounded-xl p-6 shadow-lg hover:shadow-xl transition-all hover:scale-105 group">
             <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center group-hover:bg-yellow-200 transition-colors">
-                <Coins className="w-6 h-6 text-yellow-600" />
+              <div className="w-12 h-12 bg-primary/15 rounded-lg flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                <Coins className="w-6 h-6 text-primary" />
               </div>
               <div className="text-right">
-                <div className="text-2xl font-bold text-yellow-600">
+                <div className="text-2xl font-bold text-primary">
                   {userStats.ajoContributions}
                 </div>
-                <div className="text-sm text-gray-500">Ajo Contributions</div>
+                <div className="text-sm text-white">Ajo Contributions</div>
               </div>
             </div>
-            <div className="text-sm text-gray-600">+12% this month</div>
+            <div className="text-sm text-white">+12% this month</div>
           </div>
 
-          <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all hover:scale-105 group">
+          <div className="bg-card rounded-xl p-6 shadow-lg hover:shadow-xl transition-all hover:scale-105 group">
             <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-200 transition-colors">
-                <Award className="w-6 h-6 text-purple-600" />
+              <div className="w-12 h-12 bg-primary/15 rounded-lg flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                <Award className="w-6 h-6 text-primary" />
               </div>
               <div className="text-right">
-                <div className="text-2xl font-bold text-purple-600">
+                <div className="text-2xl font-bold text-primary">
                   {userStats.nftsOwned}
                 </div>
-                <div className="text-sm text-gray-500">Cultural NFTs</div>
+                <div className="text-sm text-white">Cultural NFTs</div>
               </div>
             </div>
-            <div className="text-sm text-gray-600">3 rare items</div>
+            <div className="text-sm text-white">3 rare items</div>
           </div>
 
-          <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all hover:scale-105 group">
+          <div className="bg-card rounded-xl p-6 shadow-lg hover:shadow-xl transition-all hover:scale-105 group">
             <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
-                <Eye className="w-6 h-6 text-blue-600" />
+              <div className="w-12 h-12 bg-primary/15 rounded-lg flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                <Eye className="w-6 h-6 text-primary" />
               </div>
               <div className="text-right">
-                <div className="text-2xl font-bold text-blue-600">
+                <div className="text-2xl font-bold text-primary">
                   {userStats.exposuresReported}
                 </div>
-                <div className="text-sm text-gray-500">Exposures Reported</div>
+                <div className="text-sm text-white">Exposures Reported</div>
               </div>
             </div>
-            <div className="text-sm text-gray-600">Community hero</div>
+            <div className="text-sm text-white">Community hero</div>
           </div>
         </div>
 
         {/* Navigation Tabs */}
         <div
-          className={`bg-white rounded-xl shadow-lg mb-8 transform transition-all duration-1000 delay-300 ${
+          className={`bg-card rounded-xl shadow-lg mb-8 transform transition-all duration-1000 delay-300 ${
             isVisible ? "translate-y-0 opacity-100" : "translate-y-20 opacity-0"
           }`}
         >
@@ -323,8 +325,8 @@ const Profile = () => {
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center space-x-2 px-6 py-4 font-semibold transition-all whitespace-nowrap ${
                     activeTab === tab.id
-                      ? "text-green-600 border-b-2 border-green-600 bg-green-50"
-                      : "text-gray-600 hover:text-green-600 hover:bg-gray-50"
+                      ? "text-primary border-b-2 border-primary bg-primary/15 rounded-xl"
+                      : "text-white hover:text-primary hover:bg-primary/20 rounded-sm"
                   }`}
                 >
                   <IconComponent className="w-5 h-5" />
@@ -345,8 +347,8 @@ const Profile = () => {
             <div className="grid lg:grid-cols-3 gap-8">
               {/* Achievements */}
               <div className="lg:col-span-2">
-                <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-                  <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
+                <div className="bg-card rounded-xl shadow-lg p-6 mb-8">
+                  <h3 className="text-xl font-bold text-white mb-6 flex items-center space-x-2">
                     <Trophy className="w-6 h-6 text-yellow-600" />
                     <span>Achievements</span>
                   </h3>
@@ -356,7 +358,7 @@ const Profile = () => {
                       return (
                         <div
                           key={index}
-                          className="p-4 rounded-lg border-2 border-gray-100 hover:border-green-300 transition-all hover:scale-105 group cursor-pointer"
+                          className="p-4 rounded-lg border-2 border-primary/15 hover:border-primary/60 transition-all hover:scale-105 group cursor-pointer"
                         >
                           <div className="flex items-center space-x-3 mb-3">
                             <div
@@ -365,12 +367,12 @@ const Profile = () => {
                               <IconComponent className="w-5 h-5 text-white" />
                             </div>
                             <div>
-                              <h4 className="font-semibold text-gray-900">
+                              <h4 className="font-semibold text-white">
                                 {achievement.title}
                               </h4>
                             </div>
                           </div>
-                          <p className="text-sm text-gray-600">
+                          <p className="text-sm text-white/50">
                             {achievement.description}
                           </p>
                         </div>
@@ -380,8 +382,8 @@ const Profile = () => {
                 </div>
 
                 {/* Recent Activity */}
-                <div className="bg-white rounded-xl shadow-lg p-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
+                <div className="bg-card rounded-xl shadow-lg p-6">
+                  <h3 className="text-xl font-bold text-white mb-6 flex items-center space-x-2">
                     <Zap className="w-6 h-6 text-blue-600" />
                     <span>Recent Activity</span>
                   </h3>
@@ -391,13 +393,13 @@ const Profile = () => {
                       return (
                         <div
                           key={index}
-                          className="flex items-center space-x-4 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+                          className="flex items-center space-x-4 p-3 rounded-lg hover:bg-primary/15 transition-colors group"
                         >
-                          <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center group-hover:bg-green-100 transition-colors">
-                            <IconComponent className="w-5 h-5 text-gray-600 group-hover:text-green-600" />
+                          <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center group-hover:bg-primary/15 transition-colors">
+                            <IconComponent className="w-5 h-5 text-gray-600 group-hover:text-primary" />
                           </div>
                           <div className="flex-1">
-                            <p className="text-gray-900 font-medium">
+                            <p className="text-white font-medium">
                               {activity.text}
                             </p>
                             <p className="text-sm text-gray-500">
@@ -414,31 +416,31 @@ const Profile = () => {
               {/* Sidebar */}
               <div className="space-y-6">
                 {/* Profile Summary */}
-                <div className="bg-white rounded-xl shadow-lg p-6">
-                  <h3 className="text-lg font-bold text-gray-900 mb-4">
+                <div className="bg-card rounded-xl shadow-lg p-6">
+                  <h3 className="text-lg font-bold text-white mb-4">
                     Profile Summary
                   </h3>
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-600">Communities</span>
-                      <span className="font-semibold text-gray-900">
+                      <span className="text-white/50">Communities</span>
+                      <span className="font-semibold text-primary">
                         {userStats.communitiesJoined}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-600">Total Savings</span>
+                      <span className="text-white/50">Total Savings</span>
                       <span className="font-semibold text-green-600">
                         {userStats.ajoContributions}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-600">NFTs Owned</span>
+                      <span className="text-white/50">NFTs Owned</span>
                       <span className="font-semibold text-purple-600">
                         {userStats.nftsOwned}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-600">Exposures</span>
+                      <span className="text-white/50">Exposures</span>
                       <span className="font-semibold text-blue-600">
                         {userStats.exposuresReported}
                       </span>
@@ -447,7 +449,7 @@ const Profile = () => {
                 </div>
 
                 {/* Transparency Score */}
-                <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-6 text-white">
+                <div className="bg-gradient-to-br from-primary/10 to-accent/10 rounded-xl shadow-lg p-6 text-white border border-primary/30">
                   <h3 className="text-lg font-bold mb-4 flex items-center space-x-2">
                     <Shield className="w-5 h-5" />
                     <span>Transparency Score</span>
@@ -459,9 +461,9 @@ const Profile = () => {
                     <div className="text-green-100 mb-4">
                       Exceptional Transparency
                     </div>
-                    <div className="w-full bg-green-400 rounded-full h-3">
+                    <div className="w-full bg-white rounded-full h-3">
                       <div
-                        className="bg-white h-3 rounded-full transition-all duration-1000"
+                        className="bg-primary h-3 rounded-full transition-all duration-1000"
                         style={{ width: `${userStats.transparencyScore}%` }}
                       ></div>
                     </div>
@@ -469,20 +471,20 @@ const Profile = () => {
                 </div>
 
                 {/* Quick Actions */}
-                <div className="bg-white rounded-xl shadow-lg p-6">
-                  <h3 className="text-lg font-bold text-gray-900 mb-4">
+                <div className="bg-card rounded-xl shadow-lg p-6">
+                  <h3 className="text-lg font-bold text-white mb-4">
                     Quick Actions
                   </h3>
                   <div className="space-y-3">
-                    <button className="w-full bg-green-50 hover:bg-green-100 text-green-700 p-3 rounded-lg font-medium transition-all hover:scale-105 flex items-center justify-between">
+                    <button className="w-full bg-primary/15 hover:bg-primary/20 text-primary p-3 rounded-lg font-medium transition-all hover:scale-105 flex items-center justify-between">
                       <span>Join New Ajo</span>
                       <ChevronRight className="w-4 h-4" />
                     </button>
-                    <button className="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 p-3 rounded-lg font-medium transition-all hover:scale-105 flex items-center justify-between">
+                    <button className="w-full bg-primary/15 hover:bg-primary/20 text-primary p-3 rounded-lg font-medium transition-all hover:scale-105 flex items-center justify-between">
                       <span>Report Corruption</span>
                       <ChevronRight className="w-4 h-4" />
                     </button>
-                    <button className="w-full bg-purple-50 hover:bg-purple-100 text-purple-700 p-3 rounded-lg font-medium transition-all hover:scale-105 flex items-center justify-between">
+                    <button className="w-full bg-primary/15 hover:bg-primary/20 text-primary p-3 rounded-lg font-medium transition-all hover:scale-105 flex items-center justify-between">
                       <span>Browse NFTs</span>
                       <ChevronRight className="w-4 h-4" />
                     </button>

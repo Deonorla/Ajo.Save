@@ -1,3 +1,5 @@
+"use client";
+
 import { CheckCircle, Coins, Shield, TrendingUp, Users } from "lucide-react";
 import { useState } from "react";
 
@@ -5,13 +7,13 @@ const Features = () => {
   const [activeFeature, setActiveFeature] = useState(0);
 
   return (
-    <section id="features" className="py-24 bg-white">
+    <section id="features" className="py-24 bg-[#070101]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+          <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
             No Lies, Just Transparency
           </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
             Four revolutionary features that transform how Nigerians build
             wealth and hold organizations accountable.
           </p>
@@ -24,10 +26,10 @@ const Features = () => {
               return (
                 <div
                   key={index}
-                  className={`p-6 rounded-xl cursor-pointer transition-all duration-300 ${
+                  className={`p-6 rounded-xl cursor-pointer transition-all duration-300 border ${
                     activeFeature === index
-                      ? "bg-green-50 border-2 border-green-500 scale-105"
-                      : "bg-gray-50 border-2 border-transparent hover:bg-gray-100"
+                      ? "bg-primary/10 border-primary scale-105"
+                      : "bg-card border-border hover:bg-card/80"
                   }`}
                   onMouseEnter={() => setActiveFeature(index)}
                 >
@@ -38,10 +40,10 @@ const Features = () => {
                       <IconComponent className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                      <h3 className="text-xl font-semibold text-foreground mb-2">
                         {feature.title}
                       </h3>
-                      <p className="text-gray-600 leading-relaxed">
+                      <p className="text-muted-foreground leading-relaxed">
                         {feature.description}
                       </p>
                     </div>
@@ -52,7 +54,17 @@ const Features = () => {
           </div>
 
           <div className="relative">
-            <div className="bg-gradient-to-br from-green-500 to-yellow-500 rounded-2xl p-8 text-white">
+            <div className="absolute -top-10 -right-10 opacity-30">
+              <img
+                src="/images/coins-illustration.png"
+                alt="Coins"
+                width={100}
+                height={100}
+                className="animate-spin-slow"
+              />
+            </div>
+
+            <div className="bg-gradient-to-br from-primary to-accent rounded-2xl p-8 text-white border border-primary/30">
               <h3 className="text-2xl font-bold mb-4">
                 Where Culture Meets Truth
               </h3>
@@ -90,14 +102,14 @@ const features = [
     title: "Transparency Engine",
     description:
       "Make NGOs and organizations accountable. Every naira tracked on-chain.",
-    color: "bg-green-500",
+    color: "bg-primary",
   },
   {
     icon: Coins,
     title: "Digital Ajo System",
     description:
       "Revolutionary savings groups with tokenized gold and silver backing.",
-    color: "bg-yellow-500",
+    color: "bg-accent",
   },
   {
     icon: Users,

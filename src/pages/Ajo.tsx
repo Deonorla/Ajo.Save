@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import Header from "@/components/header/Header";
 import formatCurrency from "@/utils/formatCurrency";
 import { TrendingUp, Zap } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface AjoGroup {
   id: string;
@@ -14,6 +15,7 @@ interface AjoGroup {
 }
 
 const Ajo = () => {
+  const navigate = useNavigate();
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -22,9 +24,9 @@ const Ajo = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <Header />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 h-auto mt-16 lg:px-8 py-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 mt-16 lg:px-8 py-6">
         <div className="space-y-6">
           {/* Page header */}
           <div
@@ -35,21 +37,24 @@ const Ajo = () => {
             }`}
           >
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">
+              <h2 className="text-2xl font-bold text-card-foreground">
                 Digital Ajo Groups
               </h2>
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 Traditional savings, modern yields
               </p>
             </div>
-            <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm">
+            <button
+              onClick={() => navigate("/ajo/create-ajo")}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm"
+            >
               Create New Ajo
             </button>
           </div>
 
           {/* Highlight card */}
           <div
-            className={`bg-green-600 text-white p-6 rounded-xl transform transition-all duration-1000 delay-200 ${
+            className={`bg-gradient-to-br from-primary to-accent text-primary-foreground p-6 rounded-xl transform transition-all duration-1000 delay-200 ${
               isVisible
                 ? "translate-y-0 opacity-100"
                 : "translate-y-10 opacity-0"
@@ -58,15 +63,15 @@ const Ajo = () => {
             <h3 className="text-lg font-semibold mb-2">
               AI-Powered Yield Optimization
             </h3>
-            <p className="text-blue-100 text-sm mb-3">
+            <p className="text-sm text-white/80 mb-3">
               Your idle Ajo funds are earning 8.5% APY through smart staking
             </p>
             <div className="flex items-center gap-4 text-sm">
-              <div className="bg-blue-500/30 px-3 py-1 rounded-full">
+              <div className="bg-background/20 px-3 py-1 rounded-full">
                 <Zap className="h-3 w-3 inline mr-1" />
                 Auto-staked
               </div>
-              <div className="bg-blue-500/30 px-3 py-1 rounded-full">
+              <div className="bg-background/20 px-3 py-1 rounded-full">
                 Risk: Low
               </div>
             </div>
@@ -83,52 +88,54 @@ const Ajo = () => {
             {mockAjoGroups.map((ajo, index) => (
               <div
                 key={ajo.id}
-                className={`bg-white rounded-xl shadow-sm border border-gray-100 p-6 transition-all duration-700 ${
+                className={`bg-card/60 rounded-xl shadow-sm border border-border/30 p-6 transition-all duration-700 ${
                   isVisible
                     ? "opacity-100 translate-y-0"
                     : "opacity-0 translate-y-10"
                 }`}
-                style={{ transitionDelay: `${400 + index * 150}ms` }} // stagger animation
+                style={{ transitionDelay: `${400 + index * 150}ms` }}
               >
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
+                    <h3 className="text-lg font-semibold text-card-foreground">
                       {ajo.name}
                     </h3>
-                    <p className="text-gray-600 text-sm">
+                    <p className="text-sm text-muted-foreground">
                       {ajo.members} members • Next payout: {ajo.nextPayout}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm text-gray-600">Pool Size</p>
-                    <p className="text-xl font-bold text-gray-900">
+                    <p className="text-sm text-muted-foreground">Pool Size</p>
+                    <p className="text-xl font-bold text-card-foreground">
                       {formatCurrency(ajo.totalPool)}
                     </p>
                   </div>
                 </div>
 
-                <div className="bg-green-50 rounded-lg p-4 mb-4">
+                <div className="bg-accent/10 rounded-lg p-4 mb-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-green-700">Yield Generated</p>
-                      <p className="text-lg font-semibold text-green-800">
+                      <p className="text-sm text-accent">Yield Generated</p>
+                      <p className="text-lg font-semibold text-card-foreground">
                         {formatCurrency(ajo.yieldGenerated)}
                       </p>
                     </div>
-                    <TrendingUp className="h-5 w-5 text-green-600" />
+                    <TrendingUp className="h-5 w-5 text-accent" />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-600">Your Turn</p>
-                    <p className="text-lg font-bold text-gray-900">
+                  <div className="bg-background/30 rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground">Your Turn</p>
+                    <p className="text-lg font-bold text-card-foreground">
                       #{ajo.myTurn}
                     </p>
                   </div>
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-600">Expected Amount</p>
-                    <p className="text-lg font-bold text-gray-900">
+                  <div className="bg-background/30 rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground">
+                      Expected Amount
+                    </p>
+                    <p className="text-lg font-bold text-card-foreground">
                       {formatCurrency(
                         (ajo.totalPool + ajo.yieldGenerated) / ajo.members
                       )}
@@ -136,7 +143,7 @@ const Ajo = () => {
                   </div>
                 </div>
 
-                <button className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium">
+                <button className="w-full bg-primary text-primary-foreground py-2 rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium">
                   Make Monthly Contribution
                 </button>
               </div>
