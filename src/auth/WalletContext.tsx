@@ -1,7 +1,9 @@
 import React, { createContext, useContext } from "react";
 import { useMetaMask } from "../hooks/useMetamask";
+import type { BrowserProvider } from "ethers";
 
 interface WalletContextType {
+  provider: BrowserProvider | null;
   connectMetaMask: () => Promise<void>;
   disconnect: () => void;
   address: string | null;
@@ -28,6 +30,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({
         network: meta.network,
         connected: meta.connected,
         error: meta.error,
+        provider: meta.provider,
       }}
     >
       {children}

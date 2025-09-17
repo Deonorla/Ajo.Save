@@ -9,7 +9,8 @@ import { Shield, Users, Star } from "lucide-react";
 import { useState, useEffect } from "react";
 
 const Dashboard = () => {
-  const { getContractStats, isConnected } = useAjoCore();
+  const { connected: isConnected } = useWallet();
+  const { getContractStats } = useAjoCore();
   const { getWhbarBalance, getUsdcBalance } = useTokenHook();
   const [isVisible, setIsVisible] = useState(false);
 
@@ -62,10 +63,8 @@ const Dashboard = () => {
             <div className="bg-card p-6 rounded-xl shadow-sm border border-border hover:shadow-md transition-all hover:scale-105 hover:border-primary/30">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-muted-foreground text-sm">
-                    Organizations Tracked
-                  </p>
-                  <p className="text-2xl font-bold text-foreground">247</p>
+                  <p className="text-muted-foreground text-sm">Ajos Tracked</p>
+                  <p className="text-2xl font-bold text-foreground">0</p>
                 </div>
                 <Shield className="h-8 w-8 text-primary" />
               </div>
@@ -77,9 +76,7 @@ const Dashboard = () => {
                   <p className="text-muted-foreground text-sm">
                     Total Ajo Pools
                   </p>
-                  <p className="text-2xl font-bold text-foreground">
-                    {formatCurrency(125000000)}
-                  </p>
+                  <p className="text-2xl font-bold text-foreground">0</p>
                 </div>
                 <Users className="h-8 w-8 text-accent" />
               </div>
@@ -89,7 +86,7 @@ const Dashboard = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-muted-foreground text-sm">Cultural NFTs</p>
-                  <p className="text-2xl font-bold text-foreground">1,429</p>
+                  <p className="text-2xl font-bold text-foreground">0</p>
                 </div>
                 <Star className="h-8 w-8 text-secondary" />
               </div>

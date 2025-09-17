@@ -11,6 +11,7 @@ type MetaState = {
   balance: string | null;
   network: string | null;
   error: string | null;
+  provider: BrowserProvider | null;
   connect: () => Promise<void>;
   disconnect: () => void;
   switchToHederaTestnet: () => Promise<void>;
@@ -235,6 +236,7 @@ export function useMetaMask(): MetaState {
     balance,
     network,
     error,
+    provider,
     connect,
     disconnect,
     switchToHederaTestnet,

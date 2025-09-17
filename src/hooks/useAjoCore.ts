@@ -1,278 +1,316 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { ethers } from "ethers";
-import AjoCore from "./../abi/ajo.json";
+import { useWallet } from "./../auth/WalletContext";
+import AjoCore from "@/abi/ajoCore.json";
 
-interface UseAjoCore {
-  contractRead: ethers.Contract | null;
-  contractWrite: ethers.Contract | null;
-  signer: ethers.Signer | null;
-  isConnected: boolean;
-  networkError: string | null;
-  getContractStats: () => Promise<any | null>;
+type MemberStruct = {
+  queueNumber: bigint;
+  joinedCycle: bigint;
+  totalPaid: bigint;
+  requiredCollateral: bigint;
+  lockedCollateral: bigint;
+  lastPaymentCycle: bigint;
+  defaultCount: bigint;
+  hasReceivedPayout: boolean;
+  isActive: boolean;
+  guarantor: string;
+  preferredToken: number;
+  reputationScore: bigint;
+  pastPayments: bigint[];
+  guaranteePosition: bigint;
+};
+
+export type MemberInfoResponse = {
+  memberInfo: MemberStruct;
+  pendingPenalty: string; // bigint -> string
+  effectiveVotingPower: string; // bigint -> string
+};
+
+export type ContractStats = {
+  totalMembers: string;
+  activeMembers: string;
+  totalCollateralUSDC: string;
+  totalCollateralHBAR: string;
+  contractBalanceUSDC: string;
+  contractBalanceHBAR: string;
+  currentQueuePosition: string;
+  activeToken: number;
+};
+
+export interface UseAjoCore {
+  // status
+  connected: boolean;
+  error: string | null;
+
+  // read
+  getContractStats: () => Promise<ContractStats | null>;
+  getMemberInfo: (memberAddress: string) => Promise<MemberInfoResponse | null>;
+  needsToPayThisCycle: (memberAddress: string) => Promise<boolean | null>;
+  getQueueInfo: (
+    memberAddress: string
+  ) => Promise<{ position: string; estimatedCyclesWait: string } | null>;
+  getTokenConfig: (
+    token: number
+  ) => Promise<{ monthlyPayment: string; isActive: boolean } | null>;
+  getCollateralDemo: (
+    participants: number,
+    monthlyPayment: string
+  ) => Promise<{ positions: string[]; collaterals: string[] } | null>;
+  owner: () => Promise<string | null>;
+
+  // write
   joinAjo: (tokenChoice: number) => Promise<void>;
   makePayment: () => Promise<void>;
   distributePayout: () => Promise<void>;
-  getMemberInfo: (memberAddress: string) => Promise<any | null>;
-  needsToPayThisCycle: (memberAddress: string) => Promise<boolean | null>;
-  reconnect: () => Promise<void>;
 }
 
 const useAjoCore = (): UseAjoCore => {
-  const [provider, setProvider] = useState<ethers.BrowserProvider | null>(null);
-  const [signer, setSigner] = useState<ethers.Signer | null>(null);
-  const [contractRead, setContractRead] = useState<ethers.Contract | null>(
-    null
-  );
+  const ajoAddress = import.meta.env.VITE_AJO_CORE_CONTRACT_ADDRESS;
+
+  const { provider, connected, error } = useWallet();
   const [contractWrite, setContractWrite] = useState<ethers.Contract | null>(
     null
   );
-  const [isConnected, setIsConnected] = useState(false);
-  const [networkError, setNetworkError] = useState<string | null>(null);
 
-  // 🔹 Check if we’re on Hedera network
-  const checkNetwork = async (provider: ethers.BrowserProvider) => {
-    try {
-      const network = await provider.getNetwork();
-      console.log(
-        "Connected to network:",
-        network.name,
-        "Chain ID:",
-        network.chainId.toString()
-      );
+  // read-only contract (provider)
+  const contractRead = useMemo(() => {
+    if (!provider || !ajoAddress) return null;
+    return new ethers.Contract(ajoAddress, (AjoCore as any).abi, provider);
+  }, [provider, ajoAddress]);
 
-      if (network.chainId !== 296n && network.chainId !== 295n) {
-        setNetworkError("Please switch to Hedera network in MetaMask");
-        return false;
-      }
-
-      setNetworkError(null);
-      return true;
-    } catch (error) {
-      console.error("Network check failed:", error);
-      setNetworkError("Failed to connect to Hedera network");
-      return false;
-    }
-  };
-
-  // 🔹 Initialize contracts
-  const init = async () => {
-    if (typeof window !== "undefined" && (window as any).ethereum) {
-      try {
-        setNetworkError("Connecting to wallet...");
-
-        const _provider = new ethers.BrowserProvider((window as any).ethereum);
-        setProvider(_provider);
-
-        const networkOk = await checkNetwork(_provider);
-        if (!networkOk) {
-          setIsConnected(false);
-          return;
-        }
-
-        // Quick RPC test
-        try {
-          await _provider.getBlockNumber();
-          console.log("✅ RPC connection successful");
-        } catch (rpcError) {
-          console.error("❌ RPC connection failed:", rpcError);
-          setNetworkError(
-            "RPC endpoint unavailable. Try switching networks in MetaMask."
-          );
-          setIsConnected(false);
-          return;
-        }
-
-        const _signer = await _provider.getSigner();
-        const address = await _signer.getAddress();
-        console.log("Connected wallet address:", address);
-        setSigner(_signer);
-
-        const contractAddress = import.meta.env.VITE_AJO_CORE_CONTRACT_ADDRESS;
-        if (!contractAddress) {
-          console.error("❌ Missing VITE_AJO_CORE_CONTRACT_ADDRESS in .env");
-          setNetworkError("Contract address not configured");
-          return;
-        }
-
-        // Separate read-only (provider) and write (signer) contracts
-        const _contractRead = new ethers.Contract(
-          contractAddress,
-          AjoCore.abi,
-          _provider
-        );
-        const _contractWrite = new ethers.Contract(
-          contractAddress,
-          AjoCore.abi,
-          _signer
-        );
-
-        setContractRead(_contractRead);
-        setContractWrite(_contractWrite);
-        setIsConnected(true);
-        setNetworkError(null);
-
-        console.log("✅ Contracts initialized:", contractAddress);
-      } catch (err: any) {
-        console.error("Failed to init AjoCore contract:", err);
-        setNetworkError(err.message || "Failed to initialize contract");
-        setIsConnected(false);
-      }
-    } else {
-      setNetworkError("MetaMask not detected");
-      setIsConnected(false);
-    }
-  };
-
-  const reconnect = useCallback(async () => {
-    await init();
-  }, []);
-
+  // write-enabled contract: provider.getSigner() is async in ethers v6, so build it in effect
   useEffect(() => {
-    init();
-
-    if ((window as any).ethereum) {
-      (window as any).ethereum.on("accountsChanged", init);
-      (window as any).ethereum.on("chainChanged", init);
-
-      return () => {
-        (window as any).ethereum.removeListener("accountsChanged", init);
-        (window as any).ethereum.removeListener("chainChanged", init);
-      };
-    }
-  }, []);
+    let mounted = true;
+    const setup = async () => {
+      if (!provider || !ajoAddress) {
+        if (mounted) setContractWrite(null);
+        return;
+      }
+      try {
+        const signer = await provider.getSigner(); // await is required
+        if (!mounted) return;
+        const writable = new ethers.Contract(
+          ajoAddress,
+          (AjoCore as any).abi,
+          signer
+        );
+        setContractWrite(writable);
+      } catch (err) {
+        console.error("useAjoCore: failed to create write contract", err);
+        if (mounted) setContractWrite(null);
+      }
+    };
+    setup();
+    return () => {
+      mounted = false;
+    };
+  }, [provider, ajoAddress]);
 
   // ---------------------------
-  // 🔹 Contract Read: Stats
+  // Read wrappers
   // ---------------------------
-  const getContractStats = useCallback(async () => {
-    if (!contractRead) {
-      console.warn("Read contract not ready");
-      return null;
-    }
+  const getContractStats =
+    useCallback(async (): Promise<ContractStats | null> => {
+      if (!contractRead) return null;
+      try {
+        const res = await contractRead.getContractStats();
+        return {
+          totalMembers: res[0].toString(),
+          activeMembers: res[1].toString(),
+          totalCollateralUSDC: res[2].toString(),
+          totalCollateralHBAR: res[3].toString(),
+          contractBalanceUSDC: res[4].toString(),
+          contractBalanceHBAR: res[5].toString(),
+          currentQueuePosition: res[6].toString(),
+          activeToken: Number(res[7]),
+        };
+      } catch (err) {
+        console.error("getContractStats error:", err);
+        return null;
+      }
+    }, [contractRead]);
 
+  const getMemberInfo = useCallback(
+    async (memberAddress: string): Promise<MemberInfoResponse | null> => {
+      if (!contractRead) return null;
+      try {
+        const res = await contractRead.getMemberInfo(memberAddress);
+        // res: [ memberStruct, pendingPenalty, effectiveVotingPower ]
+        const rawMember = res[0];
+        const member: MemberStruct = {
+          queueNumber: rawMember.queueNumber,
+          joinedCycle: rawMember.joinedCycle,
+          totalPaid: rawMember.totalPaid,
+          requiredCollateral: rawMember.requiredCollateral,
+          lockedCollateral: rawMember.lockedCollateral,
+          lastPaymentCycle: rawMember.lastPaymentCycle,
+          defaultCount: rawMember.defaultCount,
+          hasReceivedPayout: rawMember.hasReceivedPayout,
+          isActive: rawMember.isActive,
+          guarantor: rawMember.guarantor,
+          preferredToken: Number(rawMember.preferredToken),
+          reputationScore: rawMember.reputationScore,
+          pastPayments: Array.isArray(rawMember.pastPayments)
+            ? rawMember.pastPayments.map((x: any) => BigInt(x))
+            : [],
+          guaranteePosition: rawMember.guaranteePosition,
+        };
+        return {
+          memberInfo: member,
+          pendingPenalty: res[1].toString(),
+          effectiveVotingPower: res[2].toString(),
+        };
+      } catch (err) {
+        console.error("getMemberInfo error:", err);
+        return null;
+      }
+    },
+    [contractRead]
+  );
+
+  const needsToPayThisCycle = useCallback(
+    async (memberAddress: string): Promise<boolean | null> => {
+      if (!contractRead) return null;
+      try {
+        return await contractRead.needsToPayThisCycle(memberAddress);
+      } catch (err) {
+        console.error("needsToPayThisCycle error:", err);
+        return null;
+      }
+    },
+    [contractRead]
+  );
+
+  const getQueueInfo = useCallback(
+    async (
+      memberAddress: string
+    ): Promise<{ position: string; estimatedCyclesWait: string } | null> => {
+      if (!contractRead) return null;
+      try {
+        const res = await contractRead.getQueueInfo(memberAddress);
+        return {
+          position: res[0].toString(),
+          estimatedCyclesWait: res[1].toString(),
+        };
+      } catch (err) {
+        console.error("getQueueInfo error:", err);
+        return null;
+      }
+    },
+    [contractRead]
+  );
+
+  const getTokenConfig = useCallback(
+    async (
+      token: number
+    ): Promise<{ monthlyPayment: string; isActive: boolean } | null> => {
+      if (!contractRead) return null;
+      try {
+        const res = await contractRead.getTokenConfig(token);
+        return { monthlyPayment: res[0].toString(), isActive: Boolean(res[1]) };
+      } catch (err) {
+        console.error("getTokenConfig error:", err);
+        return null;
+      }
+    },
+    [contractRead]
+  );
+
+  const getCollateralDemo = useCallback(
+    async (
+      participants: number,
+      monthlyPayment: string
+    ): Promise<{ positions: string[]; collaterals: string[] } | null> => {
+      if (!contractRead) return null;
+      try {
+        // monthlyPayment is a string (we keep raw). If your contract expects uint256, pass BigInt or string as appropriate.
+        const res = await contractRead.getCollateralDemo(
+          participants,
+          monthlyPayment
+        );
+        const positions = Array.isArray(res[0])
+          ? res[0].map((p: any) => p.toString())
+          : [];
+        const collaterals = Array.isArray(res[1])
+          ? res[1].map((c: any) => c.toString())
+          : [];
+        return { positions, collaterals };
+      } catch (err) {
+        console.error("getCollateralDemo error:", err);
+        return null;
+      }
+    },
+    [contractRead]
+  );
+
+  const owner = useCallback(async (): Promise<string | null> => {
+    if (!contractRead) return null;
     try {
-      const result = await contractRead.getContractStats();
-      console.log("✅ Stats:", result);
-
-      return {
-        totalMembers: result[0].toString(),
-        activeMembers: result[1].toString(),
-        totalCollateralUSDC: result[2].toString(),
-        totalCollateralHBAR: result[3].toString(),
-        contractBalanceUSDC: result[4].toString(),
-        contractBalanceHBAR: result[5].toString(),
-        currentQueuePosition: result[6].toString(),
-        activeToken: result[7].toString(),
-      };
+      return await contractRead.owner();
     } catch (err) {
-      console.error("❌ Error fetching stats:", err);
+      console.error("owner() error:", err);
       return null;
     }
   }, [contractRead]);
 
   // ---------------------------
-  // 🔹 Contract Write: Join Ajo
+  // Write wrappers
   // ---------------------------
   const joinAjo = useCallback(
     async (tokenChoice: number) => {
-      if (!contractWrite) {
-        console.error("Write contract not ready");
-        return;
-      }
+      if (!contractWrite)
+        throw new Error("Wallet not connected / write contract not ready");
       try {
         const tx = await contractWrite.joinAjo(tokenChoice);
         await tx.wait();
-        console.log("✅ Joined Ajo with token choice:", tokenChoice);
       } catch (err) {
-        console.error("Failed to join Ajo:", err);
+        console.error("joinAjo error:", err);
         throw err;
       }
     },
     [contractWrite]
   );
 
-  // ---------------------------
-  // 🔹 Contract Write: Make Payment
-  // ---------------------------
   const makePayment = useCallback(async () => {
-    if (!contractWrite) {
-      console.error("Write contract not ready");
-      return;
-    }
+    if (!contractWrite)
+      throw new Error("Wallet not connected / write contract not ready");
     try {
       const tx = await contractWrite.makePayment();
       await tx.wait();
-      console.log("✅ Payment successful");
     } catch (err) {
-      console.error("Payment failed:", err);
+      console.error("makePayment error:", err);
       throw err;
     }
   }, [contractWrite]);
 
-  // ---------------------------
-  // 🔹 Contract Write: Distribute Payout
-  // ---------------------------
   const distributePayout = useCallback(async () => {
-    if (!contractWrite) {
-      console.error("Write contract not ready");
-      return;
-    }
+    if (!contractWrite)
+      throw new Error("Wallet not connected / write contract not ready");
     try {
       const tx = await contractWrite.distributePayout();
       await tx.wait();
-      console.log("✅ Payout distributed");
     } catch (err) {
-      console.error("Failed to distribute payout:", err);
+      console.error("distributePayout error:", err);
       throw err;
     }
   }, [contractWrite]);
 
-  // ---------------------------
-  // 🔹 Contract Read: Get Member Info
-  // ---------------------------
-  const getMemberInfo = useCallback(
-    async (memberAddress: string) => {
-      if (!contractRead) return null;
-      try {
-        return await contractRead.getMemberInfo(memberAddress);
-      } catch (err) {
-        console.error("Error fetching member info:", err);
-        return null;
-      }
-    },
-    [contractRead]
-  );
-
-  // ---------------------------
-  // 🔹 Contract Read: Needs To Pay This Cycle
-  // ---------------------------
-  const needsToPayThisCycle = useCallback(
-    async (memberAddress: string) => {
-      if (!contractRead) return null;
-      try {
-        return await contractRead.needsToPayThisCycle(memberAddress);
-      } catch (err) {
-        console.error("Error checking if member needs to pay:", err);
-        return null;
-      }
-    },
-    [contractRead]
-  );
-
   return {
-    contractRead,
-    contractWrite,
-    signer,
-    isConnected,
-    networkError,
+    connected,
+    error,
+    // read
     getContractStats,
+    getMemberInfo,
+    needsToPayThisCycle,
+    getQueueInfo,
+    getTokenConfig,
+    getCollateralDemo,
+    owner,
+    // write
     joinAjo,
     makePayment,
     distributePayout,
-    getMemberInfo,
-    needsToPayThisCycle,
-    reconnect,
   };
 };
 
