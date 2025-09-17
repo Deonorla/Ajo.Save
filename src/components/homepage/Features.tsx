@@ -9,17 +9,21 @@ const Features = () => {
   return (
     <section id="features" className="py-24 bg-[#070101]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Section Header */}
         <div className="text-center mb-16">
-          <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
-            No Lies, Just Transparency
+          <h2 className="text-lg sm:text-2xl font-bold text-foreground mb-4">
+            Ajo for the Digital Age
           </h2>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Four revolutionary features that transform how Nigerians build
-            wealth and hold organizations accountable.
+          <p className="text-sm sm:text-lg text-muted-foreground max-w-3xl mx-auto">
+            Powered by Hedera, we’re reinventing Nigeria’s traditional savings
+            culture with on-chain accountability, cultural pride, and real
+            wealth opportunities.
           </p>
         </div>
 
+        {/* Features + Highlight */}
         <div className="grid lg:grid-cols-2 gap-8 items-center">
+          {/* Features List */}
           <div className="space-y-6">
             {features.map((feature, index) => {
               const IconComponent = feature.icon;
@@ -35,15 +39,15 @@ const Features = () => {
                 >
                   <div className="flex items-center space-x-4">
                     <div
-                      className={`w-12 h-12 rounded-lg ${feature.color} flex items-center justify-center`}
+                      className={`w-8 h-8 p-2 lg:w-12 lg:h-12 rounded-sm lg:rounded-lg ${feature.color} flex items-center justify-center`}
                     >
-                      <IconComponent className="w-6 h-6 text-white" />
+                      <IconComponent className="w-4 h-4 lg:w-6 lg:h-6 text-white" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-semibold text-foreground mb-2">
+                      <h3 className="text-sm sm:text-lg font-semibold text-foreground mb-2">
                         {feature.title}
                       </h3>
-                      <p className="text-muted-foreground leading-relaxed">
+                      <p className="text-sm sm:text-lg text-muted-foreground leading-relaxed">
                         {feature.description}
                       </p>
                     </div>
@@ -53,6 +57,7 @@ const Features = () => {
             })}
           </div>
 
+          {/* Highlight Box */}
           <div className="relative">
             <div className="absolute -top-10 -right-10 opacity-30">
               <img
@@ -65,25 +70,25 @@ const Features = () => {
             </div>
 
             <div className="bg-gradient-to-br from-primary to-accent rounded-2xl p-8 text-white border border-primary/30">
-              <h3 className="text-2xl font-bold mb-4">
-                Where Culture Meets Truth
+              <h3 className="text-xl font-bold mb-4">
+                Why Ajo.Save Stands Out
               </h3>
               <div className="space-y-4">
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center text-sm lg:text-lg space-x-3">
                   <CheckCircle className="w-5 h-5" />
-                  <span>Tokenized gold & silver backing</span>
+                  <span>Every transaction tracked immutably on Hedera</span>
                 </div>
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center text-sm lg:text-lg space-x-3">
                   <CheckCircle className="w-5 h-5" />
-                  <span>On-chain vibes, zero deceits</span>
+                  <span>No middlemen — smart contracts handle payouts</span>
                 </div>
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center text-sm lg:text-lg space-x-3">
                   <CheckCircle className="w-5 h-5" />
-                  <span>Community wealth building</span>
+                  <span>Collective savings that empower every member</span>
                 </div>
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center text-sm lg:text-lg space-x-3">
                   <CheckCircle className="w-5 h-5" />
-                  <span>Cultural NFT celebrations</span>
+                  <span>Celebrate culture with on-chain cultural NFTs</span>
                 </div>
               </div>
             </div>
@@ -96,33 +101,34 @@ const Features = () => {
 
 export default Features;
 
+// Updated Features Data
 const features = [
   {
     icon: Shield,
-    title: "Transparency Engine",
+    title: "Blockchain Transparency",
     description:
-      "Make NGOs and organizations accountable. Every naira tracked on-chain.",
+      "No excuses, no lies. Contributions and payouts are publicly verifiable on Hedera.",
     color: "bg-primary",
   },
   {
     icon: Coins,
-    title: "Digital Ajo System",
+    title: "Digital Ajo Savings",
     description:
-      "Revolutionary savings groups with tokenized gold and silver backing.",
+      "Bring the trusted rotation savings model on-chain — secure, fast, and borderless.",
     color: "bg-accent",
   },
   {
     icon: Users,
-    title: "Community Culture",
+    title: "Community First",
     description:
-      "Celebrate Nigerian heritage with cultural NFTs and social features.",
+      "Empowering groups to save together, build trust, and celebrate Nigerian heritage.",
     color: "bg-blue-500",
   },
   {
     icon: TrendingUp,
-    title: "Wealth Building",
+    title: "Wealth That Works",
     description:
-      "No idle capital. Your money works while building community trust.",
+      "Turn contributions into opportunities. Your money builds wealth while strengthening community bonds.",
     color: "bg-purple-500",
   },
 ];

@@ -1,5 +1,6 @@
 import Header from "@/components/header/Header";
 import AjoCard from "@/components/shared/AjoCard";
+import useAjoCore from "@/hooks/useAjoCore";
 import { useTokenHook } from "@/hooks/useTokenHook";
 import { ajoGroups } from "@/temp-data";
 import formatCurrency from "@/utils/formatCurrency";
@@ -7,6 +8,7 @@ import { Shield, Users, Star } from "lucide-react";
 import { useState, useEffect } from "react";
 
 const Dashboard = () => {
+  const { getContractStats } = useAjoCore();
   const { getWhbarBalance, getUsdcBalance } = useTokenHook();
   const [isVisible, setIsVisible] = useState(false);
 
@@ -16,10 +18,16 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
+    setIsVisible(true);
     getWhbarBalance();
     getUsdcBalance();
-    setIsVisible(true);
-  }, []);
+    const fetchStats = async () => {
+      const data = await getContractStats();
+      console.log("data", data);
+    };
+
+    fetchStats();
+  }, [getContractStats]);
 
   return (
     <div className="min-h-screen bg-background">
