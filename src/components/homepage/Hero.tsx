@@ -58,11 +58,17 @@ const Hero = () => {
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
-          <button className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 rounded-full font-semibold text-sm sm:text-lg transition-all hover:scale-105 hover:shadow-lg flex items-center space-x-2">
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 rounded-full font-semibold text-sm sm:text-lg transition-all hover:scale-105 hover:shadow-lg flex items-center space-x-2"
+          >
             <span>Start Your Ajo Journey</span>
             <ChevronRight className="w-5 h-5" />
           </button>
-          <button className="bg-card hover:bg-card/80 text-foreground px-8 py-4 rounded-full font-semibold text-sm sm:text-lg border-2 border-primary transition-all hover:scale-105 hover:shadow-lg">
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="bg-card hover:bg-card/80 text-foreground px-8 py-4 rounded-full font-semibold text-sm sm:text-lg border-2 border-primary transition-all hover:scale-105 hover:shadow-lg"
+          >
             Explore Transparency
           </button>
         </div>

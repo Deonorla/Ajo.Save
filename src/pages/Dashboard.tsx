@@ -1,3 +1,4 @@
+import { useWallet } from "@/auth/WalletContext";
 import Header from "@/components/header/Header";
 import AjoCard from "@/components/shared/AjoCard";
 import useAjoCore from "@/hooks/useAjoCore";
@@ -8,7 +9,7 @@ import { Shield, Users, Star } from "lucide-react";
 import { useState, useEffect } from "react";
 
 const Dashboard = () => {
-  const { getContractStats } = useAjoCore();
+  const { getContractStats, isConnected } = useAjoCore();
   const { getWhbarBalance, getUsdcBalance } = useTokenHook();
   const [isVisible, setIsVisible] = useState(false);
 
@@ -23,11 +24,13 @@ const Dashboard = () => {
     getUsdcBalance();
     const fetchStats = async () => {
       const data = await getContractStats();
-      console.log("data", data);
+      console.log("Contract response:", data);
     };
 
-    fetchStats();
-  }, [getContractStats]);
+    if (isConnected) {
+      fetchStats();
+    }
+  }, [isConnected, getContractStats]);
 
   return (
     <div className="min-h-screen bg-background">

@@ -1,6 +1,6 @@
-import type { AjoGroup, Organization } from "./types.t";
+import { Award, Coins, Eye, Shield, Star, Trophy, Users } from "lucide-react";
 
-const mockOrgs: Organization[] = [
+export const mockOrgs: Organization[] = [
   {
     id: "1",
     name: "Lagos Food Bank",
@@ -147,5 +147,290 @@ export const ajoGroups: AjoGroup[] = [
     reputation: 94,
     totalSaved: 2160000,
     completedCycles: 2,
+  },
+];
+
+export const userStats = {
+  name: "Chidi Okwu",
+  username: "@chidi_truth",
+  location: "Lagos, Nigeria",
+  joinDate: "March 2024",
+  transparencyScore: 98,
+  ajoContributions: "₦850,000",
+  nftsOwned: 12,
+  communitiesJoined: 5,
+  exposuresReported: 23,
+};
+
+export const achievements = [
+  {
+    icon: Shield,
+    title: "Truth Seeker",
+    description: "Exposed 20+ corrupt practices",
+    color: "bg-green-500",
+  },
+  {
+    icon: Coins,
+    title: "Ajo Master",
+    description: "Completed 5 Ajo cycles",
+    color: "bg-yellow-500",
+  },
+  {
+    icon: Trophy,
+    title: "Community Builder",
+    description: "Founded 3 transparency groups",
+    color: "bg-blue-500",
+  },
+  {
+    icon: Star,
+    title: "Cultural Guardian",
+    description: "Owns rare Wazobia NFTs",
+    color: "bg-purple-500",
+  },
+];
+
+export const recentActivity = [
+  {
+    type: "ajo",
+    text: "Contributed ₦50,000 to Tech Bros Ajo",
+    time: "2 hours ago",
+    icon: Coins,
+  },
+  {
+    type: "exposure",
+    text: "Reported suspicious NGO spending",
+    time: "1 day ago",
+    icon: Eye,
+  },
+  {
+    type: "nft",
+    text: "Minted 'Sapa Survivor' badge",
+    time: "3 days ago",
+    icon: Award,
+  },
+  {
+    type: "community",
+    text: "Joined Abuja Transparency Circle",
+    time: "1 week ago",
+    icon: Users,
+  },
+];
+
+export const nftCollection = [
+  { name: "Sapa Survivor #001", rarity: "Legendary", image: "🏆" },
+  { name: "Wazobia Unity", rarity: "Rare", image: "🌍" },
+  { name: "Dey Play Meme", rarity: "Common", image: "😂" },
+  { name: "Truth Teller", rarity: "Epic", image: "⚡" },
+];
+
+export const ajoData = {
+  id: "ajo-001",
+  name: "Tech Bros Savings Circle",
+  description:
+    "A decentralized savings group for tech professionals. Built on Hedera blockchain with smart contract automation for transparent, secure, and efficient group savings.",
+  status: "active",
+  creator: "0x7172C803Bc2EB1438bddB550dDCBe6dc1e1CAA69",
+  reputation: 4.8,
+  monthlyPayment: 50000, // in USDC (6 decimals)
+  currentMembers: 8,
+  totalMembers: 12,
+  paymentToken: "WHBAR",
+  nextPayout: "Dec 15, 2024",
+  totalSaved: 400000,
+  completedCycles: 3,
+  cycleLength: 30,
+  collateralRequired: 275000,
+  currentCycle: 4,
+  totalCycles: 12,
+  createdDate: "Jan 15, 2024",
+  isPrivate: false,
+  yieldGenerated: 48000,
+  contracts: {
+    core: "0x74C7f57793e48A2a707311fa4BfA04F36E81e8a3",
+    members: "0x6974232c0a1cE60853Fe62B81D2E8b30c729A8e9",
+    collateral: "0xaE550556d1f5B43331f09576e7e14394aD53d7C4",
+    payments: "0x95CeA4AF22F89EF699F71054514F950109f39FC6",
+    governance: "0x92b95F1fD6b3E628B99ba1084de1CA06cBe4Da4E",
+  },
+};
+
+export const paymentHistory = [
+  {
+    id: 1,
+    cycle: 3,
+    date: "Nov 15, 2024",
+    amount: 600000,
+    recipient: "Mike Chen",
+    status: "completed",
+    txHash:
+      "0x1a2b3c4d5e6f7890abcdef1234567890abcdef1234567890abcdef1234567890",
+    blockNumber: 12345678,
+    gasUsed: 21000,
+  },
+  {
+    id: 2,
+    cycle: 2,
+    date: "Oct 15, 2024",
+    amount: 600000,
+    recipient: "Sarah Wilson",
+    status: "completed",
+    txHash:
+      "0x2b3c4d5e6f7890abcdef1234567890abcdef1234567890abcdef1234567890ab",
+    blockNumber: 12345677,
+    gasUsed: 21000,
+  },
+  {
+    id: 3,
+    cycle: 1,
+    date: "Sep 15, 2024",
+    amount: 600000,
+    recipient: "John Doe",
+    status: "completed",
+    txHash:
+      "0x3c4d5e6f7890abcdef1234567890abcdef1234567890abcdef1234567890abcd",
+    blockNumber: 12345676,
+    gasUsed: 21000,
+  },
+];
+
+export const governanceProposals = [
+  {
+    id: 1,
+    title: "Increase Monthly Payment to $600",
+    description:
+      "Proposal to increase monthly payment from $500 to $600 to improve yield generation",
+    status: "active",
+    forVotes: 5,
+    againstVotes: 2,
+    abstainVotes: 1,
+    endTime: "Dec 20, 2024",
+    proposer: "0x7172C803Bc2EB1438bddB550dDCBe6dc1e1CAA69",
+  },
+  {
+    id: 2,
+    title: "Switch Payment Token to HBAR",
+    description:
+      "Proposal to switch from USDC to HBAR for lower transaction fees",
+    status: "executed",
+    forVotes: 6,
+    againstVotes: 2,
+    abstainVotes: 0,
+    endTime: "Nov 30, 2024",
+    proposer: "0x8283D904Cd3FB1549beeE661550dDCBe6dc1e1CAA70",
+  },
+];
+
+export const members = [
+  {
+    id: 1,
+    name: "John Doe",
+    address: "0x7172C803Bc2EB1438bddB550dDCBe6dc1e1CAA69",
+    queueNumber: 1,
+    status: "paid",
+    avatar: "JD",
+    isCreator: true,
+    collateralLocked: 275000,
+    reputationScore: 95,
+    guarantorPosition: 7,
+    totalPaid: 150000,
+    hasReceivedPayout: true,
+  },
+  {
+    id: 2,
+    name: "Sarah Wilson",
+    address: "0x8283D904Cd3FB1549beeE661550dDCBe6dc1e1CAA70",
+    queueNumber: 2,
+    status: "paid",
+    avatar: "SW",
+    isCreator: false,
+    collateralLocked: 250000,
+    reputationScore: 88,
+    guarantorPosition: 8,
+    totalPaid: 100000,
+    hasReceivedPayout: true,
+  },
+  {
+    id: 3,
+    name: "Mike Chen",
+    address: "0x9394E015De4GC2660cffF772661dEDCe7ed2f2DB81",
+    queueNumber: 3,
+    status: "paid",
+    avatar: "MC",
+    isCreator: false,
+    collateralLocked: 225000,
+    reputationScore: 92,
+    guarantorPosition: 9,
+    totalPaid: 150000,
+    hasReceivedPayout: true,
+  },
+  {
+    id: 4,
+    name: "Emma Davis",
+    address: "0xA4A5F126Ef5HD3771dggG883772fFEDf8fe3g3EC92",
+    queueNumber: 4,
+    status: "pending",
+    avatar: "ED",
+    isCreator: false,
+    collateralLocked: 200000,
+    reputationScore: 85,
+    guarantorPosition: 10,
+    totalPaid: 100000,
+    hasReceivedPayout: false,
+  },
+  {
+    id: 5,
+    name: "Alex Johnson",
+    address: "0xB5B6G237Fg6IE4882ehhhH994883gGFEg9gf4h4FD03",
+    queueNumber: 5,
+    status: "paid",
+    avatar: "AJ",
+    isCreator: false,
+    collateralLocked: 175000,
+    reputationScore: 90,
+    guarantorPosition: 11,
+    totalPaid: 50000,
+    hasReceivedPayout: false,
+  },
+  {
+    id: 6,
+    name: "Lisa Brown",
+    address: "0xC6C7H348Gh7JF5993fiiiI005994hHGFh0hg5i5GE14",
+    queueNumber: 6,
+    status: "paid",
+    avatar: "LB",
+    isCreator: false,
+    collateralLocked: 150000,
+    reputationScore: 87,
+    guarantorPosition: 12,
+    totalPaid: 50000,
+    hasReceivedPayout: false,
+  },
+  {
+    id: 7,
+    name: "David Kim",
+    address: "0xD7D8I459Hi8KG6004gjjjJ116005iIHGi1ih6j6HF25",
+    queueNumber: 7,
+    status: "paid",
+    avatar: "DK",
+    isCreator: false,
+    collateralLocked: 125000,
+    reputationScore: 83,
+    guarantorPosition: 1,
+    totalPaid: 50000,
+    hasReceivedPayout: false,
+  },
+  {
+    id: 8,
+    name: "Rachel Green",
+    address: "0xE8E9J560Ij9LH7115hkkkK227116jJIHj2ji7k7IG36",
+    queueNumber: 8,
+    status: "paid",
+    avatar: "RG",
+    isCreator: false,
+    collateralLocked: 100000,
+    reputationScore: 89,
+    guarantorPosition: 2,
+    totalPaid: 50000,
+    hasReceivedPayout: false,
   },
 ];

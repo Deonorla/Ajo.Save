@@ -10,6 +10,7 @@ import {
   Users,
   Zap,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface AjoCardProps {
   ajoData: AjoGroup;
@@ -18,6 +19,8 @@ interface AjoCardProps {
 }
 
 const AjoCard = ({ ajoData, index, isVisible }: AjoCardProps) => {
+  const navigate = useNavigate();
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "active":
@@ -171,7 +174,10 @@ const AjoCard = ({ ajoData, index, isVisible }: AjoCardProps) => {
         </div>
 
         {/* Action Button */}
-        <button className="w-full bg-primary text-primary-foreground px-4 py-3 rounded-lg font-semibold transition-all hover:scale-105 hover:shadow-lg flex items-center justify-center space-x-2 group border border-primary/20 shadow-md">
+        <button
+          onClick={() => navigate(`/ajo/${ajoData.id}`)}
+          className="w-full bg-primary text-primary-foreground px-4 py-3 rounded-lg font-semibold transition-all hover:scale-105 hover:shadow-lg flex items-center justify-center space-x-2 group border border-primary/20 shadow-md cursor-pointer"
+        >
           <span>
             {ajoData.status === "forming" ? "Join ajo" : "View Details"}
           </span>

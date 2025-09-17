@@ -73,6 +73,46 @@
       "outputs": [{ "type": "bool" }],
       "stateMutability": "view",
       "type": "function"
+    },
+    {
+      "inputs": [{ "type": "address", "name": "member" }],
+      "name": "getQueueInfo",
+      "outputs": [
+        { "type": "uint256", "name": "position" },
+        { "type": "uint256", "name": "estimatedCyclesWait" }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [{ "type": "uint8", "name": "token" }],
+      "name": "getTokenConfig",
+      "outputs": [
+        { "type": "uint256", "name": "monthlyPayment" },
+        { "type": "bool", "name": "isActive" }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        { "type": "uint256", "name": "participants" },
+        { "type": "uint256", "name": "monthlyPayment" }
+      ],
+      "name": "getCollateralDemo",
+      "outputs": [
+        { "type": "uint256[]", "name": "positions" },
+        { "type": "uint256[]", "name": "collaterals" }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "owner",
+      "outputs": [{ "type": "address" }],
+      "stateMutability": "view",
+      "type": "function"
     }
   ]
 }
