@@ -2,20 +2,24 @@ import { useWallet } from "@/auth/WalletContext";
 import Header from "@/components/header/Header";
 import AjoCard from "@/components/shared/AjoCard";
 import useAjoCore from "@/hooks/useAjoCore";
+import { useAjoFactory } from "@/hooks/useAjoFactory";
 import { useTokenHook } from "@/hooks/useTokenHook";
-import { ajoGroups } from "@/temp-data";
-import formatCurrency from "@/utils/formatCurrency";
+import { useAjoStore } from "@/store/ajoStore";
 import { Shield, Users, Star } from "lucide-react";
 import { useState, useEffect } from "react";
 
 const Dashboard = () => {
   const { connected: isConnected } = useWallet();
   const { getContractStats } = useAjoCore();
+  const { getAllAjos } = useAjoFactory();
+
   const { getWhbarBalance, getUsdcBalance } = useTokenHook();
   const [isVisible, setIsVisible] = useState(false);
+  const { ajoStats, setStats } = useAjoStore();
 
   useEffect(() => {
     const timer = setTimeout(() => setIsVisible(true), 100);
+
     return () => clearTimeout(timer);
   }, []);
 
@@ -24,8 +28,15 @@ const Dashboard = () => {
     getWhbarBalance();
     getUsdcBalance();
     const fetchStats = async () => {
-      const data = await getContractStats();
-      console.log("Contract response:", data);
+      try {
+        const data = await getContractStats();
+        const ajos = await getAllAjos();
+        console.log("All Ajos:", ajos);
+        if (data) setStats(data);
+        console.log("Contract response:", data);
+      } catch (err) {
+        console.error("❌ Failed to fetch stats:", err);
+      }
     };
 
     if (isConnected) {
@@ -45,7 +56,7 @@ const Dashboard = () => {
           {/* Welcome Banner */}
           <div className="bg-gradient-to-br from-primary to-accent text-primary-foreground p-6 rounded-xl shadow-lg border border-border">
             <h2 className="text-2xl font-bold mb-2">Welcome</h2>
-            <p className="text-primary-foreground/90"> Digital Ajo Platform</p>
+            <p className="text-primary-foreground/90"> Ajo Platform</p>
             <p className="text-sm text-primary-foreground/80 mt-2">
               Transparency on-chain, blockchain-powered savings groups. Build
               wealth with your community.
@@ -95,14 +106,7 @@ const Dashboard = () => {
 
           {/* Ajo Cards Grid */}
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {ajoGroups.map((ajo, index) => (
-              <AjoCard
-                key={ajo.id}
-                ajoData={ajo}
-                index={index}
-                isVisible={isVisible}
-              />
-            ))}
+            {ajoStats && <AjoCard ajoData={ajoStats} isVisible={isVisible} />}
           </div>
         </div>
       </main>

@@ -1,5 +1,5 @@
-import type { AjoGroup } from "@/types.t";
 import formatCurrency from "@/utils/formatCurrency";
+import { formatAddress } from "@/utils/utils";
 import {
   Award,
   CheckCircle,
@@ -13,12 +13,11 @@ import {
 import { useNavigate } from "react-router-dom";
 
 interface AjoCardProps {
-  ajoData: AjoGroup;
-  index: number;
+  ajoData: ContractStats;
   isVisible: boolean;
 }
 
-const AjoCard = ({ ajoData, index, isVisible }: AjoCardProps) => {
+const AjoCard = ({ ajoData, isVisible }: AjoCardProps) => {
   const navigate = useNavigate();
 
   const getStatusIcon = (status: string) => {
@@ -49,14 +48,7 @@ const AjoCard = ({ ajoData, index, isVisible }: AjoCardProps) => {
 
   return (
     <div
-      key={ajoData.id}
-      className={`bg-gradient-to-br from-card to-[#2b1a0f]/80 backdrop-blur-sm rounded-xl shadow-lg hover:shadow-xl transition-all hover:scale-105 group cursor-pointer transform duration-300 border border-border/50 hover:border-primary/30 ${
-        index % 3 === 0
-          ? "delay-0"
-          : index % 3 === 1
-          ? "delay-100"
-          : "delay-200"
-      } ${
+      className={`bg-gradient-to-br from-card to-[#2b1a0f]/80 backdrop-blur-sm rounded-xl shadow-lg hover:shadow-xl transition-all hover:scale-105 group cursor-pointer transform duration-300 border border-border/50 hover:border-primary/30 ${"delay-100"} ${
         isVisible ? "translate-y-0 opacity-100" : "translate-y-20 opacity-0"
       }`}
     >
@@ -65,53 +57,53 @@ const AjoCard = ({ ajoData, index, isVisible }: AjoCardProps) => {
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1">
             <h3 className="text-lg font-bold text-card-foreground group-hover:text-primary transition-colors mb-1">
-              {ajoData.name}
+              Contract Ajo
             </h3>
             <p className="text-sm text-muted-foreground line-clamp-2">
-              {ajoData.description}
+              A test Ajo contract for development purposes.
             </p>
           </div>
 
           <div
             className={`px-2 py-1 rounded-full text-xs font-medium flex items-center space-x-1 ${getStatusColor(
-              ajoData.status
+              "forming"
             )}`}
           >
-            {getStatusIcon(ajoData.status)}
-            <span className="capitalize">{ajoData.status}</span>
+            {getStatusIcon("forming")}
+            <span className="capitalize">forming</span>
           </div>
         </div>
 
         <div className="flex items-center justify-between text-sm">
           <div className="flex items-center space-x-2">
             <div className="w-6 h-6 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center text-xs font-bold text-primary-foreground">
-              {ajoData.creator.charAt(0)}
+              #1
             </div>
-            <span className="text-muted-foreground">by {ajoData.creator}</span>
+            <span className="text-muted-foreground">
+              by {formatAddress("0x197aD3A009b07f82527b239a4D23de6F9c795597")}
+            </span>
           </div>
 
           <div className="flex items-center space-x-1">
             <Star className="w-4 h-4 text-accent fill-current" />
-            <span className="font-semibold text-card-foreground">
-              {ajoData.reputation}
-            </span>
+            <span className="font-semibold text-card-foreground">0</span>
           </div>
         </div>
       </div>
 
       {/* Card Body */}
       <div className="p-6 bg-gradient-to-b from-transparent to-card/30">
-        <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="flex items-center justify-between gap-4 mb-4">
           <div>
             <div className="text-2xl font-bold text-primary">
-              {formatCurrency(ajoData.monthlyPayment)}
+              {formatCurrency(0)}
             </div>
             <div className="text-xs text-muted-foreground">Monthly Payment</div>
           </div>
 
           <div>
             <div className="text-2xl font-bold text-accent">
-              {ajoData.currentMembers}/{ajoData.totalMembers}
+              {ajoData.activeMembers}/{ajoData.totalMembers}
             </div>
             <div className="text-xs text-muted-foreground">Members</div>
           </div>
@@ -122,22 +114,22 @@ const AjoCard = ({ ajoData, index, isVisible }: AjoCardProps) => {
             <span className="text-muted-foreground">Payment Token:</span>
             <span className="font-semibold text-card-foreground flex items-center space-x-1">
               <Coins className="w-4 h-4 text-primary" />
-              <span>{ajoData.paymentToken}</span>
+              <span>WHBAR</span>
             </span>
           </div>
 
-          <div className="flex justify-between items-center text-sm">
+          {/* <div className="flex justify-between items-center text-sm">
             <span className="text-muted-foreground">Next Payout:</span>
             <span className="font-semibold text-card-foreground flex items-center space-x-1">
               <Clock className="w-4 h-4 text-accent" />
               <span>{ajoData.nextPayout}</span>
             </span>
-          </div>
+          </div> */}
 
           <div className="flex justify-between items-center text-sm">
             <span className="text-muted-foreground">Total Saved:</span>
             <span className="font-semibold text-secondary-foreground">
-              {formatCurrency(ajoData.totalSaved)}
+              {formatCurrency(Number(ajoData.totalCollateralHBAR))}
             </span>
           </div>
 
@@ -145,7 +137,7 @@ const AjoCard = ({ ajoData, index, isVisible }: AjoCardProps) => {
             <span className="text-muted-foreground">Completed Cycles:</span>
             <span className="font-semibold text-card-foreground flex items-center space-x-1">
               <Award className="w-4 h-4 text-primary" />
-              <span>{ajoData.completedCycles}</span>
+              <span>0</span>
             </span>
           </div>
         </div>
@@ -156,17 +148,22 @@ const AjoCard = ({ ajoData, index, isVisible }: AjoCardProps) => {
             <span>Member Progress</span>
             <span>
               {Math.round(
-                (ajoData.currentMembers / ajoData.totalMembers) * 100
+                (Number(ajoData.activeMembers) / Number(ajoData.totalMembers)) *
+                  100
               )}
               %
             </span>
           </div>
-          <div className="w-full bg-background/50 rounded-full h-2 border border-border/30">
+          <div className="w-full bg-background/50 rounded-full h-2 border border-border mt-4">
             <div
               className="bg-gradient-to-r from-primary to-accent h-2 rounded-full transition-all duration-1000 shadow-sm"
               style={{
                 width: `${
-                  (ajoData.currentMembers / ajoData.totalMembers) * 100
+                  ajoData.activeMembers == "0"
+                    ? "0"
+                    : (Number(ajoData.activeMembers) /
+                        Number(ajoData.totalMembers)) *
+                      100
                 }%`,
               }}
             ></div>
@@ -175,11 +172,12 @@ const AjoCard = ({ ajoData, index, isVisible }: AjoCardProps) => {
 
         {/* Action Button */}
         <button
-          onClick={() => navigate(`/ajo/${ajoData.id}`)}
+          onClick={() => navigate(`/ajo/${ajoData.activeToken}`)}
           className="w-full bg-primary text-primary-foreground px-4 py-3 rounded-lg font-semibold transition-all hover:scale-105 hover:shadow-lg flex items-center justify-center space-x-2 group border border-primary/20 shadow-md cursor-pointer"
         >
           <span>
-            {ajoData.status === "forming" ? "Join ajo" : "View Details"}
+            {/* {ajoData.status === "forming" ? "Join ajo" : "View Details"} */}
+            View Details
           </span>
           <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
         </button>

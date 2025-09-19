@@ -1,5 +1,38 @@
 export {};
 declare global {
+  type MemberStruct = {
+    queueNumber: bigint;
+    joinedCycle: bigint;
+    totalPaid: bigint;
+    requiredCollateral: bigint;
+    lockedCollateral: bigint;
+    lastPaymentCycle: bigint;
+    defaultCount: bigint;
+    hasReceivedPayout: boolean;
+    isActive: boolean;
+    guarantor: string;
+    preferredToken: number;
+    reputationScore: bigint;
+    pastPayments: bigint[];
+    guaranteePosition: bigint;
+  };
+
+  export type MemberInfoResponse = {
+    memberInfo: MemberStruct;
+    pendingPenalty: string; // bigint -> string
+    effectiveVotingPower: string; // bigint -> string
+  };
+
+  export type ContractStats = {
+    totalMembers: string;
+    activeMembers: string;
+    totalCollateralUSDC: string;
+    totalCollateralHBAR: string;
+    contractBalanceUSDC: string;
+    contractBalanceHBAR: string;
+    currentQueuePosition: string;
+    activeToken: number;
+  };
   interface AjoGroup {
     id: string;
     name: string;
@@ -26,16 +59,5 @@ declare global {
     totalDonations: number;
     activeProjects: number;
     transparency: "High" | "Medium" | "Low";
-  }
-
-  interface ContractStats {
-    totalMembers: number;
-    activeMembers: number;
-    totalCollateralUSDC: number;
-    totalCollateralHBAR: number;
-    contractBalanceUSDC: number;
-    contractBalanceHBAR: number;
-    currentQueuePosition: number;
-    activeToken: number;
   }
 }

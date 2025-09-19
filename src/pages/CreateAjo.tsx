@@ -1,85 +1,51 @@
-import React, { useState, useEffect } from "react";
+"use client";
+
+import type React from "react";
+import { useState, useEffect } from "react";
 import {
   ArrowLeft,
   Coins,
   Shield,
-  Users,
-  Calendar,
   DollarSign,
   Info,
   CheckCircle,
   AlertCircle,
-  TrendingUp,
-  Clock,
-  Star,
-  Eye,
-  ChevronRight,
   Plus,
-  Zap,
-  Award,
-  Target,
   Calculator,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-
-// interface CreateAjoPageProps {
-//   onBack: () => void;
-// }
+import { useAjoFactory } from "@/hooks/useAjoFactory";
+import { useWallet } from "@/auth/WalletContext";
+import { toast } from "sonner";
 
 const CreateAjo = () => {
   const navigate = useNavigate();
   const [isVisible, setIsVisible] = useState(false);
-
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const { registerAjo, getFactoryStats } = useAjoFactory();
+  const { address } = useWallet();
 
   // Form state
   const [formData, setFormData] = useState({
     name: "",
-    description: "",
-    monthlyPayment: "",
-    totalMembers: "",
-    paymentToken: "USDC" as "USDC" | "HBAR",
-    cycleLength: "30",
-    isPrivate: false,
   });
-
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  const [calculatedCollateral, setCalculatedCollateral] = useState(0);
 
   useEffect(() => {
     setIsVisible(true);
   }, []);
-
-  // Calculate collateral based on smart contract logic
-  useEffect(() => {
-    if (formData.monthlyPayment && formData.totalMembers) {
-      const monthlyPayment = parseFloat(formData.monthlyPayment) * 1000; // Convert to actual amount
-      const totalMembers = parseInt(formData.totalMembers);
-
-      if (monthlyPayment > 0 && totalMembers > 0) {
-        // Using the smart contract's calculateRequiredCollateral logic
-        // Assuming user will be in position 1 (worst case for collateral)
-        const payout = totalMembers * monthlyPayment;
-        const potentialDebt = payout - 1 * monthlyPayment;
-        const collateral = (potentialDebt * 55) / 100; // 55% collateral factor
-
-        setCalculatedCollateral(collateral);
-      }
-    }
-  }, [formData.monthlyPayment, formData.totalMembers]);
 
   const handleInputChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
     >
   ) => {
-    const { name, value, type } = e.target;
-    const checked = (e.target as HTMLInputElement).checked;
+    const { name, value } = e.target;
 
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: value,
     }));
 
     // Clear error when user starts typing
@@ -99,27 +65,6 @@ const CreateAjo = () => {
     } else if (formData.name.length < 3) {
       errors.name = "Name must be at least 3 characters";
     }
-
-    if (!formData.description.trim()) {
-      errors.description = "Description is required";
-    } else if (formData.description.length < 10) {
-      errors.description = "Description must be at least 10 characters";
-    }
-
-    if (!formData.monthlyPayment) {
-      errors.monthlyPayment = "Monthly payment is required";
-    } else if (parseFloat(formData.monthlyPayment) < 10) {
-      errors.monthlyPayment = "Minimum payment is ₦10,000";
-    }
-
-    if (!formData.totalMembers) {
-      errors.totalMembers = "Number of members is required";
-    } else if (parseInt(formData.totalMembers) < 3) {
-      errors.totalMembers = "Minimum 3 members required";
-    } else if (parseInt(formData.totalMembers) > 50) {
-      errors.totalMembers = "Maximum 50 members allowed";
-    }
-
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -132,50 +77,44 @@ const CreateAjo = () => {
     setIsSubmitting(true);
 
     // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    setIsSubmitting(false);
-    setShowSuccess(true);
+    try {
+      if (!address) throw new Error("Wallet not connected");
+      await registerAjo(address, formData.name);
+      console.log("Ajo created successfully");
+      setIsSubmitting(false);
+      setShowSuccess(true);
+    } catch (err) {
+      console.error("Failed to create Ajo:", err);
+      toast.error("Failed to create Ajo.");
+      setIsSubmitting(false);
+      throw err;
+    }
 
     // Reset form after success
     setTimeout(() => {
       setShowSuccess(false);
       setFormData({
         name: "",
-        description: "",
-        monthlyPayment: "",
-        totalMembers: "",
-        paymentToken: "USDC",
-        cycleLength: "30",
-        isPrivate: false,
       });
     }, 3000);
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-NG", {
-      style: "currency",
-      currency: "NGN",
-      minimumFractionDigits: 0,
-    }).format(amount);
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-green-50">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200">
+      <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-md border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <button
             onClick={() => navigate("/ajo")}
-            className="flex items-center space-x-2 text-gray-700 hover:text-green-600 transition-colors"
+            className="flex items-center space-x-2 text-muted-foreground hover:text-primary transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
             <span>Back</span>
           </button>
 
           <div className="flex items-center space-x-2">
-            <Coins className="w-6 h-6 text-green-600" />
-            <span className="text-xl font-bold text-gray-900">Digital Ajo</span>
+            <Coins className="w-6 h-6 text-primary" />
+            <span className="text-xl font-bold text-foreground">Ajo.Save</span>
           </div>
         </div>
       </header>
@@ -187,46 +126,14 @@ const CreateAjo = () => {
             isVisible ? "translate-y-0 opacity-100" : "translate-y-20 opacity-0"
           }`}
         >
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-4">
             Digital Ajo Platform
           </h1>
-          <p className="text-sm text-gray-600 max-w-3xl mx-auto">
-            Create or join transparent, blockchain-powered savings groups. Build
+          <p className="text-sm text-muted-foreground max-w-3xl mx-auto">
+            Create a transparent, blockchain-powered savings groups. Build
             wealth with your community.
           </p>
         </div>
-
-        {/* Tab Navigation */}
-        {/* <div
-          className={`bg-white rounded-xl shadow-lg mb-8 transform transition-all duration-1000 delay-200 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-20 opacity-0"
-          }`}
-        >
-          <div className="flex">
-            <button
-              onClick={() => setActiveTab("create")}
-              className={`flex items-center space-x-2 px-8 py-4 font-semibold transition-all ${
-                activeTab === "create"
-                  ? "text-green-600 border-b-2 border-green-600 bg-green-50"
-                  : "text-gray-600 hover:text-green-600 hover:bg-gray-50"
-              }`}
-            >
-              <Plus className="w-5 h-5" />
-              <span>Create New Ajo</span>
-            </button>
-            <button
-              onClick={() => setActiveTab("browse")}
-              className={`flex items-center space-x-2 px-8 py-4 font-semibold transition-all ${
-                activeTab === "browse"
-                  ? "text-green-600 border-b-2 border-green-600 bg-green-50"
-                  : "text-gray-600 hover:text-green-600 hover:bg-gray-50"
-              }`}
-            >
-              <Eye className="w-5 h-5" />
-              <span>Browse Existing Ajos</span>
-            </button>
-          </div>
-        </div> */}
 
         {/* Tab Content */}
         <div
@@ -237,24 +144,24 @@ const CreateAjo = () => {
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Create Form */}
             <div className="lg:col-span-2">
-              <div className="bg-white rounded-xl shadow-lg p-8">
+              <div className="bg-card rounded-xl shadow-lg p-8 border border-border">
                 <div className="flex items-center space-x-3 mb-6">
-                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                    <Plus className="w-6 h-6 text-green-600" />
+                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                    <Plus className="w-6 h-6 text-primary" />
                   </div>
-                  <h2 className="text-2xl font-bold text-gray-900">
+                  <h2 className="text-2xl font-bold text-card-foreground">
                     Create Your Ajo Group
                   </h2>
                 </div>
 
                 {showSuccess && (
-                  <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center space-x-3">
-                    <CheckCircle className="w-6 h-6 text-green-600" />
+                  <div className="mb-6 p-4 bg-primary/10 border border-primary/20 rounded-lg flex items-center space-x-3">
+                    <CheckCircle className="w-6 h-6 text-primary" />
                     <div>
-                      <h3 className="font-semibold text-green-800">
+                      <h3 className="font-semibold text-primary">
                         Ajo Created Successfully!
                       </h3>
-                      <p className="text-green-700">
+                      <p className="text-primary/80">
                         Your Ajo group is now live and accepting members.
                       </p>
                     </div>
@@ -264,13 +171,13 @@ const CreateAjo = () => {
                 <form onSubmit={handleSubmit} className="space-y-6">
                   {/* Basic Information */}
                   <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
-                      <Info className="w-5 h-5 text-blue-600" />
+                    <h3 className="text-lg font-semibold text-card-foreground flex items-center space-x-2">
+                      <Info className="w-5 h-5 text-accent" />
                       <span>Basic Information</span>
                     </h3>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-card-foreground mb-2">
                         Ajo Group Name *
                       </label>
                       <input
@@ -279,20 +186,22 @@ const CreateAjo = () => {
                         value={formData.name}
                         onChange={handleInputChange}
                         placeholder="e.g., Tech Bros Savings Circle"
-                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors ${
-                          formErrors.name ? "border-red-500" : "border-gray-300"
+                        className={`w-full px-4 py-3 bg-background border rounded-lg focus:ring-0 outline-none focus:ring-primary focus:border-primary transition-colors text-foreground ${
+                          formErrors.name
+                            ? "border-destructive"
+                            : "border-border"
                         }`}
                       />
                       {formErrors.name && (
-                        <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
+                        <p className="mt-1 text-sm text-destructive flex items-center space-x-1">
                           <AlertCircle className="w-4 h-4" />
                           <span>{formErrors.name}</span>
                         </p>
                       )}
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {/* <div>
+                      <label className="block text-sm font-medium text-card-foreground mb-2">
                         Description *
                       </label>
                       <textarea
@@ -301,31 +210,31 @@ const CreateAjo = () => {
                         onChange={handleInputChange}
                         rows={3}
                         placeholder="Describe your Ajo group's purpose and goals..."
-                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors resize-none ${
+                        className={`w-full px-4 py-3 bg-background border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors resize-none text-foreground ${
                           formErrors.description
-                            ? "border-red-500"
-                            : "border-gray-300"
+                            ? "border-destructive"
+                            : "border-border"
                         }`}
                       />
                       {formErrors.description && (
-                        <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
+                        <p className="mt-1 text-sm text-destructive flex items-center space-x-1">
                           <AlertCircle className="w-4 h-4" />
                           <span>{formErrors.description}</span>
                         </p>
                       )}
-                    </div>
+                    </div> */}
                   </div>
 
                   {/* Financial Settings */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
-                      <DollarSign className="w-5 h-5 text-green-600" />
+                  {/* <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-card-foreground flex items-center space-x-2">
+                      <DollarSign className="w-5 h-5 text-primary" />
                       <span>Financial Settings</span>
                     </h3>
 
                     <div className="grid sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-card-foreground mb-2">
                           Monthly Payment (₦'000) *
                         </label>
                         <input
@@ -336,14 +245,14 @@ const CreateAjo = () => {
                           placeholder="50"
                           min="10"
                           max="1000"
-                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors ${
+                          className={`w-full px-4 py-3 bg-background border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors text-foreground ${
                             formErrors.monthlyPayment
-                              ? "border-red-500"
-                              : "border-gray-300"
+                              ? "border-destructive"
+                              : "border-border"
                           }`}
                         />
                         {formErrors.monthlyPayment && (
-                          <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
+                          <p className="mt-1 text-sm text-destructive flex items-center space-x-1">
                             <AlertCircle className="w-4 h-4" />
                             <span>{formErrors.monthlyPayment}</span>
                           </p>
@@ -351,14 +260,14 @@ const CreateAjo = () => {
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-card-foreground mb-2">
                           Payment Token *
                         </label>
                         <select
                           name="paymentToken"
                           value={formData.paymentToken}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                          className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors text-foreground"
                         >
                           <option value="USDC">USDC (Stable)</option>
                           <option value="HBAR">HBAR (Native)</option>
@@ -368,7 +277,7 @@ const CreateAjo = () => {
 
                     <div className="grid sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-card-foreground mb-2">
                           Total Members *
                         </label>
                         <input
@@ -379,14 +288,14 @@ const CreateAjo = () => {
                           placeholder="12"
                           min="3"
                           max="50"
-                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors ${
+                          className={`w-full px-4 py-3 bg-background border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors text-foreground ${
                             formErrors.totalMembers
-                              ? "border-red-500"
-                              : "border-gray-300"
+                              ? "border-destructive"
+                              : "border-border"
                           }`}
                         />
                         {formErrors.totalMembers && (
-                          <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
+                          <p className="mt-1 text-sm text-destructive flex items-center space-x-1">
                             <AlertCircle className="w-4 h-4" />
                             <span>{formErrors.totalMembers}</span>
                           </p>
@@ -394,14 +303,14 @@ const CreateAjo = () => {
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-card-foreground mb-2">
                           Cycle Length (Days)
                         </label>
                         <select
                           name="cycleLength"
                           value={formData.cycleLength}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                          className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors text-foreground"
                         >
                           <option value="30">30 Days (Monthly)</option>
                           <option value="14">14 Days (Bi-weekly)</option>
@@ -409,12 +318,12 @@ const CreateAjo = () => {
                         </select>
                       </div>
                     </div>
-                  </div>
+                  </div> */}
 
                   {/* Privacy Settings */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
-                      <Shield className="w-5 h-5 text-purple-600" />
+                  {/* <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-card-foreground flex items-center space-x-2">
+                      <Shield className="w-5 h-5 text-accent" />
                       <span>Privacy Settings</span>
                     </h3>
 
@@ -424,24 +333,24 @@ const CreateAjo = () => {
                         name="isPrivate"
                         checked={formData.isPrivate}
                         onChange={handleInputChange}
-                        className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                        className="w-4 h-4 text-primary border-border rounded focus:ring-primary"
                       />
-                      <label className="text-sm text-gray-700">
+                      <label className="text-sm text-card-foreground">
                         Make this Ajo private (invite-only)
                       </label>
                     </div>
-                  </div>
+                  </div> */}
 
                   {/* Submit Button */}
-                  <div className="pt-6 border-t border-gray-200">
+                  <div className="pt-6 border-t border-border">
                     <button
                       type="submit"
                       disabled={isSubmitting}
-                      className="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white px-8 py-4 rounded-lg font-semibold text-lg transition-all hover:scale-105 hover:shadow-lg flex items-center justify-center space-x-2"
+                      className="w-full bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-8 py-4 rounded-lg font-semibold text-lg transition-all hover:scale-105 hover:shadow-lg flex items-center justify-center space-x-2 cursor-pointer"
                     >
                       {isSubmitting ? (
                         <>
-                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></div>
                           <span>Creating Ajo...</span>
                         </>
                       ) : (
@@ -459,31 +368,31 @@ const CreateAjo = () => {
             {/* Sidebar */}
             <div className="space-y-6">
               {/* Collateral Calculator */}
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center space-x-2">
-                  <Shield className="w-5 h-5 text-green-600" />
+              {/* <div className="bg-card rounded-xl shadow-lg p-6 border border-border">
+                <h3 className="text-lg font-bold text-card-foreground mb-4 flex items-center space-x-2">
+                  <Shield className="w-5 h-5 text-primary" />
                   <span>Collateral Calculator</span>
                 </h3>
 
                 {calculatedCollateral > 0 ? (
                   <div className="space-y-4">
-                    <div className="p-4 bg-green-50 rounded-lg">
-                      <div className="text-2xl font-bold text-green-600 mb-1">
+                    <div className="p-4 bg-primary/10 rounded-lg border border-primary/20">
+                      <div className="text-2xl font-bold text-primary mb-1">
                         {formatCurrency(calculatedCollateral)}
                       </div>
-                      <div className="text-sm text-green-700">
+                      <div className="text-sm text-primary/80">
                         Required collateral (55% factor)
                       </div>
                     </div>
 
-                    <div className="text-sm text-gray-600 space-y-2">
+                    <div className="text-sm text-muted-foreground space-y-2">
                       <div className="flex justify-between">
                         <span>Total Pool:</span>
-                        <span className="font-semibold">
+                        <span className="font-semibold text-card-foreground">
                           {formData.monthlyPayment && formData.totalMembers
                             ? formatCurrency(
-                                parseFloat(formData.monthlyPayment) *
-                                  parseInt(formData.totalMembers) *
+                                Number.parseFloat(formData.monthlyPayment) *
+                                  Number.parseInt(formData.totalMembers) *
                                   1000
                               )
                             : "₦0"}
@@ -491,16 +400,20 @@ const CreateAjo = () => {
                       </div>
                       <div className="flex justify-between">
                         <span>Your Position:</span>
-                        <span className="font-semibold">1st (Worst case)</span>
+                        <span className="font-semibold text-card-foreground">
+                          1st (Worst case)
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span>Collateral Factor:</span>
-                        <span className="font-semibold">55%</span>
+                        <span className="font-semibold text-card-foreground">
+                          55%
+                        </span>
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center py-8 text-gray-500">
+                  <div className="text-center py-8 text-muted-foreground">
                     <Calculator className="w-12 h-12 mx-auto mb-3 opacity-50" />
                     <p>
                       Enter payment amount and member count to calculate
@@ -508,10 +421,10 @@ const CreateAjo = () => {
                     </p>
                   </div>
                 )}
-              </div>
+              </div> */}
 
               {/* How It Works */}
-              <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-6 text-white">
+              <div className="bg-gradient-to-br from-primary to-primary/80 rounded-xl shadow-lg p-6 text-primary-foreground">
                 <h3 className="text-lg font-bold mb-4 flex items-center space-x-2">
                   <Info className="w-5 h-5" />
                   <span>How Digital Ajo Works</span>
@@ -519,48 +432,48 @@ const CreateAjo = () => {
 
                 <div className="space-y-3 text-sm">
                   <div className="flex items-start space-x-3">
-                    <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center text-xs font-bold">
+                    <div className="w-6 h-6 bg-primary-foreground/20 rounded-full flex items-center justify-center text-xs font-bold">
                       1
                     </div>
                     <div>
                       <div className="font-semibold">Create or Join</div>
-                      <div className="text-green-100">
+                      <div className="text-primary-foreground/80">
                         Set up your Ajo with transparent rules
                       </div>
                     </div>
                   </div>
 
                   <div className="flex items-start space-x-3">
-                    <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center text-xs font-bold">
+                    <div className="w-6 h-6 bg-primary-foreground/20 rounded-full flex items-center justify-center text-xs font-bold">
                       2
                     </div>
                     <div>
                       <div className="font-semibold">Lock Collateral</div>
-                      <div className="text-green-100">
+                      <div className="text-primary-foreground/80">
                         Smart contract calculates required collateral
                       </div>
                     </div>
                   </div>
 
                   <div className="flex items-start space-x-3">
-                    <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center text-xs font-bold">
+                    <div className="w-6 h-6 bg-primary-foreground/20 rounded-full flex items-center justify-center text-xs font-bold">
                       3
                     </div>
                     <div>
                       <div className="font-semibold">Monthly Payments</div>
-                      <div className="text-green-100">
+                      <div className="text-primary-foreground/80">
                         Automated payments via blockchain
                       </div>
                     </div>
                   </div>
 
                   <div className="flex items-start space-x-3">
-                    <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center text-xs font-bold">
+                    <div className="w-6 h-6 bg-primary-foreground/20 rounded-full flex items-center justify-center text-xs font-bold">
                       4
                     </div>
                     <div>
                       <div className="font-semibold">Receive Payout</div>
-                      <div className="text-green-100">
+                      <div className="text-primary-foreground/80">
                         Get your turn in the rotation
                       </div>
                     </div>
@@ -569,39 +482,39 @@ const CreateAjo = () => {
               </div>
 
               {/* Benefits */}
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">
+              <div className="bg-card rounded-xl shadow-lg p-6 border border-border">
+                <h3 className="text-lg font-bold text-card-foreground mb-4">
                   Why Choose Digital Ajo?
                 </h3>
 
                 <div className="space-y-3">
                   <div className="flex items-center space-x-3">
-                    <CheckCircle className="w-5 h-5 text-green-600" />
-                    <span className="text-sm text-gray-700">
+                    <CheckCircle className="w-5 h-5 text-primary" />
+                    <span className="text-sm text-muted-foreground">
                       100% transparent on blockchain
                     </span>
                   </div>
                   <div className="flex items-center space-x-3">
-                    <CheckCircle className="w-5 h-5 text-green-600" />
-                    <span className="text-sm text-gray-700">
+                    <CheckCircle className="w-5 h-5 text-primary" />
+                    <span className="text-sm text-muted-foreground">
                       Smart contract automation
                     </span>
                   </div>
                   <div className="flex items-center space-x-3">
-                    <CheckCircle className="w-5 h-5 text-green-600" />
-                    <span className="text-sm text-gray-700">
+                    <CheckCircle className="w-5 h-5 text-primary" />
+                    <span className="text-sm text-muted-foreground">
                       Lower collateral requirements
                     </span>
                   </div>
                   <div className="flex items-center space-x-3">
-                    <CheckCircle className="w-5 h-5 text-green-600" />
-                    <span className="text-sm text-gray-700">
+                    <CheckCircle className="w-5 h-5 text-primary" />
+                    <span className="text-sm text-muted-foreground">
                       Yield generation on idle funds
                     </span>
                   </div>
                   <div className="flex items-center space-x-3">
-                    <CheckCircle className="w-5 h-5 text-green-600" />
-                    <span className="text-sm text-gray-700">
+                    <CheckCircle className="w-5 h-5 text-primary" />
+                    <span className="text-sm text-muted-foreground">
                       Community governance
                     </span>
                   </div>

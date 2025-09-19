@@ -4,40 +4,6 @@ import { ethers } from "ethers";
 import { useWallet } from "./../auth/WalletContext";
 import AjoCore from "@/abi/ajoCore.json";
 
-type MemberStruct = {
-  queueNumber: bigint;
-  joinedCycle: bigint;
-  totalPaid: bigint;
-  requiredCollateral: bigint;
-  lockedCollateral: bigint;
-  lastPaymentCycle: bigint;
-  defaultCount: bigint;
-  hasReceivedPayout: boolean;
-  isActive: boolean;
-  guarantor: string;
-  preferredToken: number;
-  reputationScore: bigint;
-  pastPayments: bigint[];
-  guaranteePosition: bigint;
-};
-
-export type MemberInfoResponse = {
-  memberInfo: MemberStruct;
-  pendingPenalty: string; // bigint -> string
-  effectiveVotingPower: string; // bigint -> string
-};
-
-export type ContractStats = {
-  totalMembers: string;
-  activeMembers: string;
-  totalCollateralUSDC: string;
-  totalCollateralHBAR: string;
-  contractBalanceUSDC: string;
-  contractBalanceHBAR: string;
-  currentQueuePosition: string;
-  activeToken: number;
-};
-
 export interface UseAjoCore {
   // status
   connected: boolean;

@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 
 interface AjoStats {
   totalMembers: string;
@@ -9,9 +8,17 @@ interface AjoStats {
   contractBalanceUSDC: string;
   contractBalanceHBAR: string;
   currentQueuePosition: string;
-  activeToken: string;
+  activeToken: number;
 }
 
 interface AjoState {
   ajoStats: AjoStats | null;
+  setStats: (stats: AjoStats) => void;
+  clearStats: () => void;
 }
+
+export const useAjoStore = create<AjoState>((set) => ({
+  ajoStats: null,
+  setStats: (stats) => set({ ajoStats: stats }),
+  clearStats: () => set({ ajoStats: null }),
+}));
