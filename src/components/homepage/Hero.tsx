@@ -41,7 +41,7 @@ const Hero = () => {
         </div>
 
         {/* CTA - positioned at bottom left below the illustration */}
-        <div className={`absolute bottom-24 left-24 z-10 transition-all duration-1000 ${
+        <div className={`absolute bottom-[12vh] left-[8vw] z-10 transition-all duration-1000 ${
           isVisible ? "translate-y-0 opacity-100" : "translate-y-20 opacity-0"
         }`}>
           
@@ -53,9 +53,9 @@ const Hero = () => {
           </p> */}
           
           {/* Single CTA - longer than illustration */}
-          <button className="bg-primary hover:bg-primary/90 text-primary-foreground px-12 py-4 rounded-full font-semibold text-lg transition-all hover:scale-105 hover:shadow-lg flex items-center space-x-3  w-[35vw] justify-center">
-            <span>Start Your Ajo Journey</span>
-            <ChevronRight className="w-5 h-5 transform transition-transform duration-300 group-hover:translate-x-1 group-hover:rotate-12 animate-ping" />
+          <button className="bg-primary hover:bg-primary/90 text-primary-foreground px-12 py-4 rounded-full font-semibold text-lg transition-all hover:scale-105 hover:shadow-lg flex items-center space-x-3  h-[7vh]  w-[35vw] justify-center">
+            <span className="text-[1.4vw]">Start Your Ajo Journey</span>
+            <ChevronRight className="w-[1.4vw] h-[2vh] transform transition-transform duration-300 group-hover:translate-x-1 group-hover:rotate-12 animate-ping" />
           </button>
         </div>
 
