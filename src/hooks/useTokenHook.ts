@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { ERC20_ABI } from "@/abi/erc20ABI";
+import erc20ABI from "@/abi/erc20ABI";
 import { ethers } from "ethers";
 import { useTokenStore } from "@/store/tokenStore";
 
 const getContract = (address: string, provider: ethers.BrowserProvider) =>
-  new ethers.Contract(address, ERC20_ABI, provider);
+  new ethers.Contract(address, erc20ABI, provider);
 
 export const useTokenHook = () => {
   const { setWhbar, setUsdc, setLoading, setError } = useTokenStore();

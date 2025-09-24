@@ -39,7 +39,7 @@ const HomePageHeader = () => {
 
         <button
           onClick={() => navigate("/dashboard")}
-          className="text-sm lg:text-lg bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-2 rounded-full font-semibold transition-all hover:scale-105"
+          className="text-sm lg:text-lg bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-2 rounded-full font-semibold transition-all hover:scale-105 cursor-pointer"
         >
           Join Beta
         </button>

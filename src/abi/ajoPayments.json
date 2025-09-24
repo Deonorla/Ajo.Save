@@ -1,7 +1,7 @@
 {
   "_format": "hh-sol-artifact-1",
-  "contractName": "AjoCore",
-  "sourceName": "contracts/AjoCore.sol",
+  "contractName": "AjoPayments",
+  "sourceName": "contracts/AjoPayments.sol",
   "abi": [
     {
       "inputs": [
@@ -17,6 +17,11 @@
         },
         {
           "internalType": "address",
+          "name": "_ajoCore",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
           "name": "_membersContract",
           "type": "address"
         },
@@ -24,175 +29,28 @@
           "internalType": "address",
           "name": "_collateralContract",
           "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "_paymentsContract",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "_governanceContract",
-          "type": "address"
         }
       ],
       "stateMutability": "nonpayable",
       "type": "constructor"
     },
     {
-      "inputs": [],
-      "name": "AjoCapacityReached",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "CollateralNotTransferred",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "CollateralTransferFailed",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "InsufficientAllowance",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "InsufficientBalance",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "InsufficientCollateral",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "InsufficientCollateralBalance",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "InvalidCycle",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "InvalidTokenConfiguration",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "MemberAlreadyExists",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "MemberNotFound",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "PaymentAlreadyMade",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "PayoutNotReady",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "TokenNotSupported",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "Unauthorized",
-      "type": "error"
-    },
-    {
       "anonymous": false,
       "inputs": [
         {
           "indexed": true,
           "internalType": "address",
-          "name": "ajoContract",
+          "name": "oldCore",
           "type": "address"
         },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "timestamp",
-          "type": "uint256"
-        }
-      ],
-      "name": "AjoFull",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
         {
           "indexed": true,
           "internalType": "address",
-          "name": "member",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "enum PaymentToken",
-          "name": "token",
-          "type": "uint8"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "collateralContract",
+          "name": "newCore",
           "type": "address"
         }
       ],
-      "name": "CollateralTransferRequired",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "members",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "collateral",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "payments",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "governance",
-          "type": "address"
-        }
-      ],
-      "name": "ContractsInitialized",
+      "name": "AjoCoreUpdated",
       "type": "event"
     },
     {
@@ -224,56 +82,19 @@
           "type": "address"
         },
         {
-          "indexed": true,
-          "internalType": "address",
-          "name": "guarantor",
-          "type": "address"
-        },
-        {
           "indexed": false,
           "internalType": "uint256",
-          "name": "memberPosition",
+          "name": "cycle",
           "type": "uint256"
         },
         {
           "indexed": false,
           "internalType": "uint256",
-          "name": "guarantorPosition",
+          "name": "penalty",
           "type": "uint256"
         }
       ],
-      "name": "GuarantorAssigned",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "member",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "queueNumber",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "collateral",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "enum PaymentToken",
-          "name": "token",
-          "type": "uint8"
-        }
-      ],
-      "name": "MemberJoined",
+      "name": "MemberDefaulted",
       "type": "event"
     },
     {
@@ -296,21 +117,164 @@
       "type": "event"
     },
     {
-      "inputs": [],
-      "name": "CYCLE_DURATION",
-      "outputs": [
+      "anonymous": false,
+      "inputs": [
         {
+          "indexed": true,
+          "internalType": "address",
+          "name": "member",
+          "type": "address"
+        },
+        {
+          "indexed": false,
           "internalType": "uint256",
-          "name": "",
+          "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "cycle",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "enum PaymentToken",
+          "name": "token",
+          "type": "uint8"
+        }
+      ],
+      "name": "PaymentMade",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "member",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "baseAmount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "penalty",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "total",
           "type": "uint256"
         }
       ],
-      "stateMutability": "view",
-      "type": "function"
+      "name": "PaymentProcessed",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "member",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "cycle",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "enum PaymentToken",
+          "name": "token",
+          "type": "uint8"
+        }
+      ],
+      "name": "PaymentPulled",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "recipient",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "cycle",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "enum PaymentToken",
+          "name": "token",
+          "type": "uint8"
+        }
+      ],
+      "name": "PayoutDistributed",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        }
+      ],
+      "name": "SetupCompleted",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "enum PaymentToken",
+          "name": "oldToken",
+          "type": "uint8"
+        },
+        {
+          "indexed": false,
+          "internalType": "enum PaymentToken",
+          "name": "newToken",
+          "type": "uint8"
+        }
+      ],
+      "name": "TokenSwitched",
+      "type": "event"
     },
     {
       "inputs": [],
-      "name": "FIXED_TOTAL_PARTICIPANTS",
+      "name": "DEFAULT_PENALTY_RATE",
       "outputs": [
         {
           "internalType": "uint256",
@@ -348,14 +312,28 @@
       "type": "function"
     },
     {
-      "inputs": [
+      "inputs": [],
+      "name": "activePaymentToken",
+      "outputs": [
         {
-          "internalType": "uint256",
+          "internalType": "enum PaymentToken",
           "name": "",
-          "type": "uint256"
+          "type": "uint8"
         }
       ],
-      "name": "activeMembersList",
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "advanceCycle",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "ajoCore",
       "outputs": [
         {
           "internalType": "address",
@@ -380,28 +358,12 @@
       "type": "function"
     },
     {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "defaulterAddress",
-          "type": "address"
-        }
-      ],
-      "name": "calculateSeizableAssets",
+      "inputs": [],
+      "name": "calculatePayout",
       "outputs": [
         {
           "internalType": "uint256",
-          "name": "totalSeizable",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "collateralSeized",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "paymentsSeized",
+          "name": "",
           "type": "uint256"
         }
       ],
@@ -422,19 +384,15 @@
       "type": "function"
     },
     {
-      "inputs": [
-        {
-          "internalType": "string",
-          "name": "description",
-          "type": "string"
-        },
-        {
-          "internalType": "bytes",
-          "name": "proposalData",
-          "type": "bytes"
-        }
-      ],
-      "name": "createProposal",
+      "inputs": [],
+      "name": "completeSetup",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "currentCycle",
       "outputs": [
         {
           "internalType": "uint256",
@@ -442,19 +400,12 @@
           "type": "uint256"
         }
       ],
-      "stateMutability": "nonpayable",
+      "stateMutability": "view",
       "type": "function"
     },
     {
       "inputs": [],
       "name": "distributePayout",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "emergencyPause",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -473,96 +424,12 @@
       "type": "function"
     },
     {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "proposalId",
-          "type": "uint256"
-        }
-      ],
-      "name": "executeProposal",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
       "inputs": [],
-      "name": "exitAjo",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "participants",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "monthlyPayment",
-          "type": "uint256"
-        }
-      ],
-      "name": "getCollateralDemo",
+      "name": "getActivePaymentToken",
       "outputs": [
-        {
-          "internalType": "uint256[]",
-          "name": "positions",
-          "type": "uint256[]"
-        },
-        {
-          "internalType": "uint256[]",
-          "name": "collaterals",
-          "type": "uint256[]"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "getContractStats",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "totalMembers",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "activeMembers",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "totalCollateralUSDC",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "totalCollateralHBAR",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "contractBalanceUSDC",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "contractBalanceHBAR",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "currentQueuePosition",
-          "type": "uint256"
-        },
         {
           "internalType": "enum PaymentToken",
-          "name": "activeToken",
+          "name": "",
           "type": "uint8"
         }
       ],
@@ -572,98 +439,109 @@
     {
       "inputs": [
         {
+          "internalType": "enum PaymentToken",
+          "name": "token",
+          "type": "uint8"
+        }
+      ],
+      "name": "getContractBalance",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getCurrentCycle",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getNextPayoutPosition",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getNextRecipient",
+      "outputs": [
+        {
           "internalType": "address",
-          "name": "member",
+          "name": "",
           "type": "address"
         }
       ],
-      "name": "getMemberInfo",
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "cycle",
+          "type": "uint256"
+        }
+      ],
+      "name": "getPayout",
       "outputs": [
         {
           "components": [
             {
-              "internalType": "uint256",
-              "name": "queueNumber",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "joinedCycle",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "totalPaid",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "requiredCollateral",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "lockedCollateral",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "lastPaymentCycle",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "defaultCount",
-              "type": "uint256"
-            },
-            {
-              "internalType": "bool",
-              "name": "hasReceivedPayout",
-              "type": "bool"
-            },
-            {
-              "internalType": "bool",
-              "name": "isActive",
-              "type": "bool"
-            },
-            {
               "internalType": "address",
-              "name": "guarantor",
+              "name": "recipient",
               "type": "address"
             },
             {
-              "internalType": "enum PaymentToken",
-              "name": "preferredToken",
-              "type": "uint8"
-            },
-            {
               "internalType": "uint256",
-              "name": "reputationScore",
+              "name": "amount",
               "type": "uint256"
             },
             {
-              "internalType": "uint256[]",
-              "name": "pastPayments",
-              "type": "uint256[]"
+              "internalType": "uint256",
+              "name": "cycle",
+              "type": "uint256"
             },
             {
               "internalType": "uint256",
-              "name": "guaranteePosition",
+              "name": "timestamp",
               "type": "uint256"
             }
           ],
-          "internalType": "struct Member",
-          "name": "memberInfo",
+          "internalType": "struct PayoutRecord",
+          "name": "",
           "type": "tuple"
-        },
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getPenaltyRate",
+      "outputs": [
         {
           "internalType": "uint256",
-          "name": "pendingPenalty",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "effectiveVotingPower",
+          "name": "",
           "type": "uint256"
         }
       ],
@@ -678,31 +556,7 @@
           "type": "address"
         }
       ],
-      "name": "getQueueInfo",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "position",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "estimatedCyclesWait",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "enum PaymentToken",
-          "name": "tokenChoice",
-          "type": "uint8"
-        }
-      ],
-      "name": "getRequiredCollateralForJoin",
+      "name": "getPendingPenalty",
       "outputs": [
         {
           "internalType": "uint256",
@@ -746,31 +600,12 @@
     },
     {
       "inputs": [],
-      "name": "governanceContract",
+      "name": "getTotalPayouts",
       "outputs": [
-        {
-          "internalType": "contract IAjoGovernance",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
         {
           "internalType": "uint256",
           "name": "",
           "type": "uint256"
-        }
-      ],
-      "name": "guarantorAssignments",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
         }
       ],
       "stateMutability": "view",
@@ -790,29 +625,36 @@
       "type": "function"
     },
     {
-      "inputs": [
+      "inputs": [],
+      "name": "isPayoutReady",
+      "outputs": [
         {
-          "internalType": "enum PaymentToken",
-          "name": "tokenChoice",
-          "type": "uint8"
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
         }
       ],
-      "name": "joinAjo",
-      "outputs": [],
-      "stateMutability": "nonpayable",
+      "stateMutability": "view",
       "type": "function"
     },
     {
       "inputs": [],
-      "name": "lastCycleTimestamp",
+      "name": "isSetupComplete",
       "outputs": [
         {
-          "internalType": "uint256",
+          "internalType": "bool",
           "name": "",
-          "type": "uint256"
+          "type": "bool"
         }
       ],
       "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "makePayment",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -849,7 +691,7 @@
     },
     {
       "inputs": [],
-      "name": "nextQueueNumber",
+      "name": "nextPayoutPosition",
       "outputs": [
         {
           "internalType": "uint256",
@@ -875,20 +717,7 @@
     },
     {
       "inputs": [],
-      "name": "paymentsContract",
-      "outputs": [
-        {
-          "internalType": "contract IAjoPayments",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "processPayment",
+      "name": "pausePayments",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -901,12 +730,27 @@
           "type": "uint256"
         }
       ],
-      "name": "queuePositions",
+      "name": "payouts",
       "outputs": [
         {
           "internalType": "address",
-          "name": "",
+          "name": "recipient",
           "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "cycle",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
         }
       ],
       "stateMutability": "view",
@@ -914,9 +758,97 @@
     },
     {
       "inputs": [],
+      "name": "penaltyRate",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "pendingPenalties",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "member",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "enum PaymentToken",
+          "name": "token",
+          "type": "uint8"
+        }
+      ],
+      "name": "processPayment",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "renounceOwnership",
       "outputs": [],
       "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "resumePayments",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_ajoCore",
+          "type": "address"
+        }
+      ],
+      "name": "setAjoCore",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "setupComplete",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
       "type": "function"
     },
     {
@@ -930,6 +862,30 @@
       "name": "switchPaymentToken",
       "outputs": [],
       "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "enum PaymentToken",
+          "name": "",
+          "type": "uint8"
+        }
+      ],
+      "name": "tokenConfigs",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "monthlyPayment",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bool",
+          "name": "isActive",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
       "type": "function"
     },
     {
@@ -949,11 +905,11 @@
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "newDuration",
+          "name": "position",
           "type": "uint256"
         }
       ],
-      "name": "updateCycleDuration",
+      "name": "updateNextPayoutPosition",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -995,21 +951,21 @@
       "type": "function"
     },
     {
-      "inputs": [
+      "inputs": [],
+      "name": "verifySetup",
+      "outputs": [
         {
-          "internalType": "uint256",
-          "name": "proposalId",
-          "type": "uint256"
+          "internalType": "bool",
+          "name": "isValid",
+          "type": "bool"
         },
         {
-          "internalType": "uint8",
-          "name": "support",
-          "type": "uint8"
+          "internalType": "string",
+          "name": "reason",
+          "type": "string"
         }
       ],
-      "name": "vote",
-      "outputs": [],
-      "stateMutability": "nonpayable",
+      "stateMutability": "view",
       "type": "function"
     }
   ]

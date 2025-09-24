@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { ethers, JsonRpcSigner } from "ethers";
 import AjoFactory from "@/abi/ajoFactory.json";
 import { useWallet } from "./../auth/WalletContext";
-import { ERC20_ABI } from "../abi/erc20ABI";
+import erc20ABI from "../abi/erc20ABI";
 
 export const useAjoFactory = () => {
   const { provider, connected } = useWallet();
@@ -11,18 +11,15 @@ export const useAjoFactory = () => {
     null
   );
   const ajoFactoryAddress = import.meta.env.VITE_AJO_FACTORY_CONTRACT_ADDRESS;
-  const whbarAddress = import.meta.env.VITE_MOCK_WHBAR_ADDRESS;
-  const WHBAR_ADDRESS = "0xf34f43E8110220dbA7dc74f1fE8eDEa2bcEC1e06";
+  const WHBAR_ADDRESS = import.meta.env.VITE_MOCK_WHBAR_ADDRESS;
 
   // ---------------- GET CONTRACT ----------------
 
-  // read-only contract (provider)
   const contractRead = useMemo(() => {
     if (!provider || !ajoFactoryAddress) return null;
     return new ethers.Contract(ajoFactoryAddress, AjoFactory.abi, provider);
   }, [ajoFactoryAddress, provider]);
 
-  /// write-enabled contract: provider.getSigner() is async in ethers v6, so build it in effect
   useEffect(() => {
     let mounted = true;
     const setup = async () => {
@@ -31,7 +28,7 @@ export const useAjoFactory = () => {
         return;
       }
       try {
-        const signer = await provider.getSigner(); // await is required
+        const signer = await provider.getSigner();
         if (!mounted) return;
         const writable = new ethers.Contract(
           ajoFactoryAddress,
@@ -52,9 +49,6 @@ export const useAjoFactory = () => {
 
   // ---------------- READ FUNCTIONS ----------------
 
-  /**
-   * Get current creation fee from contract
-   */
   const getCreationFee = useCallback(async () => {
     if (!contractRead) throw new Error("Contract not ready");
     const fee: bigint = await contractRead.creationFee();
@@ -92,44 +86,74 @@ export const useAjoFactory = () => {
     async (creatorAddress: string, ajoName: string) => {
       if (!contractWrite) throw new Error("Contract not ready");
 
-      // 1. Get creation fee
-      const feeInWHBAR = await getCreationFee();
-      if (!feeInWHBAR) throw new Error("Failed to fetch creation fee");
-      console.log("Creation fee (in WHBAR):", feeInWHBAR.toString());
+      // 1. Get raw creation fee (likely in 18 decimals)
+      const rawFee = await getCreationFee();
+      if (!rawFee) throw new Error("Failed to fetch creation fee");
+
+      console.log("=== 🧾 Creation Fee Info ===");
+      console.log("Raw fee (from contract):", rawFee.toString());
 
       // 2. Setup WHBAR contract
-      const signer = contractWrite.runner as JsonRpcSigner; // signer is the runner attached to your contractWrite
+      const signer = contractWrite.runner as JsonRpcSigner;
       const whbarContract = new ethers.Contract(
         WHBAR_ADDRESS,
-        ERC20_ABI,
+        erc20ABI,
         signer
       );
 
-      // 3. Check allowance
-      const userAddress = await signer?.getAddress();
+      // 3. Normalize fee to WHBAR decimals
+      const tokenDecimals: number = await whbarContract.decimals();
+      const normalizedFee = ethers.parseUnits(
+        ethers.formatUnits(rawFee, 18), // interpret raw fee as 18 decimals
+        tokenDecimals // re-encode in WHBAR decimals
+      );
+
+      const userAddress = await signer.getAddress();
+      const balance = await whbarContract.balanceOf(userAddress);
       const allowance = await whbarContract.allowance(
         userAddress,
         ajoFactoryAddress
       );
-      console.log("Current allowance:", allowance.toString());
+
+      console.log("=== 📊 Token Stats ===");
+      console.log("WHBAR decimals:", tokenDecimals);
+      console.log("User address:", userAddress);
+      console.log("Balance (raw):", balance.toString());
+      console.log(
+        "Balance (formatted):",
+        ethers.formatUnits(balance, tokenDecimals)
+      );
+      console.log("Allowance (raw):", allowance.toString());
+      console.log(
+        "Allowance (formatted):",
+        ethers.formatUnits(allowance, tokenDecimals)
+      );
+      console.log("Creation fee (normalized raw):", normalizedFee.toString());
+      console.log(
+        "Creation fee (formatted):",
+        ethers.formatUnits(normalizedFee, tokenDecimals)
+      );
 
       // 4. Approve if needed
-      if (allowance < feeInWHBAR) {
-        console.log("Approving WHBAR...");
+      if (allowance < normalizedFee) {
+        console.log("🔑 Approving WHBAR...");
         const approveTx = await whbarContract.approve(
           ajoFactoryAddress,
-          feeInWHBAR
+          normalizedFee
         );
         await approveTx.wait();
-        console.log("Approval done ✅");
+        console.log("✅ Approval done");
       }
 
-      // 5. Call registerAjo (no value!)
-      console.log("Calling registerAjo...");
+      // 5. Call registerAjo
+      console.log("🚀 Calling registerAjo...");
       const tx = await contractWrite.registerAjo(creatorAddress, ajoName);
-      return await tx.wait();
+      const receipt = await tx.wait();
+
+      console.log("🎉 Ajo created successfully:", receipt);
+      return receipt;
     },
-    [contractWrite, getCreationFee]
+    [contractWrite, getCreationFee, ajoFactoryAddress]
   );
 
   const deactivateAjo = useCallback(

@@ -3,6 +3,9 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { ethers } from "ethers";
 import { useWallet } from "./../auth/WalletContext";
 import AjoCore from "@/abi/ajoCore.json";
+import { useAjoStore } from "@/store/ajoStore";
+import erc20ABI from "@/abi/erc20ABI";
+import { toast } from "sonner";
 
 export interface UseAjoCore {
   // status
@@ -26,12 +29,18 @@ export interface UseAjoCore {
   owner: () => Promise<string | null>;
 
   // write
-  joinAjo: (tokenChoice: number) => Promise<void>;
+  joinAjo: (
+    tokenChoice: number,
+    tokenAddress: string,
+    collateralContract: string,
+    paymentsContract: string
+  ) => Promise<ethers.TransactionReceipt>;
   makePayment: () => Promise<void>;
   distributePayout: () => Promise<void>;
 }
 
 const useAjoCore = (): UseAjoCore => {
+  const { setStats } = useAjoStore();
   const ajoAddress = import.meta.env.VITE_AJO_CORE_CONTRACT_ADDRESS;
 
   const { provider, connected, error } = useWallet();
@@ -81,6 +90,16 @@ const useAjoCore = (): UseAjoCore => {
       if (!contractRead) return null;
       try {
         const res = await contractRead.getContractStats();
+        setStats({
+          totalMembers: res[0].toString(),
+          activeMembers: res[1].toString(),
+          totalCollateralUSDC: res[2].toString(),
+          totalCollateralHBAR: res[3].toString(),
+          contractBalanceUSDC: res[4].toString(),
+          contractBalanceHBAR: res[5].toString(),
+          currentQueuePosition: res[6].toString(),
+          activeToken: Number(res[7]),
+        });
         return {
           totalMembers: res[0].toString(),
           activeMembers: res[1].toString(),
@@ -223,19 +242,75 @@ const useAjoCore = (): UseAjoCore => {
   // ---------------------------
   // Write wrappers
   // ---------------------------
+
   const joinAjo = useCallback(
-    async (tokenChoice: number) => {
-      if (!contractWrite)
+    async (
+      tokenChoice: number,
+      tokenAddress: string,
+      collateralContract: string,
+      paymentsContract: string
+    ) => {
+      if (!contractWrite) {
+        toast.info("Connect Wallet to participate");
         throw new Error("Wallet not connected / write contract not ready");
-      try {
-        const tx = await contractWrite.joinAjo(tokenChoice);
-        await tx.wait();
-      } catch (err) {
-        console.error("joinAjo error:", err);
-        throw err;
       }
+
+      const signer = await provider?.getSigner();
+      const userAddress = await signer?.getAddress();
+
+      // 1. Get expected collateral from contract
+      let expectedCollateral;
+      try {
+        expectedCollateral = await contractRead?.getRequiredCollateralForJoin(
+          tokenChoice
+        );
+        console.log("expectedCollateral", expectedCollateral.toString());
+      } catch (err) {
+        // fallback if function missing
+        console.warn(
+          "getRequiredCollateralForJoin not available, falling back to monthlyPayment"
+        );
+        const tokenConfig = await contractRead?.getTokenConfig(tokenChoice);
+        expectedCollateral = tokenConfig?.monthlyPayment;
+      }
+
+      if (!expectedCollateral)
+        throw new Error("Could not determine collateral requirement");
+
+      // 2. Approve collateral contract
+      const token = new ethers.Contract(tokenAddress, erc20ABI, signer);
+      const allowanceCollateral = await token.allowance(
+        userAddress,
+        collateralContract
+      );
+      if (allowanceCollateral < expectedCollateral) {
+        const approveTx = await token.approve(
+          collateralContract,
+          expectedCollateral
+        );
+        await approveTx.wait();
+        console.log("Collateral approved ✅");
+      }
+
+      // 3. Approve payments contract
+      const allowancePayments = await token.allowance(
+        userAddress,
+        paymentsContract
+      );
+      if (allowancePayments < expectedCollateral) {
+        const approveTx = await token.approve(
+          paymentsContract,
+          expectedCollateral
+        );
+        await approveTx.wait();
+        console.log("Payments approved ✅");
+      }
+
+      // 4. Join Ajo
+      const tx = await contractWrite.joinAjo(tokenChoice, { gasLimit: 500000 });
+      return await tx.wait();
     },
-    [contractWrite]
+    [contractWrite, contractRead, provider]
   );
 
   const makePayment = useCallback(async () => {

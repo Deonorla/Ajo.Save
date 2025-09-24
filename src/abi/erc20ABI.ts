@@ -1,6 +1,73 @@
-export const ERC20_ABI = [
-  "function approve(address spender, uint256 amount) external returns (bool)",
-  "function allowance(address owner, address spender) external view returns (uint256)",
-  "function balanceOf(address account) external view returns (uint256)",
+const erc20ABI = [
+  "function balanceOf(address owner) view returns (uint256)",
+  "function allowance(address owner, address spender) view returns (uint256)",
+  "function approve(address spender, uint256 value) returns (bool)",
+  "function transfer(address to, uint256 value) returns (bool)",
+  "function transferFrom(address from, address to, uint256 value) returns (bool)",
   "function decimals() view returns (uint8)",
-];
+] as const;
+// const erc20ABI = [
+//   {
+//     constant: true,
+//     inputs: [{ name: "_owner", type: "address" }],
+//     name: "balanceOf",
+//     outputs: [{ name: "balance", type: "uint256" }],
+//     type: "function",
+//     stateMutability: "view",
+//   },
+//   {
+//     constant: true,
+//     inputs: [
+//       { name: "_owner", type: "address" },
+//       { name: "_spender", type: "address" },
+//     ],
+//     name: "allowance",
+//     outputs: [{ name: "remaining", type: "uint256" }],
+//     type: "function",
+//     stateMutability: "view",
+//   },
+//   {
+//     constant: false,
+//     inputs: [
+//       { name: "_spender", type: "address" },
+//       { name: "_value", type: "uint256" },
+//     ],
+//     name: "approve",
+//     outputs: [{ name: "success", type: "bool" }],
+//     type: "function",
+//     stateMutability: "nonpayable",
+//   },
+//   {
+//     constant: false,
+//     inputs: [
+//       { name: "_to", type: "address" },
+//       { name: "_value", type: "uint256" },
+//     ],
+//     name: "transfer",
+//     outputs: [{ name: "success", type: "bool" }],
+//     type: "function",
+//     stateMutability: "nonpayable",
+//   },
+//   {
+//     constant: false,
+//     inputs: [
+//       { name: "_from", type: "address" },
+//       { name: "_to", type: "address" },
+//       { name: "_value", type: "uint256" },
+//     ],
+//     name: "transferFrom",
+//     outputs: [{ name: "success", type: "bool" }],
+//     type: "function",
+//     stateMutability: "nonpayable",
+//   },
+//   {
+//     constant: true,
+//     inputs: [],
+//     name: "decimals",
+//     outputs: [{ name: "", type: "uint8" }],
+//     type: "function",
+//     stateMutability: "view",
+//   },
+// ];
+
+export default erc20ABI;

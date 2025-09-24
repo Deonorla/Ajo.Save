@@ -18,10 +18,10 @@ const AjoDetailsNavigationTab = ({
       <div className="flex overflow-x-auto">
         {[
           { id: "overview", label: "Overview", icon: Eye },
-          { id: "members", label: "Members", icon: Users },
-          { id: "payments", label: "Payment History", icon: History },
+          // { id: "members", label: "Members", icon: Users },
+          // { id: "payments", label: "Payment History", icon: History },
           { id: "governance", label: "Governance", icon: Vote },
-          { id: "analytics", label: "Analytics", icon: BarChart3 },
+          // { id: "analytics", label: "Analytics", icon: BarChart3 },
         ].map((tab) => (
           <button
             key={tab.id}

@@ -1,4 +1,5 @@
 import { useWallet } from "@/auth/WalletContext";
+import { EmptyState } from "@/components/dashboard/EmptyState";
 import Header from "@/components/header/Header";
 import AjoCard from "@/components/shared/AjoCard";
 import useAjoCore from "@/hooks/useAjoCore";
@@ -7,13 +8,17 @@ import { useTokenHook } from "@/hooks/useTokenHook";
 import { useAjoStore } from "@/store/ajoStore";
 import { Shield, Users, Star } from "lucide-react";
 import { useState, useEffect } from "react";
+import { getNaira } from "@/utils/utils";
+import { useTokenStore } from "@/store/tokenStore";
+import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
   const { connected: isConnected } = useWallet();
   const { getContractStats } = useAjoCore();
   const { getAllAjos } = useAjoFactory();
-
+  const navigate = useNavigate();
   const { getWhbarBalance, getUsdcBalance } = useTokenHook();
+  const { setNaira } = useTokenStore();
   const [isVisible, setIsVisible] = useState(false);
   const { ajoStats, setStats } = useAjoStore();
 
@@ -29,6 +34,8 @@ const Dashboard = () => {
     getUsdcBalance();
     const fetchStats = async () => {
       try {
+        const naira = await getNaira();
+        setNaira(naira);
         const data = await getContractStats();
         const ajos = await getAllAjos();
         console.log("All Ajos:", ajos);
@@ -39,10 +46,15 @@ const Dashboard = () => {
       }
     };
 
-    if (isConnected) {
-      fetchStats();
-    }
+    fetchStats();
+
+    // if (isConnected) {
+    // }
   }, [isConnected, getContractStats]);
+
+  const handleRoute = () => {
+    navigate("/ajo/create-ajo");
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -75,7 +87,7 @@ const Dashboard = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-muted-foreground text-sm">Ajos Tracked</p>
-                  <p className="text-2xl font-bold text-foreground">0</p>
+                  <p className="text-2xl font-bold text-foreground">1</p>
                 </div>
                 <Shield className="h-8 w-8 text-primary" />
               </div>
@@ -87,7 +99,7 @@ const Dashboard = () => {
                   <p className="text-muted-foreground text-sm">
                     Total Ajo Pools
                   </p>
-                  <p className="text-2xl font-bold text-foreground">0</p>
+                  <p className="text-2xl font-bold text-foreground">1</p>
                 </div>
                 <Users className="h-8 w-8 text-accent" />
               </div>
@@ -103,11 +115,13 @@ const Dashboard = () => {
               </div>
             </div>
           </div>
-
-          {/* Ajo Cards Grid */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {ajoStats && <AjoCard ajoData={ajoStats} isVisible={isVisible} />}
-          </div>
+          {ajoStats ? (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {ajoStats && <AjoCard ajoData={ajoStats} isVisible={isVisible} />}
+            </div>
+          ) : (
+            <EmptyState onCreateAjo={handleRoute} />
+          )}
         </div>
       </main>
     </div>

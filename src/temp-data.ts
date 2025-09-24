@@ -225,9 +225,8 @@ export const nftCollection = [
 
 export const ajoData = {
   id: "ajo-001",
-  name: "Tech Bros Savings Circle",
-  description:
-    "A decentralized savings group for tech professionals. Built on Hedera blockchain with smart contract automation for transparent, secure, and efficient group savings.",
+  name: "Contract Ajo",
+  description: "A test Ajo contract for development purposes",
   status: "active",
   creator: "0x7172C803Bc2EB1438bddB550dDCBe6dc1e1CAA69",
   reputation: 4.8,

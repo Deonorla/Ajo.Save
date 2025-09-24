@@ -19,32 +19,12 @@ const AjoDetails = () => {
   const [contractStats, setContractStats] = useState<ContractStats | null>(
     null
   );
-  const [isLoading, setIsLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(new Date());
 
   useEffect(() => {
     setIsVisible(true);
-    fetchContractData();
+    // fetchContractData();
   }, []);
-
-  const fetchContractData = async () => {
-    setIsLoading(true);
-    // Simulate API call to smart contract
-    setTimeout(() => {
-      setContractStats({
-        totalMembers: 8,
-        activeMembers: 8,
-        totalCollateralUSDC: 2200.0,
-        totalCollateralHBAR: 0.0,
-        contractBalanceUSDC: 400000.0,
-        contractBalanceHBAR: 0.0,
-        currentQueuePosition: 9,
-        activeToken: 0, // 0 = USDC, 1 = HBAR
-      });
-      setIsLoading(false);
-      setLastUpdated(new Date());
-    }, 1500);
-  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -74,19 +54,14 @@ const AjoDetails = () => {
             isVisible ? "translate-y-0 opacity-100" : "translate-y-20 opacity-0"
           }`}
         >
-          {activeTab === "overview" && (
-            <AjoOverviewTab
-              isLoading={isLoading}
-              contractStats={contractStats}
-            />
-          )}
+          {activeTab === "overview" && <AjoOverviewTab />}
 
-          {activeTab === "members" && <AjoMembers />}
-          {activeTab === "payments" && <AjoPaymentHistory />}
+          {/* {activeTab === "members" && <AjoMembers />} */}
+          {/* {activeTab === "payments" && <AjoPaymentHistory />} */}
 
           {activeTab === "governance" && <AjoGovernance />}
 
-          {activeTab === "analytics" && <AjoDetailAnalytics />}
+          {/* {activeTab === "analytics" && <AjoDetailAnalytics />} */}
         </div>
       </div>
     </div>
