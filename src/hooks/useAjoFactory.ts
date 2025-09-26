@@ -92,7 +92,7 @@ export const useAjoFactory = () => {
       console.log("Raw fee (from contract):", rawFee.toString());
 
       // 2. Setup WHBAR contract with signer
-      const signer = provider.getSigner();
+      const signer = provider?.getSigner();
       const whbarContract = new ethers.Contract(
         WHBAR_ADDRESS,
         erc20ABI,
@@ -106,7 +106,7 @@ export const useAjoFactory = () => {
         tokenDecimals // re-encode in WHBAR decimals
       );
 
-      const userAddress = await signer.getAddress();
+      const userAddress = await signer?.getAddress();
       const balance = await whbarContract.balanceOf(userAddress);
       const allowance = await whbarContract.allowance(
         userAddress,

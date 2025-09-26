@@ -6,7 +6,7 @@ const ProfileOverview = () => {
     <div className="grid lg:grid-cols-3 gap-8">
       {/* Achievements */}
       <div className="lg:col-span-2">
-        <div className="bg-card rounded-xl shadow-lg p-6 mb-8">
+        {/* <div className="bg-card rounded-xl shadow-lg p-6 mb-8">
           <h3 className="text-xl font-bold text-white mb-6 flex items-center space-x-2">
             <Trophy className="w-6 h-6 text-yellow-600" />
             <span>Achievements</span>
@@ -38,7 +38,7 @@ const ProfileOverview = () => {
               );
             })}
           </div>
-        </div>
+        </div> */}
 
         {/* Recent Activity */}
         <div className="bg-card rounded-xl shadow-lg p-6">

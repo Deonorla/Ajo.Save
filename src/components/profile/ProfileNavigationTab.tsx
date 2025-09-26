@@ -19,10 +19,8 @@ const ProfileNavigationTab = ({
     >
       <div className="flex overflow-x-auto">
         {[
-          { id: "overview", label: "Overview", icon: User },
           { id: "ajo", label: "Ajo Groups", icon: Coins },
           { id: "nfts", label: "NFT Collection", icon: Award },
-          { id: "activity", label: "Activity", icon: TrendingUp },
         ].map((tab) => {
           const IconComponent = tab.icon;
           return (

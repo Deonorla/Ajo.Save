@@ -2,18 +2,22 @@ import { useAjoStore } from "@/store/ajoStore";
 import { useTokenStore } from "@/store/tokenStore";
 import formatCurrency from "@/utils/formatCurrency";
 import { DollarSign, TrendingUp, Users, Wallet } from "lucide-react";
+import { useEffect } from "react";
 
 interface AjoDetailsStatsGridProps {
   isVisible: boolean;
   contractStats: ContractStats | null;
+  monthlyPayment: string | undefined;
 }
 
 const AjoDetailsStatsGrid = ({
   isVisible,
   contractStats,
+  monthlyPayment,
 }: AjoDetailsStatsGridProps) => {
   const { nairaRate } = useTokenStore();
   const { ajoStats } = useAjoStore();
+
   return (
     <div
       className={`grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8 transform transition-all duration-1000 delay-200 ${
@@ -28,7 +32,9 @@ const AjoDetailsStatsGrid = ({
           <span className="text-xs text-muted-foreground">Monthly</span>
         </div>
         <div className="text-2xl font-bold text-card-foreground">
-          {formatCurrency(nairaRate * 50)}
+          {formatCurrency(
+            nairaRate * (monthlyPayment ? Number(monthlyPayment) / 1000000 : 0)
+          )}
         </div>
         <div className="text-sm text-muted-foreground">Payment Amount</div>
       </div>
@@ -41,7 +47,7 @@ const AjoDetailsStatsGrid = ({
           <span className="text-xs text-muted-foreground">Progress</span>
         </div>
         <div className="text-2xl font-bold text-card-foreground">
-          {ajoStats?.activeMembers}/10
+          {ajoStats?.activeMembers}/5
         </div>
         <div className="text-sm text-muted-foreground">Members</div>
       </div>

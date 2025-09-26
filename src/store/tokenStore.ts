@@ -6,7 +6,9 @@ interface TokenState {
   usdc: string | null;
   loading: boolean;
   nairaRate: number;
+  address: string;
   error: string | null;
+  setAddress: (add: string) => void;
   setWhbar: (bal: string) => void;
   setNaira: (bal: number) => void;
   setUsdc: (bal: string) => void;
@@ -21,8 +23,10 @@ export const useTokenStore = create<TokenState>()(
       whbar: null,
       usdc: null,
       nairaRate: 0,
+      address: "",
       loading: false,
       error: null,
+      setAddress: (add) => set({ address: add }),
       setWhbar: (bal) => set({ whbar: bal }),
       setNaira: (bal) => set({ nairaRate: bal }),
       setUsdc: (bal) => set({ usdc: bal }),

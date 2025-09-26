@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import AjoDetailsCard from "@/components/ajo-details-page/AjoDetailsCard";
 import AjoDetailsStatsGrid from "@/components/ajo-details-page/AjoDetailsStatsGrid";
@@ -13,39 +13,45 @@ import AjoDetailAnalytics from "@/components/ajo-details-page/AjoDetailAnalytics
 import AjoPaymentHistory from "@/components/ajo-details-page/AjoPaymentHistory";
 import useAjoCore from "@/hooks/useAjoCore";
 import { useWallet } from "@/auth/WalletContext";
+import { useTokenStore } from "@/store/tokenStore";
 
 const AjoDetails = () => {
-  const { address } = useWallet();
-  const { getMemberInfo, getQueueInfo, getTokenConfig, needsToPayThisCycle } =
-    useAjoCore();
+  const { address } = useTokenStore();
+  const {
+    getMemberInfo,
+    getQueueInfo,
+    getTokenConfig,
+    needsToPayThisCycle,
+    getContractStats,
+  } = useAjoCore();
   const [isVisible, setIsVisible] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [contractStats, setContractStats] = useState<ContractStats | null>(
     null
   );
   const [lastUpdated, setLastUpdated] = useState(new Date());
+  const [monthlyPayment, setMonthlyPayment] = useState<string | undefined>("");
 
-  const getUserData = async () => {
+  const getUserData = useCallback(async () => {
     try {
       if (!address) {
         throw "Address not found, connect to metamask";
       }
       const data = await getMemberInfo(address);
+      const queue = await getQueueInfo(address);
+      const tokenConfig = await getTokenConfig(0);
+      setMonthlyPayment(tokenConfig?.monthlyPayment);
       console.log("Info", data);
     } catch (err) {
       console.log("Error fetching member info:", err);
     }
-  };
+  }, [getMemberInfo, getQueueInfo, getTokenConfig]);
 
   useEffect(() => {
     setIsVisible(true);
-    // fetchContractData();
-    if (address) {
-      getQueueInfo(address);
-      getTokenConfig(0);
-    }
+    getContractStats();
     getUserData();
-  }, []);
+  }, [getContractStats]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -54,11 +60,16 @@ const AjoDetails = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Ajo Header */}
-        <AjoDetailsCard isVisible={isVisible} lastUpdated={lastUpdated} />
+        <AjoDetailsCard
+          monthlyPayment={monthlyPayment}
+          isVisible={isVisible}
+          lastUpdated={lastUpdated}
+        />
 
         {/* Stats Grid */}
 
         <AjoDetailsStatsGrid
+          monthlyPayment={monthlyPayment}
           isVisible={isVisible}
           contractStats={contractStats}
         />

@@ -10,12 +10,14 @@ import UserProfileCard from "@/components/profile/UserProfileCard";
 import ProfileNftPage from "@/components/profile/ProfileNftPage";
 import ProfileRecentActivity from "@/components/profile/ProfileRecentActivity";
 import useAjoCore from "@/hooks/useAjoCore";
+import { useAjoStore } from "@/store/ajoStore";
 
 const Profile = () => {
   const { getMemberInfo, needsToPayThisCycle } = useAjoCore();
   const [isVisible, setIsVisible] = useState(false);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("ajo");
   const { address, network } = useWallet();
+  const { ajoStats } = useAjoStore();
   const { whbar, usdc, loading } = useTokenStore();
   const [copied, setCopied] = useState(false);
   const [balanceInNGN, setBalanceInNGN] = useState<number | null>(null);
@@ -108,13 +110,13 @@ const Profile = () => {
             isVisible ? "translate-y-0 opacity-100" : "translate-y-20 opacity-0"
           }`}
         >
-          {activeTab === "overview" && <ProfileOverview />}
+          {/* {activeTab === "overview" && <ProfileOverview />} */}
 
-          {activeTab === "ajo" && <ProfileAjoGroups />}
+          {activeTab === "ajo" && <ProfileAjoGroups ajoStats={ajoStats} />}
 
           {activeTab === "nfts" && <ProfileNftPage />}
-
-          {activeTab === "activity" && <ProfileRecentActivity />}
+          {/* 
+          {activeTab === "activity" && <ProfileRecentActivity />} */}
         </div>
       </div>
     </div>

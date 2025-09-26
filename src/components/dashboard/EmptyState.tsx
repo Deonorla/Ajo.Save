@@ -14,25 +14,25 @@ export function EmptyState({ onCreateAjo }: EmptyStateProps) {
       <div className="max-w-2xl mx-auto text-center space-y-8">
         {/* Main illustration area */}
         <div className="relative">
-          <div className="w-32 h-32 mx-auto bg-card rounded-full flex items-center justify-center mb-6 border border-border">
-            <Users className="w-16 h-16 text-muted-foreground" />
+          <div className="w-16 h-16 sm:w-32 sm:h-32 mx-auto bg-card rounded-full flex items-center justify-center mb-6 border border-border">
+            <Users className="w-8 h-8 sm:w-16 sm:h-16 text-muted-foreground" />
           </div>
 
           {/* Floating elements */}
-          <div className="absolute -top-4 -left-8 w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center animate-bounce">
-            <TrendingUp className="w-6 h-6 text-primary" />
+          <div className="absolute -top-4 left-0 sm:-left-8 w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center animate-bounce">
+            <TrendingUp className="w-4 h-6 text-primary" />
           </div>
-          <div className="absolute -top-2 -right-12 w-10 h-10 bg-accent/20 rounded-full flex items-center justify-center animate-bounce delay-300">
+          <div className="absolute -top-2 right-0 sm:-right-12 w-10 h-10 bg-accent/20 rounded-full flex items-center justify-center animate-bounce delay-300">
             <Shield className="w-5 h-5 text-accent" />
           </div>
         </div>
 
         {/* Main content */}
         <div className="space-y-4">
-          <h1 className="text-3xl font-bold text-foreground">
+          <h1 className="text-lg font-bold text-foreground">
             No Ajo Groups Yet
           </h1>
-          <p className="text-lg text-muted-foreground max-w-md mx-auto">
+          <p className="text-sm text-muted-foreground max-w-md mx-auto">
             Be the pioneer! Create the first Ajo group and start building wealth
             together with your community.
           </p>

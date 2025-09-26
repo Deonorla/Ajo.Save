@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import { ethers } from "ethers";
 import { HEDERA_TESTNET } from "../lib/hederaConfig";
 import { toast } from "sonner";
+import { useTokenStore } from "@/store/tokenStore";
 
 type MetaState = {
   available: boolean;
@@ -34,6 +35,7 @@ export function useMetaMask(): MetaState {
   const [error, setError] = useState<string | null>(null);
   const [provider, setProvider] =
     useState<ethers.providers.Web3Provider | null>(null);
+  const { setAddress: setAddr } = useTokenStore();
 
   // ---------------------------
   // Fetch Account Info
@@ -47,6 +49,7 @@ export function useMetaMask(): MetaState {
         const signer = activeProvider.getSigner();
         const addr = await signer.getAddress();
         setAddress(addr);
+        setAddr(addr);
         setConnected(true);
 
         const balBig = await activeProvider.getBalance(addr);

@@ -3,10 +3,10 @@ import { Award } from "lucide-react";
 
 const ProfileNftPage = () => {
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6">
-      <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
+    <div className="bg-card rounded-xl shadow-lg p-6">
+      <h3 className="text-xl font-bold text-white mb-6 flex items-center space-x-2">
         <Award className="w-6 h-6 text-purple-600" />
-        <span>Cultural NFT Collection</span>
+        <span>Cultural NFT Collection (Coming Soon !)</span>
       </h3>
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {nftCollection.map((nft, index) => (
@@ -27,7 +27,7 @@ const ProfileNftPage = () => {
                 {nft.rarity}
               </div>
             </div>
-            <h4 className="font-semibold text-gray-900 group-hover:text-green-600 transition-colors">
+            <h4 className="font-semibold text-white/60 group-hover:text-green-600 transition-colors">
               {nft.name}
             </h4>
           </div>

@@ -1,20 +1,20 @@
 export {};
 declare global {
   type MemberStruct = {
-    queueNumber: bigint;
-    joinedCycle: bigint;
-    totalPaid: bigint;
-    requiredCollateral: bigint;
-    lockedCollateral: bigint;
-    lastPaymentCycle: bigint;
-    defaultCount: bigint;
+    queueNumber: string; // ✅ BigInt stored as string
+    joinedCycle: string;
+    totalPaid: string;
+    requiredCollateral: string;
+    lockedCollateral: string;
+    lastPaymentCycle: string;
+    defaultCount: string;
     hasReceivedPayout: boolean;
     isActive: boolean;
     guarantor: string;
     preferredToken: number;
-    reputationScore: bigint;
-    pastPayments: bigint[];
-    guaranteePosition: bigint;
+    reputationScore: string;
+    pastPayments: string[];
+    guaranteePosition: string;
   };
 
   export type MemberInfoResponse = {

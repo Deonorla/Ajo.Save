@@ -21,7 +21,7 @@ const StatsCard = ({ isVisible }: { isVisible: boolean }) => {
           </div>
           <div className="text-right">
             <div className="text-2xl font-bold text-primary">
-              {userStats.transparencyScore}
+              {memberData?.memberInfo.reputationScore}
             </div>
             <div className="text-sm text-white">Transparency Score</div>
           </div>
@@ -29,7 +29,7 @@ const StatsCard = ({ isVisible }: { isVisible: boolean }) => {
         <div className="w-full bg-gray-200 rounded-full h-2">
           <div
             className="bg-primary h-2 rounded-full"
-            style={{ width: `${userStats.transparencyScore}%` }}
+            style={{ width: `${100}%` }}
           ></div>
         </div>
       </div>
@@ -48,7 +48,7 @@ const StatsCard = ({ isVisible }: { isVisible: boolean }) => {
             <div className="text-sm text-white">Ajo Contributions</div>
           </div>
         </div>
-        <div className="text-sm text-white">+12% this month</div>
+        <div className="text-sm text-white"> this month</div>
       </div>
 
       {/* <div className="bg-card rounded-xl p-6 shadow-lg hover:shadow-xl transition-all hover:scale-105 group">

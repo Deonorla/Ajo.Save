@@ -28,7 +28,7 @@ export interface UseAjoCore {
     monthlyPayment: string
   ) => Promise<{ positions: string[]; collaterals: string[] } | null>;
   owner: () => Promise<string | null>;
-
+  getRequiredCollateralForJoin: () => Promise<string | null>;
   // write
   joinAjo: (
     tokenChoice: number,
@@ -130,32 +130,32 @@ const useAjoCore = (): UseAjoCore => {
         const rawMember = res[0];
 
         const member: MemberStruct = {
-          queueNumber: BigInt(rawMember.queueNumber.toString()),
-          joinedCycle: BigInt(rawMember.joinedCycle.toString()),
-          totalPaid: BigInt((rawMember.totalPaid / 1000000).toString()),
-          requiredCollateral: BigInt(
-            (rawMember.requiredCollateral / 1000000).toString()
-          ),
-          lockedCollateral: BigInt(
-            (rawMember.lockedCollateral / 1000000).toString()
-          ),
-          lastPaymentCycle: BigInt(rawMember.lastPaymentCycle.toString()),
-          defaultCount: BigInt(rawMember.defaultCount.toString()),
+          queueNumber: rawMember.queueNumber.toString(),
+          joinedCycle: rawMember.joinedCycle.toString(),
+          totalPaid: (BigInt(rawMember.totalPaid) / BigInt(1000000)).toString(),
+          requiredCollateral: (
+            BigInt(rawMember.requiredCollateral) / BigInt(1000000)
+          ).toString(),
+          lockedCollateral: (
+            BigInt(rawMember.lockedCollateral) / BigInt(1000000)
+          ).toString(),
+          lastPaymentCycle: rawMember.lastPaymentCycle.toString(),
+          defaultCount: rawMember.defaultCount.toString(),
           hasReceivedPayout: rawMember.hasReceivedPayout,
           isActive: rawMember.isActive,
           guarantor: rawMember.guarantor,
           preferredToken: Number(rawMember.preferredToken),
-          reputationScore: BigInt(rawMember.reputationScore.toString()),
+          reputationScore: rawMember.reputationScore.toString(),
           pastPayments: Array.isArray(rawMember.pastPayments)
-            ? rawMember.pastPayments.map((x: any) => BigInt(x.toString()))
+            ? rawMember.pastPayments.map((x: any) => x.toString())
             : [],
-          guaranteePosition: BigInt(rawMember.guaranteePosition.toString()),
+          guaranteePosition: rawMember.guaranteePosition.toString(),
         };
 
-        const data = {
+        const data: MemberInfoResponse = {
           memberInfo: member,
-          pendingPenalty: BigInt(res[1].toString()).toString(),
-          effectiveVotingPower: BigInt(res[2].toString()).toString(),
+          pendingPenalty: BigInt(res[1]).toString(), // ✅ fixed
+          effectiveVotingPower: BigInt(res[2]).toString(), // ✅ fixed
         };
 
         setMemberData(data);
@@ -270,10 +270,23 @@ const useAjoCore = (): UseAjoCore => {
     }
   }, [contractRead]);
 
+  const getRequiredCollateralForJoin = useCallback(async (): Promise<
+    string | null
+  > => {
+    if (!contractRead) return null;
+    try {
+      const collateral = await contractRead?.getRequiredCollateralForJoin(0);
+      console.log("collateral", collateral.toString());
+      return collateral;
+    } catch (err) {
+      console.error("getRequiredCollateralForJoin failed", err);
+      return null;
+    }
+  }, [contractRead]);
+
   // ---------------------------
   // Write wrappers
   // ---------------------------
-
   const joinAjo = useCallback(
     async (
       tokenChoice: number,
@@ -385,15 +398,26 @@ const useAjoCore = (): UseAjoCore => {
     [contractWrite, contractRead, provider]
   );
 
-  const makePayment = useCallback(async () => {
-    if (!contractWrite)
-      throw new Error("Wallet not connected / write contract not ready");
+  const makePayment = useCallback(async (): Promise<void> => {
+    if (!contractWrite) {
+      toast.error("Wallet not connected or contract not ready");
+      return;
+    }
+
     try {
+      // send transaction
       const tx = await contractWrite.processPayment();
-      await tx.wait();
-    } catch (err) {
+      toast.info("Processing payment...");
+
+      const receipt = await tx.wait();
+      if (receipt.status === 1) {
+        toast.success("Payment successful!");
+      } else {
+        toast.error("Payment failed");
+      }
+    } catch (err: any) {
       console.error("makePayment error:", err);
-      throw err;
+      toast.error(err?.reason || err?.message || "Payment failed");
     }
   }, [contractWrite]);
 
@@ -420,6 +444,7 @@ const useAjoCore = (): UseAjoCore => {
     getTokenConfig,
     getCollateralDemo,
     owner,
+    getRequiredCollateralForJoin,
     // write
     joinAjo,
     makePayment,

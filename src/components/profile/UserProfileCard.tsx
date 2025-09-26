@@ -38,10 +38,7 @@ const UserProfileCard = ({
           <div className="flex flex-col sm:flex-row items-start sm:items-end space-y-4 sm:space-y-0 sm:space-x-6">
             <div className="relative group hidden sm:block">
               <div className="w-24 h-24 bg-gradient-to-br from-white to-gray-100 rounded-full flex items-center justify-center text-3xl font-bold text-primary border-4 border-white shadow-lg">
-                {userStats.name
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")}
+                {address?.slice(0, 2)}
               </div>
               {/* <button className="absolute bottom-0 right-0 w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
                     <Camera className="w-4 h-4" />
@@ -68,24 +65,6 @@ const UserProfileCard = ({
               <p className="text-green-100 text-sm  sm:text-lg mb-2">
                 Wallet Balance
               </p>
-              <div className="flex items-center space-x-2 text-sm text-green-100">
-                <div className="flex items-center text-sm font-semibold  sm:text-xl space-x-1">
-                  <img src="/images/profile/hedera.png" className="w-6 h-6" />
-                  {loading ? <span>...</span> : <span>{whbar}</span>}
-                </div>
-                <div className="flex items-center text-sm font-semibold  sm:text-xl space-x-1">
-                  <span>WHBAR</span>
-                </div>
-                {/* {balanceInNGN !== null && (
-                  <p className="text-green-200 text-sm  font-semibold sm:text-xl">
-                    ≈ ₦
-                    {balanceInNGN?.toLocaleString("en-NG", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </p>
-                )} */}
-              </div>
               <div className="flex items-center my-1 space-x-2 text-sm text-green-100">
                 <div className="flex items-center text-sm font-semibold  sm:text-xl space-x-1">
                   <img src="/images/profile/usdc.png" className="w-6 h-6" />
@@ -98,6 +77,24 @@ const UserProfileCard = ({
                   <p className="text-green-200 text-sm  font-semibold sm:text-xl">
                     ≈ ₦
                     {usdcBalanceInNGN?.toLocaleString("en-NG", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </p>
+                )} */}
+              </div>
+              <div className="flex items-center space-x-2 text-sm text-green-100">
+                <div className="flex items-center text-sm font-semibold  sm:text-xl space-x-1">
+                  <img src="/images/profile/hedera.png" className="w-6 h-6" />
+                  {loading ? <span>...</span> : <span>{whbar}</span>}
+                </div>
+                <div className="flex items-center text-sm font-semibold  sm:text-xl space-x-1">
+                  <span>WHBAR</span>
+                </div>
+                {/* {balanceInNGN !== null && (
+                  <p className="text-green-200 text-sm  font-semibold sm:text-xl">
+                    ≈ ₦
+                    {balanceInNGN?.toLocaleString("en-NG", {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
                     })}

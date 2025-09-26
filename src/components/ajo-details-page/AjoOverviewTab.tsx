@@ -113,12 +113,14 @@ const AjoOverviewTab = () => {
                 <div className="text-sm text-muted-foreground">Completed</div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-accent">0</div>
+                <div className="text-2xl font-bold text-accent">
+                  {ajoStats?.activeMembers}
+                </div>
                 <div className="text-sm text-muted-foreground">Active</div>
               </div>
               <div>
                 <div className="text-2xl font-bold text-muted-foreground">
-                  {ajoStats?.activeMembers}
+                  {5 - Number(ajoStats?.activeMembers)}
                 </div>
                 <div className="text-sm text-muted-foreground">Remaining</div>
               </div>
@@ -161,7 +163,7 @@ const AjoOverviewTab = () => {
                   <span className="text-muted-foreground">Active Token:</span>
                   <span className="font-semibold flex items-center space-x-1 text-card-foreground">
                     <Coins className="w-4 h-4" />
-                    <span>{ajoStats.activeToken === 0 ? "WHBAR" : "USDC"}</span>
+                    <span>{ajoStats.activeToken === 0 ? "USDC" : "WHBAR"}</span>
                   </span>
                 </div>
               </div>
@@ -216,7 +218,7 @@ const AjoOverviewTab = () => {
               <span className="text-muted-foreground">Payment Token:</span>
               <span className="font-semibold text-card-foreground flex items-center space-x-1">
                 <Coins className="w-4 h-4" />
-                <span>WHBAR</span>
+                <span>USDC</span>
               </span>
             </div>
             <div className="flex justify-between">
@@ -243,38 +245,38 @@ const AjoOverviewTab = () => {
         <div className="bg-gradient-to-br from-primary to-accent rounded-xl shadow-lg p-6 text-primary-foreground border border-primary/30">
           <h3 className="text-lg font-bold mb-4 flex items-center space-x-2">
             <Shield className="w-5 h-5" />
-            <span>Smart Contract Security</span>
+            <span>How to participate</span>
           </h3>
 
           <div className="space-y-3 text-sm">
             <div className="flex items-center space-x-2">
               <CheckCircle className="w-4 h-4 text-green-400" />
               <span className="font-semibold text-green-400">
-                Automated payments
+                Get USDC from faucet (1000 tokens)
               </span>
             </div>
             <div className="flex items-center space-x-2">
               <CheckCircle className="w-4 h-4 text-accent" />
               <span className="font-semibold text-card-foreground">
-                Transparent operations
+                Approve contract to lock your collateral
               </span>
             </div>
             <div className="flex items-center space-x-2">
               <CheckCircle className="w-4 h-4 text-secondary-foreground" />
               <span className="font-semibold text-card-foreground">
-                Collateral protection
+                Make monthly payments
               </span>
             </div>
             <div className="flex items-center space-x-2">
-              <CheckCircle className="w-4 h-4 text-primary" />
-              <span className="font-semibold text-primary">
-                Governance voting
+              <CheckCircle className="w-4 h-4 text-green-400" />
+              <span className="font-semibold text-green-400">
+                Receive payout when it's your turn!
               </span>
             </div>
             <div className="flex items-center space-x-2">
-              <CheckCircle className="w-4 h-4 text-accent" />
-              <span className="font-semibold text-accent">
-                Reputation system
+              <CheckCircle className="w-4 h-4 text-green-400" />
+              <span className="font-semibold text-green-400">
+                Early positions lock more collateral but get paid first!
               </span>
             </div>
           </div>

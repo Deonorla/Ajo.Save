@@ -82,7 +82,7 @@ const AjoCard = ({ ajoData, isVisible }: AjoCardProps) => {
               #1
             </div>
             <span className="text-muted-foreground">
-              by {formatAddress("0x197aD3A009b07f82527b239a4D23de6F9c795597")}
+              by {formatAddress(import.meta.env.VITE_AJO_CORE_CONTRACT_ADDRESS)}
             </span>
           </div>
 
@@ -105,7 +105,7 @@ const AjoCard = ({ ajoData, isVisible }: AjoCardProps) => {
 
           <div>
             <div className="text-2xl font-bold text-accent">
-              {ajoData.activeMembers}/10
+              {ajoData.activeMembers}/5
             </div>
             <div className="text-xs text-muted-foreground">Members</div>
           </div>
