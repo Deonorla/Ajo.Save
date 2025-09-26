@@ -9,22 +9,29 @@ import {
   Check,
   User,
   Coins,
+  BadgeDollarSign,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useWallet } from "../../auth/WalletContext";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTokenStore } from "@/store/tokenStore";
 import FormattedBalance from "@/utils/FormatedBalance";
+import { useTokenContract } from "@/hooks/useTokenContract";
+import { ethers } from "ethers";
+import { toast } from "sonner";
 
 const Header = () => {
+  const usdcContract = import.meta.env.VITE_MOCK_USDC_ADDRESS;
   const navigate = useNavigate();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-  const { usdc, whbar, loading } = useTokenStore();
+  const { usdc, whbar, loading, setUsdc } = useTokenStore();
   const { connected, address, network, connectMetaMask, disconnect } =
     useWallet();
+  const { getBalance, faucet } = useTokenContract(usdcContract);
+  const [minting, setMinting] = useState(false);
 
   const handleCopy = async () => {
     if (address) {
@@ -34,6 +41,23 @@ const Header = () => {
     }
   };
 
+  const handleMint = async () => {
+    try {
+      setMinting(true);
+      const tx = await faucet(); // mint 10000 USDC (6 decimals)
+      console.log("Mint tx:", tx);
+      toast.success("1000 usdc minted successfully");
+      if (address) {
+        const balance = await getBalance(address);
+        setUsdc(ethers.utils.formatUnits(balance, 6));
+        console.log("New balance:", ethers.utils.formatUnits(balance, 6));
+      }
+    } catch (err) {
+      console.error("Mint failed", err);
+    } finally {
+      setMinting(false);
+    }
+  };
   useEffect(() => {
     const currentPath = location.pathname.replace("/", "") || "dashboard";
     setActiveTab(currentPath || "dashboard");
@@ -99,7 +123,7 @@ const Header = () => {
                   {/* <span className=" text-white/50 truncate max-w-[100px]">
                     {address?.slice(0, 6)}...{address?.slice(-4)}
                   </span> */}
-                  <button
+                  {/* <button
                     onClick={handleCopy}
                     className="p-1 hover:bg-primary/20 rounded"
                     title="Copy Address"
@@ -109,6 +133,13 @@ const Header = () => {
                     ) : (
                       <Copy className="h-4 w-4 text-white" />
                     )}
+                  </button> */}
+                  <button
+                    onClick={handleMint}
+                    className="ml-2 flex items-center gap-1 text-primary hover:text-primary/80"
+                  >
+                    <BadgeDollarSign className="h-4 w-4" />
+                    {minting ? "minting" : "mint usdc"}
                   </button>
                   <span className="hidden xl:block ml-2 text-xs text-white ">
                     {network}
@@ -209,7 +240,7 @@ const Header = () => {
                   <div className="flex items-center justify-between gap-3 pt-2">
                     <button
                       onClick={handleCopy}
-                      className="flex items-center gap-1 px-3 py-2 text-sm rounded-lg border border-primary text-white hover:bg-primary/20"
+                      className="flex items-center gap-1 px-3 py-1 text-sm rounded-lg border border-primary text-white hover:bg-primary/20"
                     >
                       {copied ? (
                         <Check className="h-4 w-4 text-primary" />
@@ -217,6 +248,13 @@ const Header = () => {
                         <Copy className="h-4 w-4 text-white" />
                       )}
                       {copied ? "Copied" : "Copy"}
+                    </button>
+                    <button
+                      onClick={handleMint}
+                      className=" px-3 py-1 flex justify-center items-center gap-1 rounded-lg border border-primary  text-primary hover:text-primary/80"
+                    >
+                      <BadgeDollarSign className="h-4 w-4" />
+                      {minting ? "minting" : "mint usdc"}
                     </button>
                     <button
                       onClick={disconnect}

@@ -16,7 +16,8 @@ import { useWallet } from "@/auth/WalletContext";
 
 const AjoDetails = () => {
   const { address } = useWallet();
-  const { getMemberInfo } = useAjoCore();
+  const { getMemberInfo, getQueueInfo, getTokenConfig, needsToPayThisCycle } =
+    useAjoCore();
   const [isVisible, setIsVisible] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [contractStats, setContractStats] = useState<ContractStats | null>(
@@ -39,6 +40,10 @@ const AjoDetails = () => {
   useEffect(() => {
     setIsVisible(true);
     // fetchContractData();
+    if (address) {
+      getQueueInfo(address);
+      getTokenConfig(0);
+    }
     getUserData();
   }, []);
 

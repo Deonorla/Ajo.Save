@@ -76,7 +76,7 @@ const UserProfileCard = ({
                 <div className="flex items-center text-sm font-semibold  sm:text-xl space-x-1">
                   <span>WHBAR</span>
                 </div>
-                {balanceInNGN !== null && (
+                {/* {balanceInNGN !== null && (
                   <p className="text-green-200 text-sm  font-semibold sm:text-xl">
                     ≈ ₦
                     {balanceInNGN?.toLocaleString("en-NG", {
@@ -84,7 +84,7 @@ const UserProfileCard = ({
                       maximumFractionDigits: 2,
                     })}
                   </p>
-                )}
+                )} */}
               </div>
               <div className="flex items-center my-1 space-x-2 text-sm text-green-100">
                 <div className="flex items-center text-sm font-semibold  sm:text-xl space-x-1">
@@ -94,7 +94,7 @@ const UserProfileCard = ({
                 <div className="flex items-center text-sm font-semibold  sm:text-xl space-x-1">
                   <span>USDC</span>
                 </div>
-                {usdcBalanceInNGN !== null && (
+                {/* {usdcBalanceInNGN !== null && (
                   <p className="text-green-200 text-sm  font-semibold sm:text-xl">
                     ≈ ₦
                     {usdcBalanceInNGN?.toLocaleString("en-NG", {
@@ -102,7 +102,7 @@ const UserProfileCard = ({
                       maximumFractionDigits: 2,
                     })}
                   </p>
-                )}
+                )} */}
               </div>
             </div>
 

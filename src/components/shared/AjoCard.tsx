@@ -131,7 +131,7 @@ const AjoCard = ({ ajoData, isVisible }: AjoCardProps) => {
           <div className="flex justify-between items-center text-sm">
             <span className="text-muted-foreground">Total Saved:</span>
             <span className="font-semibold text-white">
-              {formatCurrency(Number(ajoData.totalCollateralUSDC))}
+              {formatCurrency(Number(ajoData.totalCollateralUSDC) * nairaRate)}
             </span>
           </div>
 

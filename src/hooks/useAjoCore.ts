@@ -6,6 +6,7 @@ import AjoCore from "@/abi/ajoCore.json";
 import { useAjoStore } from "@/store/ajoStore";
 import erc20ABI from "@/abi/erc20ABI";
 import { toast } from "sonner";
+import { useMemberStore } from "@/store/memberInfoStore";
 
 export interface UseAjoCore {
   // status
@@ -95,20 +96,20 @@ const useAjoCore = (): UseAjoCore => {
         setStats({
           totalMembers: res[0].toString(),
           activeMembers: res[1].toString(),
-          totalCollateralUSDC: res[2].toString(),
-          totalCollateralHBAR: res[3].toString(),
-          contractBalanceUSDC: res[4].toString(),
-          contractBalanceHBAR: res[5].toString(),
+          totalCollateralUSDC: (res[2] / 1000000).toString(),
+          totalCollateralHBAR: (res[3] / 1000000).toString(),
+          contractBalanceUSDC: (res[4] / 1000000).toString(),
+          contractBalanceHBAR: (res[5] / 1000000).toString(),
           currentQueuePosition: res[6].toString(),
           activeToken: Number(res[7]),
         });
         return {
           totalMembers: res[0].toString(),
           activeMembers: res[1].toString(),
-          totalCollateralUSDC: res[2].toString(),
-          totalCollateralHBAR: res[3].toString(),
-          contractBalanceUSDC: res[4].toString(),
-          contractBalanceHBAR: res[5].toString(),
+          totalCollateralUSDC: (res[2] / 1000000).toString(),
+          totalCollateralHBAR: (res[3] / 1000000).toString(),
+          contractBalanceUSDC: (res[4] / 1000000).toString(),
+          contractBalanceHBAR: (res[5] / 1000000).toString(),
           currentQueuePosition: res[6].toString(),
           activeToken: Number(res[7]),
         };
@@ -121,35 +122,49 @@ const useAjoCore = (): UseAjoCore => {
   const getMemberInfo = useCallback(
     async (memberAddress: string): Promise<MemberInfoResponse | null> => {
       if (!contractRead) return null;
+      const { setMemberData, setLoading, setError } = useMemberStore.getState();
+
+      setLoading(true);
       try {
         const res = await contractRead.getMemberInfo(memberAddress);
-        // res: [ memberStruct, pendingPenalty, effectiveVotingPower ]
         const rawMember = res[0];
+
         const member: MemberStruct = {
-          queueNumber: rawMember.queueNumber,
-          joinedCycle: rawMember.joinedCycle,
-          totalPaid: rawMember.totalPaid,
-          requiredCollateral: rawMember.requiredCollateral,
-          lockedCollateral: rawMember.lockedCollateral,
-          lastPaymentCycle: rawMember.lastPaymentCycle,
-          defaultCount: rawMember.defaultCount,
+          queueNumber: BigInt(rawMember.queueNumber.toString()),
+          joinedCycle: BigInt(rawMember.joinedCycle.toString()),
+          totalPaid: BigInt((rawMember.totalPaid / 1000000).toString()),
+          requiredCollateral: BigInt(
+            (rawMember.requiredCollateral / 1000000).toString()
+          ),
+          lockedCollateral: BigInt(
+            (rawMember.lockedCollateral / 1000000).toString()
+          ),
+          lastPaymentCycle: BigInt(rawMember.lastPaymentCycle.toString()),
+          defaultCount: BigInt(rawMember.defaultCount.toString()),
           hasReceivedPayout: rawMember.hasReceivedPayout,
           isActive: rawMember.isActive,
           guarantor: rawMember.guarantor,
           preferredToken: Number(rawMember.preferredToken),
-          reputationScore: rawMember.reputationScore,
+          reputationScore: BigInt(rawMember.reputationScore.toString()),
           pastPayments: Array.isArray(rawMember.pastPayments)
             ? rawMember.pastPayments.map((x: any) => BigInt(x.toString()))
             : [],
-          guaranteePosition: rawMember.guaranteePosition,
+          guaranteePosition: BigInt(rawMember.guaranteePosition.toString()),
         };
-        return {
+
+        const data = {
           memberInfo: member,
-          pendingPenalty: res[1].toString(),
-          effectiveVotingPower: res[2].toString(),
+          pendingPenalty: BigInt(res[1].toString()).toString(),
+          effectiveVotingPower: BigInt(res[2].toString()).toString(),
         };
-      } catch (err) {
+
+        setMemberData(data);
+        setLoading(false);
+        return data;
+      } catch (err: any) {
         console.error("getMemberInfo error:", err);
+        setError(err.message);
+        setLoading(false);
         return null;
       }
     },
@@ -159,8 +174,11 @@ const useAjoCore = (): UseAjoCore => {
   const needsToPayThisCycle = useCallback(
     async (memberAddress: string): Promise<boolean | null> => {
       if (!contractRead) return null;
+      const { setNeedsToPay } = useMemberStore.getState();
       try {
-        return await contractRead.needsToPayThisCycle(memberAddress);
+        const data = await contractRead.needsToPayThisCycle(memberAddress);
+        setNeedsToPay(data);
+        return data;
       } catch (err) {
         console.error("needsToPayThisCycle error:", err);
         return null;
@@ -174,12 +192,16 @@ const useAjoCore = (): UseAjoCore => {
       memberAddress: string
     ): Promise<{ position: string; estimatedCyclesWait: string } | null> => {
       if (!contractRead) return null;
+      const { setQueueInfo } = useMemberStore.getState();
       try {
         const res = await contractRead.getQueueInfo(memberAddress);
-        return {
+        const info = {
           position: res[0].toString(),
           estimatedCyclesWait: res[1].toString(),
         };
+        console.log("QueueInfo:", info);
+        setQueueInfo(info);
+        return info;
       } catch (err) {
         console.error("getQueueInfo error:", err);
         return null;
@@ -193,9 +215,16 @@ const useAjoCore = (): UseAjoCore => {
       token: number
     ): Promise<{ monthlyPayment: string; isActive: boolean } | null> => {
       if (!contractRead) return null;
+      const { setTokenConfig } = useMemberStore.getState();
       try {
         const res = await contractRead.getTokenConfig(token);
-        return { monthlyPayment: res[0].toString(), isActive: Boolean(res[1]) };
+        const config = {
+          monthlyPayment: res[0].toString(),
+          isActive: Boolean(res[1]),
+        };
+        console.log("TokenConfig:", config);
+        setTokenConfig(config);
+        return config;
       } catch (err) {
         console.error("getTokenConfig error:", err);
         return null;

@@ -9,8 +9,10 @@ import ProfileAjoGroups from "@/components/profile/ProfileAjoGroups";
 import UserProfileCard from "@/components/profile/UserProfileCard";
 import ProfileNftPage from "@/components/profile/ProfileNftPage";
 import ProfileRecentActivity from "@/components/profile/ProfileRecentActivity";
+import useAjoCore from "@/hooks/useAjoCore";
 
 const Profile = () => {
+  const { getMemberInfo, needsToPayThisCycle } = useAjoCore();
   const [isVisible, setIsVisible] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const { address, network } = useWallet();
@@ -54,9 +56,13 @@ const Profile = () => {
         console.error("Failed to fetch prices:", error);
       }
     };
+    if (address) {
+      getMemberInfo(address);
+      needsToPayThisCycle(address);
+    }
 
     fetchPrices();
-  }, [whbar, usdc]);
+  }, [whbar, usdc, getMemberInfo]);
 
   const handleCopy = async () => {
     if (address) {

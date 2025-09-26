@@ -1,7 +1,13 @@
+import { useMemberStore } from "@/store/memberInfoStore";
+import { useTokenStore } from "@/store/tokenStore";
 import { userStats } from "@/temp-data";
+import formatCurrency from "@/utils/formatCurrency";
 import { Award, Coins, Eye, Shield } from "lucide-react";
 
 const StatsCard = ({ isVisible }: { isVisible: boolean }) => {
+  const { memberData, loading: memberLoading, error } = useMemberStore();
+  const { nairaRate } = useTokenStore();
+
   return (
     <div
       className={`grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8 transform transition-all duration-1000 delay-200 ${
@@ -35,7 +41,9 @@ const StatsCard = ({ isVisible }: { isVisible: boolean }) => {
           </div>
           <div className="text-right">
             <div className="text-2xl font-bold text-primary">
-              {userStats.ajoContributions}
+              {formatCurrency(
+                Number(memberData?.memberInfo.lockedCollateral) * nairaRate
+              )}
             </div>
             <div className="text-sm text-white">Ajo Contributions</div>
           </div>
@@ -43,7 +51,7 @@ const StatsCard = ({ isVisible }: { isVisible: boolean }) => {
         <div className="text-sm text-white">+12% this month</div>
       </div>
 
-      <div className="bg-card rounded-xl p-6 shadow-lg hover:shadow-xl transition-all hover:scale-105 group">
+      {/* <div className="bg-card rounded-xl p-6 shadow-lg hover:shadow-xl transition-all hover:scale-105 group">
         <div className="flex items-center justify-between mb-4">
           <div className="w-12 h-12 bg-primary/15 rounded-lg flex items-center justify-center group-hover:bg-primary/20 transition-colors">
             <Award className="w-6 h-6 text-primary" />
@@ -56,9 +64,9 @@ const StatsCard = ({ isVisible }: { isVisible: boolean }) => {
           </div>
         </div>
         <div className="text-sm text-white">3 rare items</div>
-      </div>
+      </div> */}
 
-      <div className="bg-card rounded-xl p-6 shadow-lg hover:shadow-xl transition-all hover:scale-105 group">
+      {/* <div className="bg-card rounded-xl p-6 shadow-lg hover:shadow-xl transition-all hover:scale-105 group">
         <div className="flex items-center justify-between mb-4">
           <div className="w-12 h-12 bg-primary/15 rounded-lg flex items-center justify-center group-hover:bg-primary/20 transition-colors">
             <Eye className="w-6 h-6 text-primary" />
@@ -71,7 +79,7 @@ const StatsCard = ({ isVisible }: { isVisible: boolean }) => {
           </div>
         </div>
         <div className="text-sm text-white">Community hero</div>
-      </div>
+      </div> */}
     </div>
   );
 };

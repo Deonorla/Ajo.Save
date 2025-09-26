@@ -54,7 +54,12 @@ const AjoDetailsStatsGrid = ({
           <span className="text-xs text-muted-foreground">Total</span>
         </div>
         <div className="text-2xl font-bold text-card-foreground">
-          {formatCurrency(0)}
+          {formatCurrency(
+            Number(
+              Number(ajoStats?.totalCollateralHBAR ?? 0) +
+                Number(ajoStats?.totalCollateralUSDC ?? 0)
+            ) * nairaRate
+          )}
         </div>
         <div className="text-sm text-muted-foreground">Pool Value</div>
       </div>
