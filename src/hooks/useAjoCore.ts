@@ -34,7 +34,7 @@ export interface UseAjoCore {
     tokenAddress: string,
     collateralContract: string,
     paymentsContract: string
-  ) => Promise<ethers.TransactionReceipt>;
+  ) => Promise<ethers.providers.TransactionReceipt>;
   makePayment: () => Promise<void>;
   distributePayout: () => Promise<void>;
 }
@@ -51,10 +51,11 @@ const useAjoCore = (): UseAjoCore => {
   // read-only contract (provider)
   const contractRead = useMemo(() => {
     if (!provider || !ajoAddress) return null;
+    // provider here is expected to be ethers.providers.Web3Provider (v5)
     return new ethers.Contract(ajoAddress, (AjoCore as any).abi, provider);
   }, [provider, ajoAddress]);
 
-  // write-enabled contract: provider.getSigner() is async in ethers v6, so build it in effect
+  // write-enabled contract: provider.getSigner() (ethers v5) is synchronous
   useEffect(() => {
     let mounted = true;
     const setup = async () => {
@@ -63,7 +64,8 @@ const useAjoCore = (): UseAjoCore => {
         return;
       }
       try {
-        const signer = await provider.getSigner(); // await is required
+        // provider is ethers.providers.Web3Provider (v5)
+        const signer = provider.getSigner();
         if (!mounted) return;
         const writable = new ethers.Contract(
           ajoAddress,
@@ -114,7 +116,7 @@ const useAjoCore = (): UseAjoCore => {
         console.error("getContractStats error:", err);
         return null;
       }
-    }, [contractRead]);
+    }, [contractRead, setStats]);
 
   const getMemberInfo = useCallback(
     async (memberAddress: string): Promise<MemberInfoResponse | null> => {
@@ -137,7 +139,7 @@ const useAjoCore = (): UseAjoCore => {
           preferredToken: Number(rawMember.preferredToken),
           reputationScore: rawMember.reputationScore,
           pastPayments: Array.isArray(rawMember.pastPayments)
-            ? rawMember.pastPayments.map((x: any) => BigInt(x))
+            ? rawMember.pastPayments.map((x: any) => BigInt(x.toString()))
             : [],
           guaranteePosition: rawMember.guaranteePosition,
         };
@@ -209,7 +211,7 @@ const useAjoCore = (): UseAjoCore => {
     ): Promise<{ positions: string[]; collaterals: string[] } | null> => {
       if (!contractRead) return null;
       try {
-        // monthlyPayment is a string (we keep raw). If your contract expects uint256, pass BigInt or string as appropriate.
+        // monthlyPayment is a string (we keep raw). If your contract expects uint256, pass BigNumber or string as appropriate.
         const res = await contractRead.getCollateralDemo(
           participants,
           monthlyPayment
@@ -255,60 +257,101 @@ const useAjoCore = (): UseAjoCore => {
         throw new Error("Wallet not connected / write contract not ready");
       }
 
-      const signer = await provider?.getSigner();
-      const userAddress = await signer?.getAddress();
+      // signer & user address (ethers v5)
+      const signer = provider?.getSigner();
+      const userAddress = signer ? await signer.getAddress() : null;
+      if (!signer || !userAddress)
+        throw new Error("Could not get signer or user address");
 
-      // 1. Get expected collateral from contract
+      // --- 1. Get expected collateral ---
       let expectedCollateral;
       try {
         expectedCollateral = await contractRead?.getRequiredCollateralForJoin(
           tokenChoice
         );
         console.log("expectedCollateral", expectedCollateral.toString());
+        const code = await provider?.getCode(tokenAddress);
+        console.log("ERC20 deployed code:", code && code.length > 2);
       } catch (err) {
-        // fallback if function missing
         console.warn(
-          "getRequiredCollateralForJoin not available, falling back to monthlyPayment"
+          "getRequiredCollateralForJoin failed, fallback to tokenConfig",
+          err
         );
         const tokenConfig = await contractRead?.getTokenConfig(tokenChoice);
         expectedCollateral = tokenConfig?.monthlyPayment;
       }
-
       if (!expectedCollateral)
         throw new Error("Could not determine collateral requirement");
 
-      // 2. Approve collateral contract
+      // --- 2. Interact with token ---
       const token = new ethers.Contract(tokenAddress, erc20ABI, signer);
-      const allowanceCollateral = await token.allowance(
-        userAddress,
-        collateralContract
+
+      // Hardcode decimals for Hedera USDC (6) or fallback to token.decimals()
+      let decimals = 6;
+      try {
+        // try to read decimals (some mocks expose decimals)
+        const d = await token.decimals();
+        decimals = Number(d);
+      } catch {
+        // keep default 6
+      }
+      const formattedCollateral = ethers.utils.formatUnits(
+        expectedCollateral,
+        decimals
       );
-      if (allowanceCollateral < expectedCollateral) {
-        const approveTx = await token.approve(
-          collateralContract,
-          expectedCollateral
+      console.log(`Collateral needed: ${formattedCollateral} tokens`);
+
+      // --- 3. Approve Collateral Contract ---
+      try {
+        const allowanceCollateral = await token.allowance(
+          userAddress,
+          collateralContract
         );
-        await approveTx.wait();
-        console.log("Collateral approved ✅");
+        console.log("allowanceCollateral", allowanceCollateral.toString());
+
+        if (allowanceCollateral.lt(expectedCollateral)) {
+          const approveTx = await token.approve(
+            collateralContract,
+            expectedCollateral
+          );
+          const receipt = await approveTx.wait();
+          console.log("✅ Collateral approved", receipt.transactionHash);
+        } else {
+          console.log("✅ Collateral already approved");
+        }
+      } catch (err) {
+        console.error("❌ allowance() / approve() for collateral failed", err);
       }
 
-      // 3. Approve payments contract
-      const allowancePayments = await token.allowance(
-        userAddress,
-        paymentsContract
-      );
-      if (allowancePayments < expectedCollateral) {
-        const approveTx = await token.approve(
-          paymentsContract,
-          expectedCollateral
+      // --- 4. Approve Payments Contract ---
+      try {
+        const allowancePayments = await token.allowance(
+          userAddress,
+          paymentsContract
         );
-        await approveTx.wait();
-        console.log("Payments approved ✅");
+        console.log("allowancePayments", allowancePayments.toString());
+
+        if (allowancePayments.lt(expectedCollateral)) {
+          const approveTx = await token.approve(
+            paymentsContract,
+            expectedCollateral
+          );
+          const receipt = await approveTx.wait();
+          console.log("✅ Payments approved", receipt.transactionHash);
+        } else {
+          console.log("✅ Payments already approved");
+        }
+      } catch (err) {
+        console.error("❌ allowance() / approve() for payments failed", err);
       }
 
-      // 4. Join Ajo
-      const tx = await contractWrite.joinAjo(tokenChoice, { gasLimit: 500000 });
-      return await tx.wait();
+      // --- 5. Join Ajo ---
+      const tx = await contractWrite.joinAjo(tokenChoice, {
+        gasLimit: 500000,
+      });
+      const receipt = await tx.wait();
+      console.log("🎉 Joined Ajo, tx hash:", receipt.transactionHash);
+      return receipt;
     },
     [contractWrite, contractRead, provider]
   );
@@ -317,7 +360,7 @@ const useAjoCore = (): UseAjoCore => {
     if (!contractWrite)
       throw new Error("Wallet not connected / write contract not ready");
     try {
-      const tx = await contractWrite.makePayment();
+      const tx = await contractWrite.processPayment();
       await tx.wait();
     } catch (err) {
       console.error("makePayment error:", err);

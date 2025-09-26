@@ -3,8 +3,10 @@ import erc20ABI from "@/abi/erc20ABI";
 import { ethers } from "ethers";
 import { useTokenStore } from "@/store/tokenStore";
 
-const getContract = (address: string, provider: ethers.BrowserProvider) =>
-  new ethers.Contract(address, erc20ABI, provider);
+const getContract = (
+  address: string,
+  provider: ethers.providers.Web3Provider
+) => new ethers.Contract(address, erc20ABI, provider);
 
 export const useTokenHook = () => {
   const { setWhbar, setUsdc, setLoading, setError } = useTokenStore();
@@ -18,8 +20,11 @@ export const useTokenHook = () => {
 
       setLoading(true);
 
-      const provider = new ethers.BrowserProvider((window as any).ethereum);
-      const signer = await provider.getSigner();
+      const provider = new ethers.providers.Web3Provider(
+        (window as any).ethereum,
+        "any"
+      );
+      const signer = provider.getSigner();
       const userAddress = await signer.getAddress();
 
       const whbar = getContract(
@@ -29,10 +34,17 @@ export const useTokenHook = () => {
 
       const [balance, decimals] = await Promise.all([
         whbar.balanceOf(userAddress),
-        whbar.decimals(),
+        // decimals might exist on the contract
+        (async () => {
+          try {
+            return await whbar.decimals();
+          } catch {
+            return 18; // fallback
+          }
+        })(),
       ]);
 
-      const formatted = ethers.formatUnits(balance, decimals);
+      const formatted = ethers.utils.formatUnits(balance, decimals);
       setWhbar(formatted);
       setLoading(false);
       console.log("Whbar Balance:", formatted);
@@ -40,6 +52,7 @@ export const useTokenHook = () => {
     } catch (err: any) {
       setError(err.message ?? "Failed to fetch WHBAR balance");
       setLoading(false);
+      return;
     }
   };
 
@@ -50,8 +63,11 @@ export const useTokenHook = () => {
         return;
       }
       setLoading(true);
-      const provider = new ethers.BrowserProvider((window as any).ethereum);
-      const signer = await provider.getSigner();
+      const provider = new ethers.providers.Web3Provider(
+        (window as any).ethereum,
+        "any"
+      );
+      const signer = provider.getSigner();
       const userAddress = await signer.getAddress();
 
       const usdc = getContract(
@@ -60,16 +76,23 @@ export const useTokenHook = () => {
       );
       const [balance, decimals] = await Promise.all([
         usdc.balanceOf(userAddress),
-        usdc.decimals(),
+        (async () => {
+          try {
+            return await usdc.decimals();
+          } catch {
+            return 6; // fallback to 6 for USDC
+          }
+        })(),
       ]);
 
-      const formatted = ethers.formatUnits(balance, decimals);
+      const formatted = ethers.utils.formatUnits(balance, decimals);
       setUsdc(formatted);
       setLoading(false);
       return formatted;
     } catch (err: any) {
       setError(err.message ?? "Failed to fetch USDC balance");
       setLoading(false);
+      return;
     }
   };
 
@@ -78,3 +101,5 @@ export const useTokenHook = () => {
     getUsdcBalance,
   };
 };
+
+export default useTokenHook;

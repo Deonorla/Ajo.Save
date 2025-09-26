@@ -1,24 +1,27 @@
 import { useMemo } from "react";
-import { ethers, Contract, ContractTransactionResponse } from "ethers";
+import { ethers, Contract } from "ethers";
 import ERC20_ABI from "../abi/erc20ABI";
 import { useWallet } from "@/auth/WalletContext";
 
-// Define ERC20 contract type separately
-type ERC20Contract = {
-  allowance(owner: string, spender: string): Promise<bigint>;
+// Define ERC20 contract type separately (ethers v5 style)
+type ERC20Contract = Contract & {
+  allowance(owner: string, spender: string): Promise<ethers.BigNumber>;
   approve(
     spender: string,
-    amount: bigint
-  ): Promise<ContractTransactionResponse>;
-  balanceOf(owner: string): Promise<bigint>;
-  transfer(to: string, amount: bigint): Promise<ContractTransactionResponse>;
+    amount: ethers.BigNumberish
+  ): Promise<ethers.ContractTransaction>;
+  balanceOf(owner: string): Promise<ethers.BigNumber>;
+  transfer(
+    to: string,
+    amount: ethers.BigNumberish
+  ): Promise<ethers.ContractTransaction>;
   transferFrom(
     from: string,
     to: string,
-    amount: bigint
-  ): Promise<ContractTransactionResponse>;
+    amount: ethers.BigNumberish
+  ): Promise<ethers.ContractTransaction>;
   decimals(): Promise<number>;
-} & Contract;
+};
 
 export const useTokenContract = (tokenAddress: string) => {
   const { provider } = useWallet();
@@ -37,9 +40,9 @@ export const useTokenContract = (tokenAddress: string) => {
     return contract.allowance(owner, spender);
   };
 
-  const approve = async (spender: string, amount: bigint) => {
+  const approve = async (spender: string, amount: ethers.BigNumberish) => {
     if (!contract || !provider) throw new Error("Contract not ready");
-    const signer = await provider.getSigner();
+    const signer = provider.getSigner();
     const writeable = contract.connect(signer) as ERC20Contract;
     const tx = await writeable.approve(spender, amount);
     return tx.wait();

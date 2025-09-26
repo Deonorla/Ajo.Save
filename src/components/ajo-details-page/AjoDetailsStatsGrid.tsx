@@ -41,7 +41,7 @@ const AjoDetailsStatsGrid = ({
           <span className="text-xs text-muted-foreground">Progress</span>
         </div>
         <div className="text-2xl font-bold text-card-foreground">
-          {ajoStats?.activeMembers}/{ajoStats?.totalMembers}
+          {ajoStats?.activeMembers}/10
         </div>
         <div className="text-sm text-muted-foreground">Members</div>
       </div>

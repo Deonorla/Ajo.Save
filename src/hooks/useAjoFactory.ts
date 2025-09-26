@@ -1,6 +1,6 @@
 // hooks/useAjoFactory.ts
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { ethers, JsonRpcSigner } from "ethers";
+import { ethers } from "ethers";
 import AjoFactory from "@/abi/ajoFactory.json";
 import { useWallet } from "./../auth/WalletContext";
 import erc20ABI from "../abi/erc20ABI";
@@ -14,7 +14,6 @@ export const useAjoFactory = () => {
   const WHBAR_ADDRESS = import.meta.env.VITE_MOCK_WHBAR_ADDRESS;
 
   // ---------------- GET CONTRACT ----------------
-
   const contractRead = useMemo(() => {
     if (!provider || !ajoFactoryAddress) return null;
     return new ethers.Contract(ajoFactoryAddress, AjoFactory.abi, provider);
@@ -28,7 +27,7 @@ export const useAjoFactory = () => {
         return;
       }
       try {
-        const signer = await provider.getSigner();
+        const signer = provider.getSigner();
         if (!mounted) return;
         const writable = new ethers.Contract(
           ajoFactoryAddress,
@@ -48,10 +47,9 @@ export const useAjoFactory = () => {
   }, [provider, ajoFactoryAddress]);
 
   // ---------------- READ FUNCTIONS ----------------
-
   const getCreationFee = useCallback(async () => {
     if (!contractRead) throw new Error("Contract not ready");
-    const fee: bigint = await contractRead.creationFee();
+    const fee = await contractRead.creationFee(); // BigNumber in v5
     return fee;
   }, [contractRead]);
 
@@ -86,15 +84,15 @@ export const useAjoFactory = () => {
     async (creatorAddress: string, ajoName: string) => {
       if (!contractWrite) throw new Error("Contract not ready");
 
-      // 1. Get raw creation fee (likely in 18 decimals)
+      // 1. Get raw creation fee (BigNumber, usually 18 decimals)
       const rawFee = await getCreationFee();
       if (!rawFee) throw new Error("Failed to fetch creation fee");
 
       console.log("=== 🧾 Creation Fee Info ===");
       console.log("Raw fee (from contract):", rawFee.toString());
 
-      // 2. Setup WHBAR contract
-      const signer = contractWrite.runner as JsonRpcSigner;
+      // 2. Setup WHBAR contract with signer
+      const signer = provider.getSigner();
       const whbarContract = new ethers.Contract(
         WHBAR_ADDRESS,
         erc20ABI,
@@ -103,8 +101,8 @@ export const useAjoFactory = () => {
 
       // 3. Normalize fee to WHBAR decimals
       const tokenDecimals: number = await whbarContract.decimals();
-      const normalizedFee = ethers.parseUnits(
-        ethers.formatUnits(rawFee, 18), // interpret raw fee as 18 decimals
+      const normalizedFee = ethers.utils.parseUnits(
+        ethers.utils.formatUnits(rawFee, 18), // interpret raw fee as 18 decimals
         tokenDecimals // re-encode in WHBAR decimals
       );
 
@@ -121,21 +119,21 @@ export const useAjoFactory = () => {
       console.log("Balance (raw):", balance.toString());
       console.log(
         "Balance (formatted):",
-        ethers.formatUnits(balance, tokenDecimals)
+        ethers.utils.formatUnits(balance, tokenDecimals)
       );
       console.log("Allowance (raw):", allowance.toString());
       console.log(
         "Allowance (formatted):",
-        ethers.formatUnits(allowance, tokenDecimals)
+        ethers.utils.formatUnits(allowance, tokenDecimals)
       );
       console.log("Creation fee (normalized raw):", normalizedFee.toString());
       console.log(
         "Creation fee (formatted):",
-        ethers.formatUnits(normalizedFee, tokenDecimals)
+        ethers.utils.formatUnits(normalizedFee, tokenDecimals)
       );
 
       // 4. Approve if needed
-      if (allowance < normalizedFee) {
+      if (allowance.lt(normalizedFee)) {
         console.log("🔑 Approving WHBAR...");
         const approveTx = await whbarContract.approve(
           ajoFactoryAddress,
@@ -153,7 +151,7 @@ export const useAjoFactory = () => {
       console.log("🎉 Ajo created successfully:", receipt);
       return receipt;
     },
-    [contractWrite, getCreationFee, ajoFactoryAddress]
+    [contractWrite, getCreationFee, ajoFactoryAddress, provider]
   );
 
   const deactivateAjo = useCallback(

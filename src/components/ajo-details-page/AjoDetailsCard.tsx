@@ -40,7 +40,8 @@ const AjoDetailsCard = ({ isVisible, lastUpdated }: AjoDetailsCardProps) => {
         import.meta.env.VITE_AJO_COLLATERAL_CONTRACT,
         import.meta.env.VITE_AJO_PAYMENTS_CONTRACT
       );
-      console.log("✅ Joined Ajo, tx hash:", join.hash);
+      // join is a receipt (ethers v5 transaction receipt)
+      console.log("✅ Joined Ajo, tx hash:", join.transactionHash);
       // Check logs
       console.log("📜 Logs:", join.logs);
       toast.success("Ajo joined");
@@ -55,7 +56,7 @@ const AjoDetailsCard = ({ isVisible, lastUpdated }: AjoDetailsCardProps) => {
       }
       setLoading(false);
     } catch (err) {
-      console.log("Error:", err);
+      console.log("Error joining:", err);
       toast.error("Failed to join");
     } finally {
       setLoading(false);
@@ -112,7 +113,7 @@ const AjoDetailsCard = ({ isVisible, lastUpdated }: AjoDetailsCardProps) => {
           <div className="flex flex-col sm:flex-row gap-3">
             <button
               onClick={_joinAjo}
-              className="w-full bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-8 py-4 rounded-lg font-semibold text-lg transition-all hover:scale-105 hover:shadow-lg flex items-center justify-center space-x-2 cursor-pointer"
+              className="w-full bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg font-semibold text-sm transition-all hover:scale-105 hover:shadow-lg flex items-center justify-center space-x-2 cursor-pointer"
             >
               {loading ? (
                 <>
@@ -126,10 +127,6 @@ const AjoDetailsCard = ({ isVisible, lastUpdated }: AjoDetailsCardProps) => {
                 </>
               )}
             </button>
-            {/* <button className="border border-primary text-primary hover:bg-primary/10 px-6 py-3 rounded-lg font-semibold transition-all flex items-center justify-center space-x-2">
-              <Bell className="w-5 h-5" />
-              <span>Subscribe</span>
-            </button> */}
           </div>
         </div>
       </div>

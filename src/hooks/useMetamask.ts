@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState, useCallback } from "react";
-import { BrowserProvider, formatEther, getAddress } from "ethers";
+import { ethers } from "ethers";
 import { HEDERA_TESTNET } from "../lib/hederaConfig";
 import { toast } from "sonner";
 
@@ -11,7 +11,7 @@ type MetaState = {
   balance: string | null;
   network: string | null;
   error: string | null;
-  provider: BrowserProvider | null;
+  provider: ethers.providers.Web3Provider | null;
   connect: () => Promise<void>;
   disconnect: () => void;
   switchToHederaTestnet: () => Promise<void>;
@@ -32,24 +32,25 @@ export function useMetaMask(): MetaState {
   const [balance, setBalance] = useState<string | null>(null);
   const [network, setNetwork] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [provider, setProvider] = useState<BrowserProvider | null>(null);
+  const [provider, setProvider] =
+    useState<ethers.providers.Web3Provider | null>(null);
 
   // ---------------------------
   // Fetch Account Info
   // ---------------------------
   const fetchAccountInfo = useCallback(
-    async (customProvider?: BrowserProvider) => {
+    async (customProvider?: ethers.providers.Web3Provider) => {
       const activeProvider = customProvider ?? provider;
       if (!activeProvider) return;
 
       try {
-        const signer = await activeProvider.getSigner();
+        const signer = activeProvider.getSigner();
         const addr = await signer.getAddress();
         setAddress(addr);
         setConnected(true);
 
         const balBig = await activeProvider.getBalance(addr);
-        setBalance(formatEther(balBig));
+        setBalance(ethers.utils.formatEther(balBig));
 
         const net = await activeProvider.getNetwork();
         setNetwork(mapChainIdToName(net.chainId));
@@ -69,7 +70,7 @@ export function useMetaMask(): MetaState {
   useEffect(() => {
     setAvailable(Boolean(window.ethereum));
     if (window.ethereum) {
-      const p = new BrowserProvider(window.ethereum, "any");
+      const p = new ethers.providers.Web3Provider(window.ethereum, "any");
       setProvider(p);
 
       // listen for account/network changes
@@ -77,7 +78,11 @@ export function useMetaMask(): MetaState {
         if (!accounts || accounts.length === 0) {
           handleDisconnect();
         } else {
-          setAddress(getAddress(accounts[0]));
+          try {
+            setAddress(ethers.utils.getAddress(accounts[0]));
+          } catch {
+            setAddress(accounts[0]);
+          }
           setConnected(true);
           localStorage.setItem(STORAGE_KEY, "true");
         }
@@ -85,7 +90,6 @@ export function useMetaMask(): MetaState {
 
       window.ethereum.on?.("chainChanged", () => {
         setTimeout(() => {
-          console.log("function called");
           fetchAccountInfo();
         }, 500);
       });
@@ -100,10 +104,14 @@ export function useMetaMask(): MetaState {
             method: "eth_accounts",
           });
           if (accounts.length > 0) {
-            const p = new BrowserProvider(window.ethereum, "any");
+            const p = new ethers.providers.Web3Provider(window.ethereum, "any");
             setProvider(p);
             setConnected(true);
-            setAddress(getAddress(accounts[0]));
+            try {
+              setAddress(ethers.utils.getAddress(accounts[0]));
+            } catch {
+              setAddress(accounts[0]);
+            }
             await fetchAccountInfo(p); // ✅ use fresh provider immediately
           }
         } catch {
@@ -199,7 +207,7 @@ export function useMetaMask(): MetaState {
         return;
       }
 
-      const p = new BrowserProvider(window.ethereum, "any");
+      const p = new ethers.providers.Web3Provider(window.ethereum, "any");
       setProvider(p);
       console.log("New provider set", p);
       await fetchAccountInfo(p); // ✅ use fresh provider
@@ -246,13 +254,13 @@ export function useMetaMask(): MetaState {
 // ---------------------------
 // Map ChainId to Network Name
 // ---------------------------
-function mapChainIdToName(chainId: bigint): string {
-  switch (chainId.toString()) {
-    case "295":
+function mapChainIdToName(chainId: number): string {
+  switch (chainId) {
+    case 295:
       return "Hedera Mainnet";
-    case "296":
+    case 296:
       return "Hedera Testnet";
-    case "297":
+    case 297:
       return "Hedera Previewnet";
     default:
       return `Chain ${chainId}`;

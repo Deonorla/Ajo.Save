@@ -11,19 +11,35 @@ import AjoGovernance from "@/components/ajo-details-page/AjoGovernance";
 
 import AjoDetailAnalytics from "@/components/ajo-details-page/AjoDetailAnalytics";
 import AjoPaymentHistory from "@/components/ajo-details-page/AjoPaymentHistory";
+import useAjoCore from "@/hooks/useAjoCore";
+import { useWallet } from "@/auth/WalletContext";
 
 const AjoDetails = () => {
+  const { address } = useWallet();
+  const { getMemberInfo } = useAjoCore();
   const [isVisible, setIsVisible] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
-
   const [contractStats, setContractStats] = useState<ContractStats | null>(
     null
   );
   const [lastUpdated, setLastUpdated] = useState(new Date());
 
+  const getUserData = async () => {
+    try {
+      if (!address) {
+        throw "Address not found, connect to metamask";
+      }
+      const data = await getMemberInfo(address);
+      console.log("Info", data);
+    } catch (err) {
+      console.log("Error fetching member info:", err);
+    }
+  };
+
   useEffect(() => {
     setIsVisible(true);
     // fetchContractData();
+    getUserData();
   }, []);
 
   return (

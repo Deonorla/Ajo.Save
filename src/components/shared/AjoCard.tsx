@@ -1,3 +1,4 @@
+import { useTokenStore } from "@/store/tokenStore";
 import formatCurrency from "@/utils/formatCurrency";
 import { formatAddress } from "@/utils/utils";
 import {
@@ -19,6 +20,7 @@ interface AjoCardProps {
 
 const AjoCard = ({ ajoData, isVisible }: AjoCardProps) => {
   const navigate = useNavigate();
+  const { nairaRate } = useTokenStore();
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -96,14 +98,14 @@ const AjoCard = ({ ajoData, isVisible }: AjoCardProps) => {
         <div className="flex items-center justify-between gap-4 mb-4">
           <div>
             <div className="text-2xl font-bold text-primary">
-              {formatCurrency(0)}
+              {formatCurrency(nairaRate * 50)}
             </div>
             <div className="text-xs text-muted-foreground">Monthly Payment</div>
           </div>
 
           <div>
             <div className="text-2xl font-bold text-accent">
-              {ajoData.activeMembers}/{ajoData.totalMembers}
+              {ajoData.activeMembers}/10
             </div>
             <div className="text-xs text-muted-foreground">Members</div>
           </div>
@@ -114,7 +116,7 @@ const AjoCard = ({ ajoData, isVisible }: AjoCardProps) => {
             <span className="text-muted-foreground">Payment Token:</span>
             <span className="font-semibold text-card-foreground flex items-center space-x-1">
               <Coins className="w-4 h-4 text-primary" />
-              <span>WHBAR</span>
+              <span>USDC</span>
             </span>
           </div>
 
@@ -128,8 +130,8 @@ const AjoCard = ({ ajoData, isVisible }: AjoCardProps) => {
 
           <div className="flex justify-between items-center text-sm">
             <span className="text-muted-foreground">Total Saved:</span>
-            <span className="font-semibold text-secondary-foreground">
-              {formatCurrency(Number(ajoData.totalCollateralHBAR))}
+            <span className="font-semibold text-white">
+              {formatCurrency(Number(ajoData.totalCollateralUSDC))}
             </span>
           </div>
 
@@ -147,11 +149,7 @@ const AjoCard = ({ ajoData, isVisible }: AjoCardProps) => {
           <div className="flex justify-between text-xs text-muted-foreground mb-1">
             <span>Member Progress</span>
             <span>
-              {Math.round(
-                (Number(ajoData.activeMembers) / Number(ajoData.totalMembers)) *
-                  100
-              )}
-              %
+              {Math.round((Number(ajoData.activeMembers) / 10) * 100)}%
             </span>
           </div>
           <div className="w-full bg-background/50 rounded-full h-2 border border-border mt-4">
@@ -161,9 +159,7 @@ const AjoCard = ({ ajoData, isVisible }: AjoCardProps) => {
                 width: `${
                   ajoData.activeMembers == "0"
                     ? "0"
-                    : (Number(ajoData.activeMembers) /
-                        Number(ajoData.totalMembers)) *
-                      100
+                    : (Number(ajoData.activeMembers) / 10) * 100
                 }%`,
               }}
             ></div>

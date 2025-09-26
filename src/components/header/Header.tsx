@@ -14,6 +14,7 @@ import { useEffect, useState } from "react";
 import { useWallet } from "../../auth/WalletContext";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTokenStore } from "@/store/tokenStore";
+import FormattedBalance from "@/utils/FormatedBalance";
 
 const Header = () => {
   const navigate = useNavigate();
@@ -21,7 +22,7 @@ const Header = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-  const { whbar, loading } = useTokenStore();
+  const { usdc, whbar, loading } = useTokenStore();
   const { connected, address, network, connectMetaMask, disconnect } =
     useWallet();
 
@@ -85,12 +86,19 @@ const Header = () => {
               {connected ? (
                 <div className="flex flex-wrap md:flex-nowrap items-center gap-2 bg-primary/15 px-3 py-2 rounded-lg text-sm font-medium">
                   <Wallet className="h-4 w-4 text-primary" />
-                  <span className="text-primary">
-                    {!loading ? `${whbar} WHBAR` : "Loading..."}
-                  </span>
-                  <span className=" text-white/50 truncate max-w-[100px]">
+                  <FormattedBalance
+                    value={usdc ?? ""}
+                    symbol="USDC"
+                    loading={loading}
+                  />
+                  <FormattedBalance
+                    value={whbar ?? ""}
+                    symbol="WHBAR"
+                    loading={loading}
+                  />
+                  {/* <span className=" text-white/50 truncate max-w-[100px]">
                     {address?.slice(0, 6)}...{address?.slice(-4)}
-                  </span>
+                  </span> */}
                   <button
                     onClick={handleCopy}
                     className="p-1 hover:bg-primary/20 rounded"
@@ -179,9 +187,14 @@ const Header = () => {
                 <div className="bg-primary/15 border border-primary/25 rounded-xl p-4 shadow-sm flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <span className="text-white text-sm">Balance</span>
-                    <span className="text-white font-semibold">
-                      {whbar} WHBAR
-                    </span>
+                    <div className="flex flex-col gap-2 items-end">
+                      <span className="text-white font-semibold">
+                        {usdc} USDC
+                      </span>
+                      <span className="text-white font-semibold">
+                        {whbar} WHBAR
+                      </span>
+                    </div>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-white text-sm">Wallet</span>

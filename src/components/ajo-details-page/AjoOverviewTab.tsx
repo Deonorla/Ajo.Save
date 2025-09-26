@@ -171,7 +171,9 @@ const AjoOverviewTab = () => {
                     Total Collateral:
                   </span>
                   <span className="font-semibold text-secondary-foreground">
-                    ₦{Number(ajoStats.totalCollateralUSDC) * nairaRate}
+                    {formatCurrency(
+                      Number(ajoStats.totalCollateralUSDC) * nairaRate
+                    )}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -179,7 +181,9 @@ const AjoOverviewTab = () => {
                     Contract Balance:
                   </span>
                   <span className="font-semibold text-primary">
-                    ₦{Number(ajoStats.contractBalanceUSDC) * nairaRate}
+                    {formatCurrency(
+                      Number(ajoStats.contractBalanceUSDC) * nairaRate
+                    )}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -227,7 +231,7 @@ const AjoOverviewTab = () => {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Collateral:</span>
-              <span className="font-semibold text-secondary-foreground">
+              <span className="font-semibold text-white">
                 {formatCurrency(
                   Number(ajoStats?.totalCollateralUSDC) * nairaRate
                 )}
