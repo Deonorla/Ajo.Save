@@ -87,7 +87,6 @@ const Header = () => {
             <div className="flex items-center gap-4 flex-wrap justify-center">
               {[
                 { id: "dashboard", label: "Dashboard", icon: Home },
-                { id: "ajo", label: "Digital Ajo", icon: Users },
                 { id: "profile", label: "Profile", icon: User },
               ].map((tab) => (
                 <button
@@ -195,7 +194,6 @@ const Header = () => {
           <div className="border-t border-primary/25 bg-background px-4 py-3 space-y-2">
             {[
               { id: "dashboard", label: "Dashboard", icon: Home },
-              { id: "ajo", label: "Digital Ajo", icon: Users },
               { id: "profile", label: "Profile", icon: User },
             ].map((tab) => (
               <button

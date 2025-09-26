@@ -139,7 +139,7 @@ const AjoOverviewTab = () => {
           </h3>
 
           {ajoStats ? (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Total Members:</span>

@@ -1,16 +1,15 @@
 import { useMemberStore } from "@/store/memberInfoStore";
 import { useTokenStore } from "@/store/tokenStore";
-import { userStats } from "@/temp-data";
 import formatCurrency from "@/utils/formatCurrency";
-import { Award, Coins, Eye, Shield } from "lucide-react";
+import { Coins, Shield } from "lucide-react";
 
 const StatsCard = ({ isVisible }: { isVisible: boolean }) => {
-  const { memberData, loading: memberLoading, error } = useMemberStore();
+  const { memberData } = useMemberStore();
   const { nairaRate } = useTokenStore();
 
   return (
     <div
-      className={`grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8 transform transition-all duration-1000 delay-200 ${
+      className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 transform transition-all duration-1000 delay-200 ${
         isVisible ? "translate-y-0 opacity-100" : "translate-y-20 opacity-0"
       }`}
     >
