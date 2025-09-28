@@ -4,38 +4,7 @@
   "sourceName": "contracts/AjoCore.sol",
   "abi": [
     {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "_usdc",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "_hbar",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "_membersContract",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "_collateralContract",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "_paymentsContract",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "_governanceContract",
-          "type": "address"
-        }
-      ],
+      "inputs": [],
       "stateMutability": "nonpayable",
       "type": "constructor"
     },
@@ -243,6 +212,19 @@
         }
       ],
       "name": "GuarantorAssigned",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint8",
+          "name": "version",
+          "type": "uint8"
+        }
+      ],
+      "name": "Initialized",
       "type": "event"
     },
     {
@@ -785,6 +767,44 @@
         }
       ],
       "name": "handleDefault",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_usdc",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_whbar",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_ajoMembers",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_ajoCollateral",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_ajoPayments",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_ajoGovernance",
+          "type": "address"
+        }
+      ],
+      "name": "initialize",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

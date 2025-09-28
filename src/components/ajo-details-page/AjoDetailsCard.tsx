@@ -1,6 +1,7 @@
 import { useWallet } from "@/auth/WalletContext";
 import useAjoCore from "@/hooks/useAjoCore";
-import { useAjoStore } from "@/store/ajoStore";
+import { useAjoFactory } from "@/hooks/useAjoFactory";
+import { useAjoStore, type AjoInfo } from "@/store/ajoStore";
 import { useMemberStore } from "@/store/memberInfoStore";
 import { useTokenStore } from "@/store/tokenStore";
 import { ajoData } from "@/temp-data";
@@ -18,30 +19,39 @@ import {
   Zap,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import { toast } from "sonner";
 
 interface AjoDetailsCardProps {
+  ajo: AjoInfo | null | undefined;
   isVisible?: boolean;
   lastUpdated: Date;
   monthlyPayment: string | undefined;
 }
 
-const AjoDetailsCard = ({ isVisible, monthlyPayment }: AjoDetailsCardProps) => {
+const AjoDetailsCard = ({
+  ajo,
+  isVisible,
+  monthlyPayment,
+}: AjoDetailsCardProps) => {
   const { memberData } = useMemberStore();
   const { nairaRate } = useTokenStore();
-  const { ajoStats } = useAjoStore();
+  const { ajoInfos } = useAjoStore();
   const [loading, setLoading] = useState(false);
   const [makingPayment, setMakingPayment] = useState(false);
   const [collateralRequired, setCollateralRequired] = useState(0);
   const [hasPaidMonthly, setHasPaidMonthly] = useState(false);
+  const { ajoId, ajoCore } = useParams<{ ajoId: string; ajoCore: string }>();
   const {
     joinAjo,
     getContractStats,
     getMemberInfo,
     getRequiredCollateralForJoin,
+    getTokenConfig,
     makePayment,
-  } = useAjoCore();
+  } = useAjoCore(ajoCore ? ajoCore : "");
   const { address } = useWallet();
+  const { getFactoryStats } = useAjoFactory();
 
   const getCollateral = useCallback(async () => {
     try {
@@ -49,7 +59,7 @@ const AjoDetailsCard = ({ isVisible, monthlyPayment }: AjoDetailsCardProps) => {
       console.log("collateral---", collateralRequired);
       setCollateralRequired(Number(collateralRequired?.toString()) / 1000000);
     } catch (err) {
-      console.log("error gettinng collateral", err);
+      console.log("error getting collateral", err);
     }
   }, [getRequiredCollateralForJoin]);
 
@@ -60,7 +70,8 @@ const AjoDetailsCard = ({ isVisible, monthlyPayment }: AjoDetailsCardProps) => {
       "locked collateral",
       Number(memberData?.memberInfo.lockedCollateral)
     );
-  }, [getRequiredCollateralForJoin]);
+    // console.log("Ajo name", ajo?.name);
+  }, [getCollateral]);
 
   const _joinAjo = async () => {
     try {
@@ -123,11 +134,11 @@ const AjoDetailsCard = ({ isVisible, monthlyPayment }: AjoDetailsCardProps) => {
             <div className="flex w-full items-center justify-between">
               <div className="flex items-center space-x-3 mb-4">
                 <div className="w-6 h-6 lg:w-12 lg:h-12 bg-gradient-to-br p-4 from-primary to-accent rounded-xl flex items-center justify-center text-sm lg:text-xl font-bold text-primary-foreground">
-                  {ajoData.name.charAt(0)}
+                  {ajo?.name.charAt(0)}
                 </div>
                 <div>
                   <h1 className=" text-sm lg:text-xl font-bold text-card-foreground mb-1">
-                    {ajoData.name}
+                    {ajo?.name}
                   </h1>
                   <div className="flex items-center space-x-4">
                     <div

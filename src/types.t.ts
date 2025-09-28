@@ -1,3 +1,5 @@
+import type { BigNumber } from "ethers";
+
 export {};
 declare global {
   type MemberStruct = {
@@ -59,5 +61,19 @@ declare global {
     totalDonations: number;
     activeProjects: number;
     transparency: "High" | "Medium" | "Low";
+  }
+
+  interface AjoOperationalStatus {
+    totalMembers: BigNumber;
+    activeMembers: BigNumber;
+    totalCollateralUSDC: BigNumber;
+    totalCollateralHBAR: BigNumber;
+    contractBalanceUSDC: BigNumber;
+    contractBalanceHBAR: BigNumber;
+    currentCycle: BigNumber;
+    activeToken: string | number;
+    canAcceptMembers: boolean;
+    canProcessPayments: boolean;
+    canDistributePayouts: boolean;
   }
 }

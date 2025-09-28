@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import type { AjoInfo } from "@/store/ajoStore";
 import { useTokenStore } from "@/store/tokenStore";
 import formatCurrency from "@/utils/formatCurrency";
 import { formatAddress } from "@/utils/utils";
@@ -14,11 +16,11 @@ import {
 import { useNavigate } from "react-router-dom";
 
 interface AjoCardProps {
-  ajoData: ContractStats;
+  ajo: AjoInfo;
   isVisible: boolean;
 }
 
-const AjoCard = ({ ajoData, isVisible }: AjoCardProps) => {
+const AjoCard = ({ ajo, isVisible }: AjoCardProps) => {
   const navigate = useNavigate();
   const { nairaRate } = useTokenStore();
 
@@ -50,7 +52,7 @@ const AjoCard = ({ ajoData, isVisible }: AjoCardProps) => {
 
   return (
     <div
-      className={`bg-gradient-to-br from-card to-[#2b1a0f]/80 backdrop-blur-sm rounded-xl shadow-lg hover:shadow-xl transition-all hover:scale-105 group cursor-pointer transform duration-300 border border-border/50 hover:border-primary/30 ${"delay-100"} ${
+      className={`bg-gradient-to-br from-card to-[#2b1a0f]/80 backdrop-blur-sm rounded-xl shadow-lg hover:shadow-xl transition-all hover:scale-105 group cursor-pointer transform duration-300 border border-border/50 hover:border-primary/30 h-fit ${"delay-100"} ${
         isVisible ? "translate-y-0 opacity-100" : "translate-y-20 opacity-0"
       }`}
     >
@@ -59,11 +61,11 @@ const AjoCard = ({ ajoData, isVisible }: AjoCardProps) => {
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1">
             <h3 className="text-lg font-bold text-card-foreground group-hover:text-primary transition-colors mb-1">
-              Contract Ajo
+              {ajo.name}
             </h3>
-            <p className="text-sm text-muted-foreground line-clamp-2">
+            {/* <p className="text-sm text-muted-foreground line-clamp-2">
               A test Ajo contract for development purposes.
-            </p>
+            </p> */}
           </div>
 
           <div
@@ -82,7 +84,7 @@ const AjoCard = ({ ajoData, isVisible }: AjoCardProps) => {
               #1
             </div>
             <span className="text-muted-foreground">
-              by {formatAddress(import.meta.env.VITE_AJO_CORE_CONTRACT_ADDRESS)}
+              by {formatAddress(ajo.creator)}
             </span>
           </div>
 
@@ -96,22 +98,28 @@ const AjoCard = ({ ajoData, isVisible }: AjoCardProps) => {
       {/* Card Body */}
       <div className="p-6 bg-gradient-to-b from-transparent to-card/30">
         <div className="flex items-center justify-between gap-4 mb-4">
-          <div>
+          {/* <div>
             <div className="text-2xl font-bold text-primary">
               {formatCurrency(nairaRate * 50)}
             </div>
             <div className="text-xs text-muted-foreground">Monthly Payment</div>
-          </div>
+          </div> */}
 
-          <div>
+          {/* <div>
             <div className="text-2xl font-bold text-accent">
               {ajoData.activeMembers}/5
             </div>
             <div className="text-xs text-muted-foreground">Members</div>
-          </div>
+          </div> */}
         </div>
 
         <div className="space-y-3 mb-4">
+          <div className="flex justify-between items-center">
+            <div className="text-xs text-muted-foreground">Monthly Payment</div>
+            <div className="text-2xl font-bold text-primary">
+              {formatCurrency(nairaRate * 50)}
+            </div>
+          </div>
           <div className="flex justify-between items-center text-sm">
             <span className="text-muted-foreground">Payment Token:</span>
             <span className="font-semibold text-card-foreground flex items-center space-x-1">
@@ -128,24 +136,24 @@ const AjoCard = ({ ajoData, isVisible }: AjoCardProps) => {
             </span>
           </div> */}
 
-          <div className="flex justify-between items-center text-sm">
+          {/* <div className="flex justify-between items-center text-sm">
             <span className="text-muted-foreground">Total Saved:</span>
             <span className="font-semibold text-white">
               {formatCurrency(Number(ajoData.totalCollateralUSDC) * nairaRate)}
             </span>
-          </div>
-
+          </div> */}
+          {/* 
           <div className="flex justify-between items-center text-sm">
             <span className="text-muted-foreground">Completed Cycles:</span>
             <span className="font-semibold text-card-foreground flex items-center space-x-1">
               <Award className="w-4 h-4 text-primary" />
               <span>0</span>
             </span>
-          </div>
+          </div> */}
         </div>
 
         {/* Progress Bar */}
-        <div className="mb-4">
+        {/* <div className="mb-4">
           <div className="flex justify-between text-xs text-muted-foreground mb-1">
             <span>Member Progress</span>
             <span>
@@ -164,11 +172,11 @@ const AjoCard = ({ ajoData, isVisible }: AjoCardProps) => {
               }}
             ></div>
           </div>
-        </div>
+        </div> */}
 
         {/* Action Button */}
         <button
-          onClick={() => navigate(`/ajo/${ajoData.activeToken}`)}
+          onClick={() => navigate(`/ajo/${ajo.ajoId}/${ajo.ajoCore}`)}
           className="w-full bg-primary text-primary-foreground px-4 py-3 rounded-lg font-semibold transition-all hover:scale-105 hover:shadow-lg flex items-center justify-center space-x-2 group border border-primary/20 shadow-md cursor-pointer"
         >
           <span>

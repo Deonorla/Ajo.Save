@@ -1,4 +1,5 @@
 import useAjoCore from "@/hooks/useAjoCore";
+import { useAjoDetailsStore } from "@/store/ajoDetailsStore";
 import { useAjoStore } from "@/store/ajoStore";
 import { useTokenStore } from "@/store/tokenStore";
 import { ajoData, paymentHistory } from "@/temp-data";
@@ -16,11 +17,21 @@ import {
   Target,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 
 const AjoOverviewTab = () => {
-  const { getCollateralDemo } = useAjoCore();
-  const { ajoStats } = useAjoStore();
+  const { ajoCore } = useParams<{ ajoId: string; ajoCore: string }>();
+  const { getCollateralDemo } = useAjoCore(ajoCore ? ajoCore : "");
   const { nairaRate } = useTokenStore();
+  const {
+    activeMembers,
+    totalMembers,
+    activeToken,
+    totalCollateralUSDC,
+    contractBalanceUSDC,
+    contractBalanceHBAR,
+    ajoId,
+  } = useAjoDetailsStore();
   const [demoData, setDemoData] = useState<{
     positions: string[];
     collaterals: string[];
@@ -29,7 +40,7 @@ const AjoOverviewTab = () => {
   const getDemo = async () => {
     try {
       const demo = await getCollateralDemo(10, "50");
-      console.log("demo", demo);
+      // console.log("demo", demo);
       setDemoData(demo);
     } catch (err) {
       console.log("Error getting collateral demo", err);
@@ -114,13 +125,13 @@ const AjoOverviewTab = () => {
               </div>
               <div>
                 <div className="text-2xl font-bold text-accent">
-                  {ajoStats?.activeMembers}
+                  {activeMembers}
                 </div>
                 <div className="text-sm text-muted-foreground">Active</div>
               </div>
               <div>
                 <div className="text-2xl font-bold text-muted-foreground">
-                  {5 - Number(ajoStats?.activeMembers)}
+                  {5 - Number(activeMembers)}
                 </div>
                 <div className="text-sm text-muted-foreground">Remaining</div>
               </div>
@@ -133,37 +144,37 @@ const AjoOverviewTab = () => {
           <h3 className="text-xl font-bold text-card-foreground mb-4 flex items-center space-x-2">
             <Database className="w-6 h-6 text-accent" />
             <span>Smart Contract Status</span>
-            {!ajoStats && (
+            {!ajoId && (
               <RefreshCw className="w-4 h-4 animate-spin text-muted-foreground" />
             )}
           </h3>
 
-          {ajoStats ? (
+          {ajoId ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Total Members:</span>
                   <span className="font-semibold text-card-foreground">
-                    {ajoStats.totalMembers}
+                    {totalMembers}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Active Members:</span>
                   <span className="font-semibold text-primary">
-                    {ajoStats.activeMembers}
+                    {activeMembers}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Queue Position:</span>
                   <span className="font-semibold text-card-foreground">
-                    {ajoStats.currentQueuePosition}
+                    {/* {ajoStats.currentQueuePosition} */}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Active Token:</span>
                   <span className="font-semibold flex items-center space-x-1 text-card-foreground">
                     <Coins className="w-4 h-4" />
-                    <span>{ajoStats.activeToken === 0 ? "USDC" : "WHBAR"}</span>
+                    <span>{activeToken === "0" ? "USDC" : "WHBAR"}</span>
                   </span>
                 </div>
               </div>
@@ -173,9 +184,7 @@ const AjoOverviewTab = () => {
                     Total Collateral:
                   </span>
                   <span className="font-semibold text-secondary-foreground">
-                    {formatCurrency(
-                      Number(ajoStats.totalCollateralUSDC) * nairaRate
-                    )}
+                    {formatCurrency(Number(totalCollateralUSDC) * nairaRate)}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -183,15 +192,13 @@ const AjoOverviewTab = () => {
                     Contract Balance:
                   </span>
                   <span className="font-semibold text-primary">
-                    {formatCurrency(
-                      Number(ajoStats.contractBalanceUSDC) * nairaRate
-                    )}
+                    {formatCurrency(Number(contractBalanceUSDC) * nairaRate)}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">HBAR Balance:</span>
                   <span className="font-semibold text-card-foreground">
-                    {ajoStats.contractBalanceHBAR} HBAR
+                    {contractBalanceHBAR} HBAR
                   </span>
                 </div>
               </div>
@@ -234,9 +241,7 @@ const AjoOverviewTab = () => {
             <div className="flex justify-between">
               <span className="text-muted-foreground">Collateral:</span>
               <span className="font-semibold text-white">
-                {formatCurrency(
-                  Number(ajoStats?.totalCollateralUSDC) * nairaRate
-                )}
+                {formatCurrency(Number(totalCollateralUSDC) * nairaRate)}
               </span>
             </div>
           </div>

@@ -20,7 +20,7 @@ const Dashboard = () => {
   const { getWhbarBalance, getUsdcBalance } = useTokenHook();
   const { setNaira } = useTokenStore();
   const [isVisible, setIsVisible] = useState(false);
-  const { ajoStats, setStats } = useAjoStore();
+  const { ajoInfos } = useAjoStore();
 
   useEffect(() => {
     const timer = setTimeout(() => setIsVisible(true), 100);
@@ -36,13 +36,12 @@ const Dashboard = () => {
       try {
         const naira = await getNaira();
         setNaira(naira);
-        const data = await getContractStats();
-        const ajos = await getAllAjos();
-        console.log("All Ajos:", ajos);
-        if (data) setStats(data);
-        console.log("Contract response:", data);
+        // const data = await getContractStats();
+        await getAllAjos();
+        console.log("All Ajos:", ajoInfos);
+        // console.log("Contract response:", data);
       } catch (err) {
-        console.error("❌ Failed to fetch stats:", err);
+        console.error("❌ Failed to fetch ajos:", err);
       }
     };
 
@@ -115,9 +114,12 @@ const Dashboard = () => {
               </div>
             </div>
           </div>
-          {ajoStats ? (
+          {ajoInfos.length != 0 ? (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {ajoStats && <AjoCard ajoData={ajoStats} isVisible={isVisible} />}
+              {ajoInfos &&
+                ajoInfos.map((ajo, index) => (
+                  <AjoCard key={ajo.ajoCore} ajo={ajo} isVisible={isVisible} />
+                ))}
             </div>
           ) : (
             <EmptyState onCreateAjo={handleRoute} />

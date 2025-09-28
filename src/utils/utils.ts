@@ -1,3 +1,7 @@
+import { useParams } from "react-router-dom";
+import { useAjoStore } from "./../store/ajoStore";
+import { useMemo } from "react";
+
 export const formatAddress = (address: string) => {
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
 };
@@ -15,4 +19,25 @@ export const getNaira = async () => {
   const rate = data.usd.ngn;
   console.log("rate", rate);
   return rate;
+};
+
+export const useAjoDetails = () => {
+  const { ajoId, ajoCore } = useParams<{ ajoId: string; ajoCore: string }>();
+  const { ajoInfos } = useAjoStore();
+
+  const ajo = useMemo(() => {
+    if (!ajoId && !ajoCore) return null;
+
+    const found = ajoInfos.find((item) => {
+      const matchesId = ajoId && String(item.ajoId) === String(ajoId); // match by ID
+      const matchesCore =
+        ajoCore && item.ajoCore.toLowerCase() === ajoCore.toLowerCase(); // match by core
+      return matchesId || matchesCore;
+    });
+
+    console.log("Selected Ajo:", found);
+    return found ?? null;
+  }, [ajoId, ajoCore, ajoInfos]);
+
+  return ajo;
 };

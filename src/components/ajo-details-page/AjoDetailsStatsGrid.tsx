@@ -1,3 +1,4 @@
+import { useAjoDetailsStore } from "@/store/ajoDetailsStore";
 import { useAjoStore } from "@/store/ajoStore";
 import { useTokenStore } from "@/store/tokenStore";
 import formatCurrency from "@/utils/formatCurrency";
@@ -16,7 +17,8 @@ const AjoDetailsStatsGrid = ({
   monthlyPayment,
 }: AjoDetailsStatsGridProps) => {
   const { nairaRate } = useTokenStore();
-  const { ajoStats } = useAjoStore();
+  const { activeMembers, totalCollateralUSDC, totalCollateralHBAR } =
+    useAjoDetailsStore();
 
   return (
     <div
@@ -32,9 +34,10 @@ const AjoDetailsStatsGrid = ({
           <span className="text-xs text-muted-foreground">Monthly</span>
         </div>
         <div className="text-2xl font-bold text-card-foreground">
-          {formatCurrency(
-            nairaRate * (monthlyPayment ? Number(monthlyPayment) / 1000000 : 0)
-          )}
+          {/* {formatCurrency(
+            nairaRate * (monthlyPayment ? Number() / 1000000 : 0)
+          )} */}
+          {formatCurrency(50 * nairaRate)}
         </div>
         <div className="text-sm text-muted-foreground">Payment Amount</div>
       </div>
@@ -47,7 +50,7 @@ const AjoDetailsStatsGrid = ({
           <span className="text-xs text-muted-foreground">Progress</span>
         </div>
         <div className="text-2xl font-bold text-card-foreground">
-          {ajoStats?.activeMembers}/5
+          {activeMembers}/5
         </div>
         <div className="text-sm text-muted-foreground">Members</div>
       </div>
@@ -62,8 +65,8 @@ const AjoDetailsStatsGrid = ({
         <div className="text-2xl font-bold text-card-foreground">
           {formatCurrency(
             Number(
-              Number(ajoStats?.totalCollateralHBAR ?? 0) +
-                Number(ajoStats?.totalCollateralUSDC ?? 0)
+              Number(totalCollateralHBAR ?? 0) +
+                Number(totalCollateralUSDC ?? 0)
             ) * nairaRate
           )}
         </div>

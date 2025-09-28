@@ -23,7 +23,15 @@ const CreateAjo = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const { registerAjo, getFactoryStats } = useAjoFactory();
+  const {
+    createAjo,
+    initializePhase2,
+    initializePhase3,
+    initializePhase4,
+    finalizeSetup,
+    getAjoInitializationStatus,
+    getAjoInfo,
+  } = useAjoFactory();
   const { address } = useWallet();
 
   // Form state
@@ -71,32 +79,44 @@ const CreateAjo = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!validateForm()) return;
 
     setIsSubmitting(true);
 
-    // Simulate API call
     try {
       if (!address) throw new Error("Wallet not connected");
-      await registerAjo(address, formData.name);
-      console.log("Ajo created successfully");
+
+      // Phase 1
+      const { ajoId, receipt } = await createAjo(formData.name);
+      console.log("✅ Phase 1 complete. Ajo ID:", ajoId);
+
+      // Phase 2
+      await initializePhase2(ajoId);
+      console.log("✅ Phase 2 complete");
+
+      // Phase 3
+      await initializePhase3(ajoId);
+      console.log("✅ Phase 3 complete");
+
+      // Phase 4
+      await initializePhase4(ajoId);
+      console.log("✅ Phase 4 complete - Ajo active");
       setIsSubmitting(false);
+      toast.success("Ajo created successfully!");
       setShowSuccess(true);
+      // Reset form after success
+      setTimeout(() => {
+        setShowSuccess(false);
+        setFormData({
+          name: "",
+        });
+      }, 3000);
     } catch (err) {
       console.error("Failed to create Ajo:", err);
       toast.error("Failed to create Ajo.");
+    } finally {
       setIsSubmitting(false);
-      throw err;
     }
-
-    // Reset form after success
-    setTimeout(() => {
-      setShowSuccess(false);
-      setFormData({
-        name: "",
-      });
-    }, 3000);
   };
 
   return (
@@ -105,7 +125,7 @@ const CreateAjo = () => {
       <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-md border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <button
-            onClick={() => navigate("/ajo")}
+            onClick={() => navigate(-1)}
             className="flex items-center space-x-2 text-muted-foreground hover:text-primary transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -199,147 +219,7 @@ const CreateAjo = () => {
                         </p>
                       )}
                     </div>
-
-                    {/* <div>
-                      <label className="block text-sm font-medium text-card-foreground mb-2">
-                        Description *
-                      </label>
-                      <textarea
-                        name="description"
-                        value={formData.description}
-                        onChange={handleInputChange}
-                        rows={3}
-                        placeholder="Describe your Ajo group's purpose and goals..."
-                        className={`w-full px-4 py-3 bg-background border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors resize-none text-foreground ${
-                          formErrors.description
-                            ? "border-destructive"
-                            : "border-border"
-                        }`}
-                      />
-                      {formErrors.description && (
-                        <p className="mt-1 text-sm text-destructive flex items-center space-x-1">
-                          <AlertCircle className="w-4 h-4" />
-                          <span>{formErrors.description}</span>
-                        </p>
-                      )}
-                    </div> */}
                   </div>
-
-                  {/* Financial Settings */}
-                  {/* <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-card-foreground flex items-center space-x-2">
-                      <DollarSign className="w-5 h-5 text-primary" />
-                      <span>Financial Settings</span>
-                    </h3>
-
-                    <div className="grid sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-card-foreground mb-2">
-                          Monthly Payment (₦'000) *
-                        </label>
-                        <input
-                          type="number"
-                          name="monthlyPayment"
-                          value={formData.monthlyPayment}
-                          onChange={handleInputChange}
-                          placeholder="50"
-                          min="10"
-                          max="1000"
-                          className={`w-full px-4 py-3 bg-background border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors text-foreground ${
-                            formErrors.monthlyPayment
-                              ? "border-destructive"
-                              : "border-border"
-                          }`}
-                        />
-                        {formErrors.monthlyPayment && (
-                          <p className="mt-1 text-sm text-destructive flex items-center space-x-1">
-                            <AlertCircle className="w-4 h-4" />
-                            <span>{formErrors.monthlyPayment}</span>
-                          </p>
-                        )}
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-card-foreground mb-2">
-                          Payment Token *
-                        </label>
-                        <select
-                          name="paymentToken"
-                          value={formData.paymentToken}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors text-foreground"
-                        >
-                          <option value="USDC">USDC (Stable)</option>
-                          <option value="HBAR">HBAR (Native)</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="grid sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-card-foreground mb-2">
-                          Total Members *
-                        </label>
-                        <input
-                          type="number"
-                          name="totalMembers"
-                          value={formData.totalMembers}
-                          onChange={handleInputChange}
-                          placeholder="12"
-                          min="3"
-                          max="50"
-                          className={`w-full px-4 py-3 bg-background border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors text-foreground ${
-                            formErrors.totalMembers
-                              ? "border-destructive"
-                              : "border-border"
-                          }`}
-                        />
-                        {formErrors.totalMembers && (
-                          <p className="mt-1 text-sm text-destructive flex items-center space-x-1">
-                            <AlertCircle className="w-4 h-4" />
-                            <span>{formErrors.totalMembers}</span>
-                          </p>
-                        )}
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-card-foreground mb-2">
-                          Cycle Length (Days)
-                        </label>
-                        <select
-                          name="cycleLength"
-                          value={formData.cycleLength}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors text-foreground"
-                        >
-                          <option value="30">30 Days (Monthly)</option>
-                          <option value="14">14 Days (Bi-weekly)</option>
-                          <option value="7">7 Days (Weekly)</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div> */}
-
-                  {/* Privacy Settings */}
-                  {/* <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-card-foreground flex items-center space-x-2">
-                      <Shield className="w-5 h-5 text-accent" />
-                      <span>Privacy Settings</span>
-                    </h3>
-
-                    <div className="flex items-center space-x-3">
-                      <input
-                        type="checkbox"
-                        name="isPrivate"
-                        checked={formData.isPrivate}
-                        onChange={handleInputChange}
-                        className="w-4 h-4 text-primary border-border rounded focus:ring-primary"
-                      />
-                      <label className="text-sm text-card-foreground">
-                        Make this Ajo private (invite-only)
-                      </label>
-                    </div>
-                  </div> */}
 
                   {/* Submit Button */}
                   <div className="pt-6 border-t border-border">
@@ -367,62 +247,6 @@ const CreateAjo = () => {
 
             {/* Sidebar */}
             <div className="space-y-6">
-              {/* Collateral Calculator */}
-              {/* <div className="bg-card rounded-xl shadow-lg p-6 border border-border">
-                <h3 className="text-lg font-bold text-card-foreground mb-4 flex items-center space-x-2">
-                  <Shield className="w-5 h-5 text-primary" />
-                  <span>Collateral Calculator</span>
-                </h3>
-
-                {calculatedCollateral > 0 ? (
-                  <div className="space-y-4">
-                    <div className="p-4 bg-primary/10 rounded-lg border border-primary/20">
-                      <div className="text-2xl font-bold text-primary mb-1">
-                        {formatCurrency(calculatedCollateral)}
-                      </div>
-                      <div className="text-sm text-primary/80">
-                        Required collateral (55% factor)
-                      </div>
-                    </div>
-
-                    <div className="text-sm text-muted-foreground space-y-2">
-                      <div className="flex justify-between">
-                        <span>Total Pool:</span>
-                        <span className="font-semibold text-card-foreground">
-                          {formData.monthlyPayment && formData.totalMembers
-                            ? formatCurrency(
-                                Number.parseFloat(formData.monthlyPayment) *
-                                  Number.parseInt(formData.totalMembers) *
-                                  1000
-                              )
-                            : "₦0"}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Your Position:</span>
-                        <span className="font-semibold text-card-foreground">
-                          1st (Worst case)
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Collateral Factor:</span>
-                        <span className="font-semibold text-card-foreground">
-                          55%
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Calculator className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p>
-                      Enter payment amount and member count to calculate
-                      collateral
-                    </p>
-                  </div>
-                )}
-              </div> */}
-
               {/* How It Works */}
               <div className="bg-gradient-to-br from-primary to-primary/80 rounded-xl shadow-lg p-6 text-primary-foreground">
                 <h3 className="text-lg font-bold mb-4 flex items-center space-x-2">

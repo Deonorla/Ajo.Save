@@ -40,8 +40,8 @@ export interface UseAjoCore {
   distributePayout: () => Promise<void>;
 }
 
-const useAjoCore = (): UseAjoCore => {
-  const { setStats } = useAjoStore();
+const useAjoCore = (ajoCoreAddress: string): UseAjoCore => {
+  // const { setStats } = useAjoStore();
   const ajoAddress = import.meta.env.VITE_AJO_CORE_CONTRACT_ADDRESS;
 
   const { provider, connected, error } = useWallet();
@@ -51,39 +51,28 @@ const useAjoCore = (): UseAjoCore => {
 
   // read-only contract (provider)
   const contractRead = useMemo(() => {
-    if (!provider || !ajoAddress) return null;
-    // provider here is expected to be ethers.providers.Web3Provider (v5)
-    return new ethers.Contract(ajoAddress, (AjoCore as any).abi, provider);
-  }, [provider, ajoAddress]);
+    if (!provider || !ajoCoreAddress) return null;
+    return new ethers.Contract(ajoCoreAddress, (AjoCore as any).abi, provider);
+  }, [provider, ajoCoreAddress]);
 
-  // write-enabled contract: provider.getSigner() (ethers v5) is synchronous
   useEffect(() => {
-    let mounted = true;
-    const setup = async () => {
-      if (!provider || !ajoAddress) {
-        if (mounted) setContractWrite(null);
-        return;
-      }
-      try {
-        // provider is ethers.providers.Web3Provider (v5)
-        const signer = provider.getSigner();
-        if (!mounted) return;
-        const writable = new ethers.Contract(
-          ajoAddress,
-          (AjoCore as any).abi,
-          signer
-        );
-        setContractWrite(writable);
-      } catch (err) {
-        console.error("useAjoCore: failed to create write contract", err);
-        if (mounted) setContractWrite(null);
-      }
-    };
-    setup();
-    return () => {
-      mounted = false;
-    };
-  }, [provider, ajoAddress]);
+    if (!provider || !ajoCoreAddress) {
+      setContractWrite(null);
+      return;
+    }
+    try {
+      const signer = provider.getSigner();
+      const writable = new ethers.Contract(
+        ajoCoreAddress,
+        (AjoCore as any).abi,
+        signer
+      );
+      setContractWrite(writable);
+    } catch (err) {
+      console.error("Failed to create write contract", err);
+      setContractWrite(null);
+    }
+  }, [provider, ajoCoreAddress]);
 
   // ---------------------------
   // Read wrappers
@@ -93,16 +82,16 @@ const useAjoCore = (): UseAjoCore => {
       if (!contractRead) return null;
       try {
         const res = await contractRead.getContractStats();
-        setStats({
-          totalMembers: res[0].toString(),
-          activeMembers: res[1].toString(),
-          totalCollateralUSDC: (res[2] / 1000000).toString(),
-          totalCollateralHBAR: (res[3] / 1000000).toString(),
-          contractBalanceUSDC: (res[4] / 1000000).toString(),
-          contractBalanceHBAR: (res[5] / 1000000).toString(),
-          currentQueuePosition: res[6].toString(),
-          activeToken: Number(res[7]),
-        });
+        // setStats({
+        //   totalMembers: res[0].toString(),
+        //   activeMembers: res[1].toString(),
+        //   totalCollateralUSDC: (res[2] / 1000000).toString(),
+        //   totalCollateralHBAR: (res[3] / 1000000).toString(),
+        //   contractBalanceUSDC: (res[4] / 1000000).toString(),
+        //   contractBalanceHBAR: (res[5] / 1000000).toString(),
+        //   currentQueuePosition: res[6].toString(),
+        //   activeToken: Number(res[7]),
+        // });
         return {
           totalMembers: res[0].toString(),
           activeMembers: res[1].toString(),
@@ -117,7 +106,7 @@ const useAjoCore = (): UseAjoCore => {
         console.error("getContractStats error:", err);
         return null;
       }
-    }, [contractRead, setStats]);
+    }, [contractRead]);
 
   const getMemberInfo = useCallback(
     async (memberAddress: string): Promise<MemberInfoResponse | null> => {
@@ -199,7 +188,7 @@ const useAjoCore = (): UseAjoCore => {
           position: res[0].toString(),
           estimatedCyclesWait: res[1].toString(),
         };
-        console.log("QueueInfo:", info);
+        // console.log("QueueInfo:", info);
         setQueueInfo(info);
         return info;
       } catch (err) {

@@ -1,15 +1,43 @@
 {
+  "_format": "hh-sol-artifact-1",
+  "contractName": "AjoFactory",
+  "sourceName": "contracts/AjoFactory.sol",
   "abi": [
     {
       "inputs": [
         {
           "internalType": "address",
-          "name": "_usdcToken",
+          "name": "_usdc",
           "type": "address"
         },
         {
           "internalType": "address",
-          "name": "_whbarToken",
+          "name": "_whbar",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_ajoCoreImpl",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_ajoMembersImpl",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_ajoCollateralImpl",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_ajoPaymentsImpl",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_ajoGovernanceImpl",
           "type": "address"
         }
       ],
@@ -32,7 +60,7 @@
           "type": "address"
         },
         {
-          "indexed": true,
+          "indexed": false,
           "internalType": "address",
           "name": "ajoCore",
           "type": "address"
@@ -44,26 +72,7 @@
           "type": "string"
         }
       ],
-      "name": "AjoRegistered",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "oldFee",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "newFee",
-          "type": "uint256"
-        }
-      ],
-      "name": "CreationFeeUpdated",
+      "name": "AjoCreated",
       "type": "event"
     },
     {
@@ -71,80 +80,289 @@
       "inputs": [
         {
           "indexed": true,
-          "internalType": "address",
-          "name": "previousOwner",
-          "type": "address"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "newOwner",
-          "type": "address"
-        }
-      ],
-      "name": "OwnershipTransferred",
-      "type": "event"
-    },
-    {
-      "inputs": [],
-      "name": "USDC_TOKEN",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "WHBAR_TOKEN",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "ajoInstances",
-      "outputs": [
-        {
           "internalType": "uint256",
           "name": "ajoId",
           "type": "uint256"
         },
         {
+          "indexed": true,
           "internalType": "address",
-          "name": "creator",
+          "name": "completer",
           "type": "address"
         },
         {
+          "indexed": false,
+          "internalType": "uint8",
+          "name": "finalPhase",
+          "type": "uint8"
+        }
+      ],
+      "name": "AjoForceCompleted",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "ajoId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "ajoCore",
+          "type": "address"
+        }
+      ],
+      "name": "AjoFullyInitialized",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "ajoId",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "bool",
+          "name": "isHealthy",
+          "type": "bool"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "issues",
+          "type": "string"
+        }
+      ],
+      "name": "AjoHealthCheckPerformed",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "ajoId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "ajoCore",
+          "type": "address"
+        }
+      ],
+      "name": "AjoPhase1Completed",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "ajoId",
+          "type": "uint256"
+        }
+      ],
+      "name": "AjoPhase2Completed",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "ajoId",
+          "type": "uint256"
+        }
+      ],
+      "name": "AjoPhase3Completed",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "ajoId",
+          "type": "uint256"
+        }
+      ],
+      "name": "AjoPhase4Completed",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
           "internalType": "address",
           "name": "ajoCore",
           "type": "address"
         },
         {
-          "internalType": "string",
-          "name": "name",
-          "type": "string"
+          "indexed": false,
+          "internalType": "address",
+          "name": "ajoMembers",
+          "type": "address"
         },
         {
+          "indexed": false,
+          "internalType": "address",
+          "name": "ajoCollateral",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "ajoPayments",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "ajoGovernance",
+          "type": "address"
+        }
+      ],
+      "name": "MasterImplementationsSet",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "USDC",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "WHBAR",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "ajoCollateralImplementation",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "ajoCoreImplementation",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "ajoGovernanceImplementation",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
           "internalType": "uint256",
-          "name": "createdAt",
+          "name": "",
           "type": "uint256"
+        }
+      ],
+      "name": "ajoInitializationPhase",
+      "outputs": [
+        {
+          "internalType": "uint8",
+          "name": "",
+          "type": "uint8"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "ajoMembersImplementation",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "ajoPaymentsImplementation",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "ajoId",
+          "type": "uint256"
+        }
+      ],
+      "name": "ajoStatus",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "exists",
+          "type": "bool"
         },
         {
           "internalType": "bool",
@@ -163,28 +381,92 @@
           "type": "uint256"
         }
       ],
-      "name": "allAjoIds",
+      "name": "ajos",
       "outputs": [
         {
+          "internalType": "address",
+          "name": "ajoCore",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "ajoMembers",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "ajoCollateral",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "ajoPayments",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "ajoGovernance",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "creator",
+          "type": "address"
+        },
+        {
           "internalType": "uint256",
-          "name": "",
+          "name": "createdAt",
           "type": "uint256"
+        },
+        {
+          "internalType": "string",
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "internalType": "bool",
+          "name": "isActive",
+          "type": "bool"
         }
       ],
       "stateMutability": "view",
       "type": "function"
     },
     {
-      "inputs": [],
-      "name": "creationFee",
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "ajoId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint8",
+          "name": "startFromPhase",
+          "type": "uint8"
+        }
+      ],
+      "name": "completeRemainingPhases",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "string",
+          "name": "_name",
+          "type": "string"
+        }
+      ],
+      "name": "createAjo",
       "outputs": [
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "ajoId",
           "type": "uint256"
         }
       ],
-      "stateMutability": "view",
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -232,7 +514,118 @@
           "type": "uint256"
         }
       ],
-      "name": "getAjoInfo",
+      "name": "finalizeAjoSetup",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "ajoId",
+          "type": "uint256"
+        }
+      ],
+      "name": "forceCompleteAbandonedAjo",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "ajoId",
+          "type": "uint256"
+        }
+      ],
+      "name": "getAjo",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "ajoCore",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "ajoMembers",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "ajoCollateral",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "ajoPayments",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "ajoGovernance",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "creator",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "createdAt",
+              "type": "uint256"
+            },
+            {
+              "internalType": "string",
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "internalType": "bool",
+              "name": "isActive",
+              "type": "bool"
+            }
+          ],
+          "internalType": "struct IAjoFactory.AjoInfo",
+          "name": "info",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "ajoId",
+          "type": "uint256"
+        }
+      ],
+      "name": "getAjoCore",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "ajoCore",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "ajoId",
+          "type": "uint256"
+        }
+      ],
+      "name": "getAjoHealthReport",
       "outputs": [
         {
           "components": [
@@ -242,33 +635,240 @@
               "type": "uint256"
             },
             {
-              "internalType": "address",
-              "name": "creator",
-              "type": "address"
-            },
-            {
-              "internalType": "address",
-              "name": "ajoCore",
-              "type": "address"
-            },
-            {
-              "internalType": "string",
-              "name": "name",
-              "type": "string"
-            },
-            {
-              "internalType": "uint256",
-              "name": "createdAt",
-              "type": "uint256"
+              "internalType": "uint8",
+              "name": "initializationPhase",
+              "type": "uint8"
             },
             {
               "internalType": "bool",
-              "name": "isActive",
+              "name": "isReady",
               "type": "bool"
+            },
+            {
+              "internalType": "bool",
+              "name": "isFullyFinalized",
+              "type": "bool"
+            },
+            {
+              "components": [
+                {
+                  "internalType": "bool",
+                  "name": "isDeployed",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "isInitialized",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "isResponsive",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "hasCorrectConfig",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "string",
+                  "name": "errorMessage",
+                  "type": "string"
+                }
+              ],
+              "internalType": "struct AjoFactory.ContractHealthStatus",
+              "name": "ajoCore",
+              "type": "tuple"
+            },
+            {
+              "components": [
+                {
+                  "internalType": "bool",
+                  "name": "isDeployed",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "isInitialized",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "isResponsive",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "hasCorrectConfig",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "string",
+                  "name": "errorMessage",
+                  "type": "string"
+                }
+              ],
+              "internalType": "struct AjoFactory.ContractHealthStatus",
+              "name": "ajoMembers",
+              "type": "tuple"
+            },
+            {
+              "components": [
+                {
+                  "internalType": "bool",
+                  "name": "isDeployed",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "isInitialized",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "isResponsive",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "hasCorrectConfig",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "string",
+                  "name": "errorMessage",
+                  "type": "string"
+                }
+              ],
+              "internalType": "struct AjoFactory.ContractHealthStatus",
+              "name": "ajoCollateral",
+              "type": "tuple"
+            },
+            {
+              "components": [
+                {
+                  "internalType": "bool",
+                  "name": "isDeployed",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "isInitialized",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "isResponsive",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "hasCorrectConfig",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "string",
+                  "name": "errorMessage",
+                  "type": "string"
+                }
+              ],
+              "internalType": "struct AjoFactory.ContractHealthStatus",
+              "name": "ajoPayments",
+              "type": "tuple"
+            },
+            {
+              "components": [
+                {
+                  "internalType": "bool",
+                  "name": "isDeployed",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "isInitialized",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "isResponsive",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "hasCorrectConfig",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "string",
+                  "name": "errorMessage",
+                  "type": "string"
+                }
+              ],
+              "internalType": "struct AjoFactory.ContractHealthStatus",
+              "name": "ajoGovernance",
+              "type": "tuple"
+            },
+            {
+              "components": [
+                {
+                  "internalType": "bool",
+                  "name": "ajoCoreToMembers",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "ajoCoreToCollateral",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "ajoCoreToPayments",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "ajoCoreToGovernance",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "membersToCollateral",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "membersToPayments",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "collateralToCore",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "paymentsToCore",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "governanceToCore",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "string",
+                  "name": "linkingErrors",
+                  "type": "string"
+                }
+              ],
+              "internalType": "struct AjoFactory.CrossContractLinkingStatus",
+              "name": "linking",
+              "type": "tuple"
             }
           ],
-          "internalType": "struct PatientAjoFactory.AjoInstance",
-          "name": "",
+          "internalType": "struct AjoFactory.AjoHealthReport",
+          "name": "report",
           "type": "tuple"
         }
       ],
@@ -276,13 +876,105 @@
       "type": "function"
     },
     {
-      "inputs": [],
-      "name": "getAllAjos",
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "ajoId",
+          "type": "uint256"
+        }
+      ],
+      "name": "getAjoInitializationStatus",
       "outputs": [
         {
-          "internalType": "uint256[]",
-          "name": "",
-          "type": "uint256[]"
+          "internalType": "uint8",
+          "name": "phase",
+          "type": "uint8"
+        },
+        {
+          "internalType": "bool",
+          "name": "isReady",
+          "type": "bool"
+        },
+        {
+          "internalType": "bool",
+          "name": "isFullyFinalized",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "ajoId",
+          "type": "uint256"
+        }
+      ],
+      "name": "getAjoOperationalStatus",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "totalMembers",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "activeMembers",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "totalCollateralUSDC",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "totalCollateralHBAR",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "contractBalanceUSDC",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "contractBalanceHBAR",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "currentCycle",
+              "type": "uint256"
+            },
+            {
+              "internalType": "enum PaymentToken",
+              "name": "activeToken",
+              "type": "uint8"
+            },
+            {
+              "internalType": "bool",
+              "name": "canAcceptMembers",
+              "type": "bool"
+            },
+            {
+              "internalType": "bool",
+              "name": "canProcessPayments",
+              "type": "bool"
+            },
+            {
+              "internalType": "bool",
+              "name": "canDistributePayouts",
+              "type": "bool"
+            }
+          ],
+          "internalType": "struct AjoFactory.AjoOperationalStatus",
+          "name": "status",
+          "type": "tuple"
         }
       ],
       "stateMutability": "view",
@@ -296,12 +988,384 @@
           "type": "address"
         }
       ],
-      "name": "getCreatorAjos",
+      "name": "getAjosByCreator",
       "outputs": [
         {
           "internalType": "uint256[]",
-          "name": "",
+          "name": "ajoIds",
           "type": "uint256[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "offset",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "limit",
+          "type": "uint256"
+        }
+      ],
+      "name": "getAllAjos",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "ajoCore",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "ajoMembers",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "ajoCollateral",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "ajoPayments",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "ajoGovernance",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "creator",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "createdAt",
+              "type": "uint256"
+            },
+            {
+              "internalType": "string",
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "internalType": "bool",
+              "name": "isActive",
+              "type": "bool"
+            }
+          ],
+          "internalType": "struct IAjoFactory.AjoInfo[]",
+          "name": "ajoInfos",
+          "type": "tuple[]"
+        },
+        {
+          "internalType": "bool",
+          "name": "hasMore",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "startId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "count",
+          "type": "uint256"
+        }
+      ],
+      "name": "getBatchAjoHealthReports",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "ajoId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint8",
+              "name": "initializationPhase",
+              "type": "uint8"
+            },
+            {
+              "internalType": "bool",
+              "name": "isReady",
+              "type": "bool"
+            },
+            {
+              "internalType": "bool",
+              "name": "isFullyFinalized",
+              "type": "bool"
+            },
+            {
+              "components": [
+                {
+                  "internalType": "bool",
+                  "name": "isDeployed",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "isInitialized",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "isResponsive",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "hasCorrectConfig",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "string",
+                  "name": "errorMessage",
+                  "type": "string"
+                }
+              ],
+              "internalType": "struct AjoFactory.ContractHealthStatus",
+              "name": "ajoCore",
+              "type": "tuple"
+            },
+            {
+              "components": [
+                {
+                  "internalType": "bool",
+                  "name": "isDeployed",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "isInitialized",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "isResponsive",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "hasCorrectConfig",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "string",
+                  "name": "errorMessage",
+                  "type": "string"
+                }
+              ],
+              "internalType": "struct AjoFactory.ContractHealthStatus",
+              "name": "ajoMembers",
+              "type": "tuple"
+            },
+            {
+              "components": [
+                {
+                  "internalType": "bool",
+                  "name": "isDeployed",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "isInitialized",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "isResponsive",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "hasCorrectConfig",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "string",
+                  "name": "errorMessage",
+                  "type": "string"
+                }
+              ],
+              "internalType": "struct AjoFactory.ContractHealthStatus",
+              "name": "ajoCollateral",
+              "type": "tuple"
+            },
+            {
+              "components": [
+                {
+                  "internalType": "bool",
+                  "name": "isDeployed",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "isInitialized",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "isResponsive",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "hasCorrectConfig",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "string",
+                  "name": "errorMessage",
+                  "type": "string"
+                }
+              ],
+              "internalType": "struct AjoFactory.ContractHealthStatus",
+              "name": "ajoPayments",
+              "type": "tuple"
+            },
+            {
+              "components": [
+                {
+                  "internalType": "bool",
+                  "name": "isDeployed",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "isInitialized",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "isResponsive",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "hasCorrectConfig",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "string",
+                  "name": "errorMessage",
+                  "type": "string"
+                }
+              ],
+              "internalType": "struct AjoFactory.ContractHealthStatus",
+              "name": "ajoGovernance",
+              "type": "tuple"
+            },
+            {
+              "components": [
+                {
+                  "internalType": "bool",
+                  "name": "ajoCoreToMembers",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "ajoCoreToCollateral",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "ajoCoreToPayments",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "ajoCoreToGovernance",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "membersToCollateral",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "membersToPayments",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "collateralToCore",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "paymentsToCore",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "governanceToCore",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "string",
+                  "name": "linkingErrors",
+                  "type": "string"
+                }
+              ],
+              "internalType": "struct AjoFactory.CrossContractLinkingStatus",
+              "name": "linking",
+              "type": "tuple"
+            }
+          ],
+          "internalType": "struct AjoFactory.AjoHealthReport[]",
+          "name": "reports",
+          "type": "tuple[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getFactoryHealthSummary",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "phase1Count",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "phase2Count",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "phase3Count",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "phase4Count",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "phase5Count",
+          "type": "uint256"
         }
       ],
       "stateMutability": "view",
@@ -318,23 +1382,8 @@
         },
         {
           "internalType": "uint256",
-          "name": "totalActive",
+          "name": "activeCount",
           "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "currentCreationFee",
-          "type": "uint256"
-        },
-        {
-          "internalType": "address",
-          "name": "usdcToken",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "whbarToken",
-          "type": "address"
         }
       ],
       "stateMutability": "view",
@@ -342,15 +1391,74 @@
     },
     {
       "inputs": [],
-      "name": "nextAjoId",
+      "name": "getImplementations",
       "outputs": [
         {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
+          "internalType": "address",
+          "name": "ajoCore",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "ajoMembers",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "ajoCollateral",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "ajoPayments",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "ajoGovernance",
+          "type": "address"
         }
       ],
       "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "ajoId",
+          "type": "uint256"
+        }
+      ],
+      "name": "initializeAjoPhase2",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "ajoId",
+          "type": "uint256"
+        }
+      ],
+      "name": "initializeAjoPhase3",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "ajoId",
+          "type": "uint256"
+        }
+      ],
+      "name": "initializeAjoPhase4",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -370,36 +1478,38 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "ajoCoreAddress",
+          "name": "_ajoCoreImpl",
           "type": "address"
         },
         {
-          "internalType": "string",
-          "name": "name",
-          "type": "string"
-        }
-      ],
-      "name": "registerAjo",
-      "outputs": [
+          "internalType": "address",
+          "name": "_ajoMembersImpl",
+          "type": "address"
+        },
         {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
+          "internalType": "address",
+          "name": "_ajoCollateralImpl",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_ajoPaymentsImpl",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_ajoGovernanceImpl",
+          "type": "address"
         }
       ],
-      "stateMutability": "payable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "renounceOwnership",
+      "name": "setImplementations",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
     },
     {
       "inputs": [],
-      "name": "totalAjosCreated",
+      "name": "totalAjos",
       "outputs": [
         {
           "internalType": "uint256",
@@ -419,26 +1529,6 @@
         }
       ],
       "name": "transferOwnership",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "newFee",
-          "type": "uint256"
-        }
-      ],
-      "name": "updateCreationFee",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "withdrawFees",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
