@@ -11,13 +11,16 @@ import ProfileNftPage from "@/components/profile/ProfileNftPage";
 import ProfileRecentActivity from "@/components/profile/ProfileRecentActivity";
 import useAjoCore from "@/hooks/useAjoCore";
 import { useAjoStore } from "@/store/ajoStore";
+import { useParams } from "react-router-dom";
 
 const Profile = () => {
-  const { getMemberInfo, needsToPayThisCycle } = useAjoCore();
+  const { ajoId, ajoCore } = useParams<{ ajoId: string; ajoCore: string }>();
+  const { getMemberInfo, needsToPayThisCycle } = useAjoCore(
+    ajoCore ? ajoCore : ""
+  );
   const [isVisible, setIsVisible] = useState(false);
   const [activeTab, setActiveTab] = useState("ajo");
   const { address, network } = useWallet();
-  const { ajoStats } = useAjoStore();
   const { whbar, usdc, loading } = useTokenStore();
   const [copied, setCopied] = useState(false);
   const [balanceInNGN, setBalanceInNGN] = useState<number | null>(null);
@@ -96,7 +99,7 @@ const Profile = () => {
         />
 
         {/* Stats Cards */}
-        <StatsCard isVisible={isVisible} />
+        {/* <StatsCard isVisible={isVisible} /> */}
         {/* Navigation Tabs */}
         <ProfileNavigationTab
           isVisible={isVisible}
@@ -112,7 +115,7 @@ const Profile = () => {
         >
           {/* {activeTab === "overview" && <ProfileOverview />} */}
 
-          {activeTab === "ajo" && <ProfileAjoGroups ajoStats={ajoStats} />}
+          {activeTab === "ajo" && <ProfileAjoGroups />}
 
           {activeTab === "nfts" && <ProfileNftPage />}
           {/* 

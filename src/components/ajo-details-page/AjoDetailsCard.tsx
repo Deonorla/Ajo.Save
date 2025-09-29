@@ -1,6 +1,7 @@
 import { useWallet } from "@/auth/WalletContext";
 import useAjoCore from "@/hooks/useAjoCore";
 import { useAjoFactory } from "@/hooks/useAjoFactory";
+import { useAjoDetailsStore } from "@/store/ajoDetailsStore";
 import { useAjoStore, type AjoInfo } from "@/store/ajoStore";
 import { useMemberStore } from "@/store/memberInfoStore";
 import { useTokenStore } from "@/store/tokenStore";
@@ -34,30 +35,35 @@ const AjoDetailsCard = ({
   isVisible,
   monthlyPayment,
 }: AjoDetailsCardProps) => {
-  const { memberData } = useMemberStore();
+  const { memberData, needsToPayThisCycle: needTo } = useMemberStore();
   const { nairaRate } = useTokenStore();
   const { ajoInfos } = useAjoStore();
   const [loading, setLoading] = useState(false);
   const [makingPayment, setMakingPayment] = useState(false);
   const [collateralRequired, setCollateralRequired] = useState(0);
-  const [hasPaidMonthly, setHasPaidMonthly] = useState(false);
+  const [requesting, setRequesting] = useState(false);
   const { ajoId, ajoCore } = useParams<{ ajoId: string; ajoCore: string }>();
   const {
     joinAjo,
     getContractStats,
     getMemberInfo,
     getRequiredCollateralForJoin,
-    getTokenConfig,
+    distributePayout,
+    needsToPayThisCycle,
     makePayment,
   } = useAjoCore(ajoCore ? ajoCore : "");
   const { address } = useWallet();
   const { getFactoryStats } = useAjoFactory();
+  const { activeMembers } = useAjoDetailsStore();
 
   const getCollateral = useCallback(async () => {
     try {
       const collateralRequired = await getRequiredCollateralForJoin();
       console.log("collateral---", collateralRequired);
       setCollateralRequired(Number(collateralRequired?.toString()) / 1000000);
+      if (!address) return null;
+      const needsToPay = await needsToPayThisCycle(address);
+      console.log("needsToPay", needsToPay);
     } catch (err) {
       console.log("error getting collateral", err);
     }
@@ -81,11 +87,14 @@ const AjoDetailsCard = ({
         setLoading(false);
         return;
       }
+      if (!ajo) return null;
+      console.log("ajoCollateral", ajo.ajoCollateral);
+      console.log("ajoPayments", ajo.ajoPayments);
       const join = await joinAjo(
         0,
         import.meta.env.VITE_MOCK_USDC_ADDRESS,
-        import.meta.env.VITE_AJO_COLLATERAL_CONTRACT,
-        import.meta.env.VITE_AJO_PAYMENTS_CONTRACT
+        ajo?.ajoCollateral,
+        ajo?.ajoPayments
       );
       // join is a receipt (ethers v5 transaction receipt)
       console.log("✅ Joined Ajo, tx hash:", join.transactionHash);
@@ -102,6 +111,7 @@ const AjoDetailsCard = ({
         console.log("🙋 Member details:", member);
       }
       setLoading(false);
+      window.location.reload();
     } catch (err) {
       console.log("Error joining:", err);
       toast.error("Failed to join");
@@ -115,10 +125,23 @@ const AjoDetailsCard = ({
       setMakingPayment(true);
       const receipt = await makePayment();
       console.log("receipt:", receipt);
+      window.location.reload();
     } catch (err) {
       console.log("Error making monthly payment:", err);
     } finally {
       setMakingPayment(false);
+    }
+  };
+
+  const _requestPayout = async () => {
+    try {
+      setRequesting(true);
+      const payout = distributePayout();
+      console.log("receipt:", payout);
+    } catch (err) {
+      console.log("Error distributing payment", err);
+    } finally {
+      setRequesting(false);
     }
   };
 
@@ -143,11 +166,15 @@ const AjoDetailsCard = ({
                   <div className="flex items-center space-x-4">
                     <div
                       className={`px-2 py-1 rounded-full text-xs font-medium flex items-center space-x-1 ${getStatusColor(
-                        "forming"
+                        activeMembers == "10" ? "active" : "forming"
                       )}`}
                     >
-                      {getStatusIcon("Forming")}
-                      <span className="capitalize">Forming</span>
+                      {getStatusIcon(
+                        activeMembers == "10" ? "active" : "forming"
+                      )}
+                      <span className="capitalize">
+                        {activeMembers == "10" ? "Active" : "Forming"}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -155,23 +182,31 @@ const AjoDetailsCard = ({
 
               <div className=" hidden sm:flex flex-col sm:flex-row gap-3">
                 {Number(memberData?.memberInfo.lockedCollateral) == 0 ? (
-                  <button
-                    onClick={_joinAjo}
-                    className="w-full bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg font-semibold text-sm transition-all hover:scale-105 hover:shadow-lg flex items-center justify-center space-x-2 cursor-pointer"
-                  >
-                    {loading ? (
-                      <>
-                        <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></div>
-                        <span>Joining Ajo...</span>
-                      </>
-                    ) : (
-                      <>
-                        <CreditCard className="w-5 h-5" />
-                        <span>Join Ajo</span>
-                      </>
-                    )}
-                  </button>
-                ) : (
+                  activeMembers == "10" ? (
+                    <></>
+                  ) : (
+                    <button
+                      onClick={_joinAjo}
+                      className="w-full bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg font-semibold text-sm transition-all hover:scale-105 hover:shadow-lg flex items-center justify-center space-x-2 cursor-pointer"
+                    >
+                      {loading ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></div>
+                          <span>Joining Ajo...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CreditCard className="w-5 h-5" />
+                          <span>Join Ajo</span>
+                        </>
+                      )}
+                    </button>
+                  )
+                ) : activeMembers !== "10" ? (
+                  <div className="text-xs flex text-primary">
+                    Total ajo members incomplete for ajo to start
+                  </div>
+                ) : Number(memberData?.memberInfo.lastPaymentCycle) == 0 ? (
                   <button
                     onClick={_processPayment}
                     className="w-full bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg font-semibold text-sm transition-all hover:scale-105 hover:shadow-lg flex items-center justify-center space-x-2 cursor-pointer"
@@ -188,34 +223,58 @@ const AjoDetailsCard = ({
                       </>
                     )}
                   </button>
+                ) : (
+                  <button
+                    onClick={_requestPayout}
+                    className="w-full bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg font-semibold text-sm transition-all hover:scale-105 hover:shadow-lg flex items-center justify-center space-x-2 cursor-pointer"
+                  >
+                    {requesting ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></div>
+                        <span>Processing payment...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="w-5 h-5" />
+                        <span>Request payout</span>
+                      </>
+                    )}
+                  </button>
                 )}
               </div>
             </div>
             {/* <p className="text-muted-foreground leading-relaxed">
               {ajoData.description}
             </p> */}
+            {/* {activeMembers == "10" ? (
+              <div className="mb-6 p-4 text-xs text-primary bg-primary/10 border border-primary/20 rounded-lg flex flex-col space-y-3 sm:w-50%">
+                Not taking in members
+              </div>
+            ) : ( */}
             <div className="mb-6 p-4 bg-primary/10 border border-primary/20 rounded-lg flex flex-col space-y-3 sm:w-50%">
               {/* Collateral Section */}
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-primary font-medium ">
-                  Collateral Required:
-                </span>
-                <span className=" ml-4 font-semibold text-primary text-sm">
-                  {collateralRequired
-                    ? `${collateralRequired} USDC `
-                    : "Loading..."}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-primary font-medium ">
-                  Monthly Contribution:
-                </span>
-                <span className=" ml-4 font-semibold text-primary text-sm">
-                  {collateralRequired
-                    ? `${Number(monthlyPayment) / 1000000} USDC `
-                    : "Loading..."}
-                </span>
-              </div>
+              {Number(memberData?.memberInfo.lockedCollateral) == 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-primary font-medium ">
+                    Collateral Required:
+                  </span>
+                  <span className=" ml-4 font-semibold text-primary text-sm">
+                    {collateralRequired
+                      ? `${collateralRequired} USDC `
+                      : "Loading..."}
+                  </span>
+                </div>
+              )}
+              {Number(memberData?.memberInfo.lastPaymentCycle) == 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-primary font-medium ">
+                    Monthly Contribution:
+                  </span>
+                  <span className=" ml-4 font-semibold text-primary text-sm">
+                    $50 USDC
+                  </span>
+                </div>
+              )}
 
               {/* Collateral Lock Status */}
               <div
@@ -241,20 +300,20 @@ const AjoDetailsCard = ({
               {/* Monthly Payment / Join Status */}
               <div
                 className={`px-3 py-1 rounded-md text-xs font-semibold flex items-center space-x-2 w-fit ${
-                  hasPaidMonthly
+                  Number(memberData?.memberInfo.lastPaymentCycle) !== 0
                     ? "bg-[#111E18] text-[#3DB569]"
                     : "bg-[#211416] text-[#EA4343]"
                 }`}
               >
-                {hasPaidMonthly ? (
+                {Number(memberData?.memberInfo.lastPaymentCycle) !== 0 ? (
                   <>
                     <CreditCard className="w-4 h-4" />
-                    <span>Monthly Fee Paid</span>
+                    <span>Monthly Payment Paid</span>
                   </>
                 ) : (
                   <>
                     <CreditCard className="w-4 h-4" />
-                    <span>Monthly Fee Pending</span>
+                    <span>Monthly payment pending</span>
                   </>
                 )}
               </div>
@@ -266,7 +325,11 @@ const AjoDetailsCard = ({
                 Smart Contract:
               </span>
               <span className="font-mono text-primary">
-                {formatAddress(import.meta.env.VITE_AJO_CORE_CONTRACT_ADDRESS)}
+                {ajo
+                  ? formatAddress(ajo?.ajoCore)
+                  : formatAddress(
+                      import.meta.env.VITE_AJO_CORE_CONTRACT_ADDRESS
+                    )}
               </span>
               {/* <button className="text-primary hover:text-primary/80">
                 <ExternalLink className="w-4 h-4" />
@@ -276,23 +339,31 @@ const AjoDetailsCard = ({
 
           <div className="flex sm:hidden flex-col sm:flex-row  gap-3">
             {Number(memberData?.memberInfo.lockedCollateral) == 0 ? (
-              <button
-                onClick={_joinAjo}
-                className="w-full bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg font-semibold text-sm transition-all hover:scale-105 hover:shadow-lg flex items-center justify-center space-x-2 cursor-pointer"
-              >
-                {loading ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></div>
-                    <span>Joining Ajo...</span>
-                  </>
-                ) : (
-                  <>
-                    <CreditCard className="w-5 h-5" />
-                    <span>Join Ajo</span>
-                  </>
-                )}
-              </button>
-            ) : (
+              activeMembers == "10" ? (
+                <></>
+              ) : (
+                <button
+                  onClick={_joinAjo}
+                  className="w-full bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg font-semibold text-sm transition-all hover:scale-105 hover:shadow-lg flex items-center justify-center space-x-2 cursor-pointer"
+                >
+                  {loading ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></div>
+                      <span>Joining Ajo...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="w-5 h-5" />
+                      <span>Join Ajo</span>
+                    </>
+                  )}
+                </button>
+              )
+            ) : activeMembers !== "10" ? (
+              <div className="text-xs flex text-primary">
+                Total ajo members incomplete for ajo to start
+              </div>
+            ) : Number(memberData?.memberInfo.lastPaymentCycle) == 0 ? (
               <button
                 onClick={_processPayment}
                 className="w-full bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg font-semibold text-sm transition-all hover:scale-105 hover:shadow-lg flex items-center justify-center space-x-2 cursor-pointer"
@@ -306,6 +377,23 @@ const AjoDetailsCard = ({
                   <>
                     <CreditCard className="w-5 h-5" />
                     <span>Process payment</span>
+                  </>
+                )}
+              </button>
+            ) : (
+              <button
+                onClick={_requestPayout}
+                className="w-full bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg font-semibold text-sm transition-all hover:scale-105 hover:shadow-lg flex items-center justify-center space-x-2 cursor-pointer"
+              >
+                {requesting ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></div>
+                    <span>Processing payment...</span>
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="w-5 h-5" />
+                    <span>Request payout</span>
                   </>
                 )}
               </button>

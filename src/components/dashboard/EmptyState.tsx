@@ -91,7 +91,7 @@ export function EmptyState({ onCreateAjo }: EmptyStateProps) {
           </Button>
 
           <p className="text-sm text-muted-foreground">
-            Start with as few as 3 members • No setup fees • Full blockchain
+            Start with as few as 10 members • No setup fees • Full blockchain
             transparency
           </p>
         </div>

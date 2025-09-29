@@ -14,7 +14,7 @@ import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
   const { connected: isConnected } = useWallet();
-  const { getContractStats } = useAjoCore();
+  // const { getContractStats } = useAjoCore();
   const { getAllAjos } = useAjoFactory();
   const navigate = useNavigate();
   const { getWhbarBalance, getUsdcBalance } = useTokenHook();
@@ -34,10 +34,10 @@ const Dashboard = () => {
     getUsdcBalance();
     const fetchStats = async () => {
       try {
+        await getAllAjos();
         const naira = await getNaira();
         setNaira(naira);
         // const data = await getContractStats();
-        await getAllAjos();
         console.log("All Ajos:", ajoInfos);
         // console.log("Contract response:", data);
       } catch (err) {
@@ -49,7 +49,7 @@ const Dashboard = () => {
 
     // if (isConnected) {
     // }
-  }, [isConnected, getContractStats]);
+  }, [isConnected]);
 
   const handleRoute = () => {
     navigate("/ajo/create-ajo");
@@ -86,7 +86,9 @@ const Dashboard = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-muted-foreground text-sm">Ajos Tracked</p>
-                  <p className="text-2xl font-bold text-foreground">1</p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {ajoInfos.length}
+                  </p>
                 </div>
                 <Shield className="h-8 w-8 text-primary" />
               </div>

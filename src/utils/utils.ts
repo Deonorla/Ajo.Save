@@ -34,10 +34,37 @@ export const useAjoDetails = () => {
         ajoCore && item.ajoCore.toLowerCase() === ajoCore.toLowerCase(); // match by core
       return matchesId || matchesCore;
     });
-
     console.log("Selected Ajo:", found);
     return found ?? null;
   }, [ajoId, ajoCore, ajoInfos]);
 
   return ajo;
 };
+
+// utils/formatTimestamp.ts
+export function formatTimestamp(timestamp: string | number): string {
+  if (!timestamp) return "N/A";
+
+  // Ensure it's a number
+  const seconds =
+    typeof timestamp === "string" ? parseInt(timestamp, 10) : timestamp;
+
+  // Convert seconds → milliseconds
+  const date = new Date(seconds * 1000);
+
+  // Format as YYYY-MM-DD HH:mm:ss
+  const formatted =
+    date.getFullYear() +
+    "-" +
+    String(date.getMonth() + 1).padStart(2, "0") +
+    "-" +
+    String(date.getDate()).padStart(2, "0") +
+    " " +
+    String(date.getHours()).padStart(2, "0") +
+    ":" +
+    String(date.getMinutes()).padStart(2, "0") +
+    ":" +
+    String(date.getSeconds()).padStart(2, "0");
+
+  return formatted;
+}

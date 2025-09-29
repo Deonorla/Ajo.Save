@@ -135,17 +135,24 @@ const Header = () => {
                   </button> */}
                   <button
                     onClick={handleMint}
-                    className="ml-2 flex items-center gap-1 text-primary hover:text-primary/80"
+                    className="ml-2 flex items-center gap-1 text-primary hover:text-primary/80 cursor-pointer"
                   >
                     <BadgeDollarSign className="h-4 w-4" />
-                    {minting ? "minting" : "mint usdc"}
+                    {minting ? (
+                      <div className="flex items-center">
+                        <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2"></div>
+                        minting
+                      </div>
+                    ) : (
+                      "Mint USDC"
+                    )}
                   </button>
                   <span className="hidden xl:block ml-2 text-xs text-white ">
                     {network}
                   </span>
                   <button
                     onClick={disconnect}
-                    className="ml-2 flex items-center gap-1 text-red-600 hover:text-red-700"
+                    className="ml-2 flex items-center gap-1 text-red-600 hover:text-red-700 cursor-pointer"
                   >
                     <LogOut className="h-4 w-4" />
                     Disconnect
@@ -252,7 +259,14 @@ const Header = () => {
                       className=" px-3 py-1 flex justify-center items-center gap-1 rounded-lg border border-primary  text-primary hover:text-primary/80"
                     >
                       <BadgeDollarSign className="h-4 w-4" />
-                      {minting ? "minting" : "mint usdc"}
+                      {minting ? (
+                        <div className="flex items-center">
+                          <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2"></div>
+                          minting
+                        </div>
+                      ) : (
+                        "Mint USDC"
+                      )}
                     </button>
                     <button
                       onClick={disconnect}

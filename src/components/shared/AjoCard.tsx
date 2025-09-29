@@ -2,7 +2,7 @@
 import type { AjoInfo } from "@/store/ajoStore";
 import { useTokenStore } from "@/store/tokenStore";
 import formatCurrency from "@/utils/formatCurrency";
-import { formatAddress } from "@/utils/utils";
+import { formatAddress, formatTimestamp } from "@/utils/utils";
 import {
   Award,
   CheckCircle,
@@ -63,25 +63,22 @@ const AjoCard = ({ ajo, isVisible }: AjoCardProps) => {
             <h3 className="text-lg font-bold text-card-foreground group-hover:text-primary transition-colors mb-1">
               {ajo.name}
             </h3>
-            {/* <p className="text-sm text-muted-foreground line-clamp-2">
-              A test Ajo contract for development purposes.
-            </p> */}
           </div>
 
-          <div
+          {/* <div
             className={`px-2 py-1 rounded-full text-xs font-medium flex items-center space-x-1 ${getStatusColor(
               "forming"
             )}`}
           >
             {getStatusIcon("forming")}
             <span className="capitalize">forming</span>
-          </div>
+          </div> */}
         </div>
 
         <div className="flex items-center justify-between text-sm">
           <div className="flex items-center space-x-2">
             <div className="w-6 h-6 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center text-xs font-bold text-primary-foreground">
-              #1
+              #{ajo.ajoId}
             </div>
             <span className="text-muted-foreground">
               by {formatAddress(ajo.creator)}
@@ -93,6 +90,9 @@ const AjoCard = ({ ajo, isVisible }: AjoCardProps) => {
             <span className="font-semibold text-card-foreground">0</span>
           </div>
         </div>
+        <p className="text-sm text-muted-foreground line-clamp-2 mt-3">
+          Created: {formatTimestamp(ajo.createdAt)}
+        </p>
       </div>
 
       {/* Card Body */}

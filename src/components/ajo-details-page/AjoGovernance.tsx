@@ -10,7 +10,7 @@ const AjoGovernance = () => {
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-xl font-bold text-card-foreground flex items-center space-x-2">
             <Vote className="w-6 h-6 text-primary" />
-            <span>Governance Proposals</span>
+            <span>Governance Proposals (Coming soon)</span>
           </h3>
           <button className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg font-semibold transition-all flex items-center space-x-2">
             <Vote className="w-4 h-4" />

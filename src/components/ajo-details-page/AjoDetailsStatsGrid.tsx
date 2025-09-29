@@ -1,9 +1,19 @@
 import { useAjoDetailsStore } from "@/store/ajoDetailsStore";
 import { useAjoStore } from "@/store/ajoStore";
+import { useMemberStore } from "@/store/memberInfoStore";
 import { useTokenStore } from "@/store/tokenStore";
+import { members } from "@/temp-data";
 import formatCurrency from "@/utils/formatCurrency";
-import { DollarSign, TrendingUp, Users, Wallet } from "lucide-react";
-import { useEffect } from "react";
+import { formatAddress } from "@/utils/utils";
+import {
+  Check,
+  Copy,
+  DollarSign,
+  ShieldCheckIcon,
+  Users,
+  Wallet,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface AjoDetailsStatsGridProps {
   isVisible: boolean;
@@ -16,9 +26,27 @@ const AjoDetailsStatsGrid = ({
   contractStats,
   monthlyPayment,
 }: AjoDetailsStatsGridProps) => {
+  const { memberData } = useMemberStore();
   const { nairaRate } = useTokenStore();
+  const [copied, setCopied] = useState(false);
   const { activeMembers, totalCollateralUSDC, totalCollateralHBAR } =
     useAjoDetailsStore();
+
+  const formattedTotalCollateralHBAR = Number(totalCollateralHBAR) / 1000000;
+  const [formattedTotalCollateralUSDC, setFormattedTotalCollateralUSDC] =
+    useState(0);
+  useEffect(() => {
+    setFormattedTotalCollateralUSDC(Number(totalCollateralUSDC) / 1000000);
+  }, [activeMembers]);
+
+  // Copy guarantor's address
+  const handleCopy = async () => {
+    if (memberData) {
+      await navigator.clipboard.writeText(memberData?.memberInfo.guarantor);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    }
+  };
 
   return (
     <div
@@ -34,10 +62,10 @@ const AjoDetailsStatsGrid = ({
           <span className="text-xs text-muted-foreground">Monthly</span>
         </div>
         <div className="text-2xl font-bold text-card-foreground">
-          {/* {formatCurrency(
-            nairaRate * (monthlyPayment ? Number() / 1000000 : 0)
-          )} */}
-          {formatCurrency(50 * nairaRate)}
+          {formatCurrency(
+            nairaRate * (monthlyPayment ? Number(monthlyPayment) / 1000000 : 0)
+          )}
+          {/* {formatCurrency(50 * nairaRate)} */}
         </div>
         <div className="text-sm text-muted-foreground">Payment Amount</div>
       </div>
@@ -50,7 +78,7 @@ const AjoDetailsStatsGrid = ({
           <span className="text-xs text-muted-foreground">Progress</span>
         </div>
         <div className="text-2xl font-bold text-card-foreground">
-          {activeMembers}/5
+          {activeMembers}/10
         </div>
         <div className="text-sm text-muted-foreground">Members</div>
       </div>
@@ -64,10 +92,8 @@ const AjoDetailsStatsGrid = ({
         </div>
         <div className="text-2xl font-bold text-card-foreground">
           {formatCurrency(
-            Number(
-              Number(totalCollateralHBAR ?? 0) +
-                Number(totalCollateralUSDC ?? 0)
-            ) * nairaRate
+            (formattedTotalCollateralHBAR + formattedTotalCollateralUSDC) *
+              nairaRate
           )}
         </div>
         <div className="text-sm text-muted-foreground">Pool Value</div>
@@ -76,14 +102,24 @@ const AjoDetailsStatsGrid = ({
       <div className="bg-card p-6 rounded-xl shadow-lg hover:shadow-xl transition-all hover:scale-105 border border-border">
         <div className="flex items-center justify-between mb-2">
           <div className="w-10 h-10 bg-accent/20 rounded-lg flex items-center justify-center">
-            <TrendingUp className="w-6 h-6 text-accent" />
+            <ShieldCheckIcon className="w-6 h-6 text-accent" />
           </div>
-          <span className="text-xs text-muted-foreground">Earned</span>
+          <button
+            onClick={handleCopy}
+            className="p-1 hover:bg-primary/20 rounded"
+            title="Copy Address"
+          >
+            {copied ? (
+              <Check className="h-4 w-4 text-primary" />
+            ) : (
+              <Copy className="h-4 w-4 text-white" />
+            )}
+          </button>
         </div>
         <div className="text-2xl font-bold text-card-foreground">
-          {formatCurrency(0)}
+          {memberData && formatAddress(memberData?.memberInfo.guarantor)}
         </div>
-        <div className="text-sm text-muted-foreground">Yield Generated</div>
+        <div className="text-sm text-muted-foreground">Guarantor address</div>
       </div>
     </div>
   );

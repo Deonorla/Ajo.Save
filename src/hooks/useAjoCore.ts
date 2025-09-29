@@ -377,9 +377,7 @@ const useAjoCore = (ajoCoreAddress: string): UseAjoCore => {
       }
 
       // --- 5. Join Ajo ---
-      const tx = await contractWrite.joinAjo(tokenChoice, {
-        gasLimit: 500000,
-      });
+      const tx = await contractWrite.joinAjo(tokenChoice);
       const receipt = await tx.wait();
       console.log("🎉 Joined Ajo, tx hash:", receipt.transactionHash);
       return receipt;
@@ -400,7 +398,7 @@ const useAjoCore = (ajoCoreAddress: string): UseAjoCore => {
 
       const receipt = await tx.wait();
       if (receipt.status === 1) {
-        toast.success("Payment successful!");
+        toast.success("Monthly Payment successful!");
       } else {
         toast.error("Payment failed");
       }
@@ -415,9 +413,15 @@ const useAjoCore = (ajoCoreAddress: string): UseAjoCore => {
       throw new Error("Wallet not connected / write contract not ready");
     try {
       const tx = await contractWrite.distributePayout();
-      await tx.wait();
-    } catch (err) {
+      const receipt = await tx.wait();
+      if (receipt.status === 1) {
+        toast.success("Cycle ajo distribution successful!");
+      } else {
+        toast.error("Payment failed");
+      }
+    } catch (err: any) {
       console.error("distributePayout error:", err);
+      toast.error(err?.reason || err?.message || "Payment failed");
       throw err;
     }
   }, [contractWrite]);

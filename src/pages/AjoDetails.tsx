@@ -64,6 +64,8 @@ const AjoDetails = () => {
       const queue = await getQueueInfo(address);
       const tokenConfig = await getTokenConfig(0);
       setMonthlyPayment(tokenConfig?.monthlyPayment);
+
+      console.log("monthlyPayment:", monthlyPayment);
       console.log("Info", data);
     } catch (err) {
       console.log("Error fetching member info:", err);

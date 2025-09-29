@@ -1,6 +1,7 @@
 import useAjoCore from "@/hooks/useAjoCore";
 import { useAjoDetailsStore } from "@/store/ajoDetailsStore";
 import { useAjoStore } from "@/store/ajoStore";
+import { useMemberStore } from "@/store/memberInfoStore";
 import { useTokenStore } from "@/store/tokenStore";
 import { ajoData, paymentHistory } from "@/temp-data";
 import formatCurrency from "@/utils/formatCurrency";
@@ -23,6 +24,7 @@ const AjoOverviewTab = () => {
   const { ajoCore } = useParams<{ ajoId: string; ajoCore: string }>();
   const { getCollateralDemo } = useAjoCore(ajoCore ? ajoCore : "");
   const { nairaRate } = useTokenStore();
+  const { memberData } = useMemberStore();
   const {
     activeMembers,
     totalMembers,
@@ -67,8 +69,8 @@ const AjoOverviewTab = () => {
               <table className="w-full text-sm border border-border rounded-lg">
                 <thead>
                   <tr className="bg-primary/20 text-left">
-                    <th className="p-2">Position</th>
-                    <th className="p-2">Collateral</th>
+                    <th className="p-2">Queue Position</th>
+                    <th className="p-2">Collateral to be paid</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -131,7 +133,7 @@ const AjoOverviewTab = () => {
               </div>
               <div>
                 <div className="text-2xl font-bold text-muted-foreground">
-                  {5 - Number(activeMembers)}
+                  {10 - Number(activeMembers)}
                 </div>
                 <div className="text-sm text-muted-foreground">Remaining</div>
               </div>
@@ -143,7 +145,7 @@ const AjoOverviewTab = () => {
         <div className="bg-card rounded-xl shadow-lg p-6 border border-border">
           <h3 className="text-xl font-bold text-card-foreground mb-4 flex items-center space-x-2">
             <Database className="w-6 h-6 text-accent" />
-            <span>Smart Contract Status</span>
+            <span>Ajo Contract Status</span>
             {!ajoId && (
               <RefreshCw className="w-4 h-4 animate-spin text-muted-foreground" />
             )}
@@ -153,9 +155,19 @@ const AjoOverviewTab = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="space-y-3">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total Members:</span>
+                  <span className="text-muted-foreground">
+                    Guarantor queue position:
+                  </span>
                   <span className="font-semibold text-card-foreground">
-                    {totalMembers}
+                    {memberData?.memberInfo.guaranteePosition}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">
+                    your queue Position:
+                  </span>
+                  <span className="font-semibold text-card-foreground">
+                    {memberData?.memberInfo.queueNumber}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -164,12 +176,7 @@ const AjoOverviewTab = () => {
                     {activeMembers}
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Queue Position:</span>
-                  <span className="font-semibold text-card-foreground">
-                    {/* {ajoStats.currentQueuePosition} */}
-                  </span>
-                </div>
+
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Active Token:</span>
                   <span className="font-semibold flex items-center space-x-1 text-card-foreground">
@@ -183,8 +190,10 @@ const AjoOverviewTab = () => {
                   <span className="text-muted-foreground">
                     Total Collateral:
                   </span>
-                  <span className="font-semibold text-secondary-foreground">
-                    {formatCurrency(Number(totalCollateralUSDC) * nairaRate)}
+                  <span className="font-semibold text-white">
+                    {formatCurrency(
+                      Number(Number(totalCollateralUSDC) / 1000000) * nairaRate
+                    )}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -192,7 +201,9 @@ const AjoOverviewTab = () => {
                     Contract Balance:
                   </span>
                   <span className="font-semibold text-primary">
-                    {formatCurrency(Number(contractBalanceUSDC) * nairaRate)}
+                    {formatCurrency(
+                      Number(Number(contractBalanceUSDC) / 1000000) * nairaRate
+                    )}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -238,12 +249,14 @@ const AjoOverviewTab = () => {
               <span className="text-muted-foreground">Privacy:</span>
               <span className="font-semibold text-card-foreground">Public</span>
             </div>
-            <div className="flex justify-between">
+            {/* <div className="flex justify-between">
               <span className="text-muted-foreground">Collateral:</span>
               <span className="font-semibold text-white">
-                {formatCurrency(Number(totalCollateralUSDC) * nairaRate)}
+                {formatCurrency(
+                  Number(Number(totalCollateralUSDC) / 1000000) * nairaRate
+                )}
               </span>
-            </div>
+            </div> */}
           </div>
         </div>
 
