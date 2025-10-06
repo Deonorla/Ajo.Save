@@ -11,7 +11,7 @@ const HowItWorks = () => {
           </h2>
           <p className="text-sm lg:text-lg text-muted-foreground max-w-2xl mx-auto">
             We’ve reimagined <span className="font-semibold">Ajo</span> for the
-            digital age. Transparent, borderless, and built for Nigerians
+            digital age. Transparent, borderless, and built for Africans
             everywhere.
           </p>
         </div>

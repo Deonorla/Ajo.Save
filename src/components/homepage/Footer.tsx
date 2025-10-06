@@ -53,7 +53,7 @@ const Footer = () => {
             </div>
           </div>
 
-          <div>
+          {/* <div>
             <h3 className="text-foreground font-semibold mb-4">Platform</h3>
             <ul className="space-y-2">
               <li>
@@ -89,9 +89,9 @@ const Footer = () => {
                 </a>
               </li>
             </ul>
-          </div>
+          </div> */}
 
-          <div>
+          {/* <div>
             <h3 className="text-foreground font-semibold mb-4">Support</h3>
             <ul className="space-y-2">
               <li>
@@ -127,7 +127,7 @@ const Footer = () => {
                 </a>
               </li>
             </ul>
-          </div>
+          </div> */}
         </div>
 
         <div className="border-t border-border mt-12 pt-8 text-center">

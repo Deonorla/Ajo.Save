@@ -39,7 +39,7 @@ const Hero = () => {
           </div>
 
           <h1 className="text-lg lg:text-xl text-gray-400 font-normal leading-tight">
-            Nigeria's Trusted Savings Culture, Now On-Chain
+            Africa's Trusted Savings Culture, Now On-Chain
           </h1>
         </div>
 

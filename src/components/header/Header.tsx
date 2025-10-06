@@ -256,7 +256,7 @@ const Header = () => {
                     </button>
                     <button
                       onClick={handleMint}
-                      className=" px-3 py-1 flex justify-center items-center gap-1 rounded-lg border border-primary  text-primary hover:text-primary/80"
+                      className=" px-3 py-1 text-xs flex justify-center items-center gap-1 rounded-lg border border-primary  text-primary hover:text-primary/80"
                     >
                       <BadgeDollarSign className="h-4 w-4" />
                       {minting ? (

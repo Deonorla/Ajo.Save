@@ -11,6 +11,7 @@ import { useState, useEffect } from "react";
 import { getNaira } from "@/utils/utils";
 import { useTokenStore } from "@/store/tokenStore";
 import { useNavigate } from "react-router-dom";
+import formatCurrency from "@/utils/formatCurrency";
 
 const Dashboard = () => {
   const { connected: isConnected } = useWallet();
@@ -100,7 +101,9 @@ const Dashboard = () => {
                   <p className="text-muted-foreground text-sm">
                     Total Ajo Pools
                   </p>
-                  <p className="text-2xl font-bold text-foreground">1</p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {formatCurrency(0)}
+                  </p>
                 </div>
                 <Users className="h-8 w-8 text-accent" />
               </div>

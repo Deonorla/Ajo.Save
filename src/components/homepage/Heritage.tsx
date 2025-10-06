@@ -16,10 +16,10 @@ const Heritage = () => {
         {/* Section Header */}
         <div className="text-center mb-16">
           <h2 className="text-lg sm:text-2xl font-bold text-foreground mb-4">
-            Celebrating Nigerian Heritage
+            Celebrating African Heritage
           </h2>
           <p className="ttext-sm sm:text-lg text-muted-foreground max-w-2xl mx-auto">
-            From *Ajo* savings to timeless sayings, we’re immortalizing Nigerian
+            From *Ajo* savings to timeless sayings, we’re immortalizing African
             culture with digital collectibles that carry both pride and purpose.
           </p>
         </div>

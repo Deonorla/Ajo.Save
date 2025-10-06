@@ -56,12 +56,12 @@ const AjoDetailsStatsGrid = ({
     >
       <div className="bg-card p-6 rounded-xl shadow-lg hover:shadow-xl transition-all hover:scale-105 border border-border">
         <div className="flex items-center justify-between mb-2">
-          <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center">
-            <DollarSign className="w-6 h-6 text-primary" />
+          <div className="w-6 h-6 md:w-10 md:h-10 bg-primary/20 rounded-lg flex items-center justify-center">
+            <DollarSign className="w-3 h-3 md:w-6 md:h-6 text-primary" />
           </div>
           <span className="text-xs text-muted-foreground">Monthly</span>
         </div>
-        <div className="text-2xl font-bold text-card-foreground">
+        <div className="text-lg md:text-2xl font-bold text-card-foreground">
           {formatCurrency(
             nairaRate * (monthlyPayment ? Number(monthlyPayment) / 1000000 : 0)
           )}
@@ -72,12 +72,12 @@ const AjoDetailsStatsGrid = ({
 
       <div className="bg-card p-6 rounded-xl shadow-lg hover:shadow-xl transition-all hover:scale-105 border border-border">
         <div className="flex items-center justify-between mb-2">
-          <div className="w-10 h-10 bg-accent/20 rounded-lg flex items-center justify-center">
-            <Users className="w-6 h-6 text-accent" />
+          <div className="w-6 h-6 md:w-10 md:h-10 bg-accent/20 rounded-lg flex items-center justify-center">
+            <Users className="w-3 h-3 md:w-6 md:h-6 text-accent" />
           </div>
           <span className="text-xs text-muted-foreground">Progress</span>
         </div>
-        <div className="text-2xl font-bold text-card-foreground">
+        <div className="text-lg md:text-2xl font-bold text-card-foreground">
           {activeMembers}/10
         </div>
         <div className="text-sm text-muted-foreground">Members</div>
@@ -85,12 +85,12 @@ const AjoDetailsStatsGrid = ({
 
       <div className="bg-card p-6 rounded-xl shadow-lg hover:shadow-xl transition-all hover:scale-105 border border-border">
         <div className="flex items-center justify-between mb-2">
-          <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center">
-            <Wallet className="w-6 h-6  text-primary" />
+          <div className="w-6 h-6 md:w-10 md:h-10 bg-primary/20 rounded-lg flex items-center justify-center">
+            <Wallet className="w-3 h-3 md:w-6 md:h-6  text-primary" />
           </div>
           <span className="text-xs text-muted-foreground">Total</span>
         </div>
-        <div className="text-2xl font-bold text-card-foreground">
+        <div className="text-lg md:text-2xl font-bold text-card-foreground">
           {formatCurrency(
             (formattedTotalCollateralHBAR + formattedTotalCollateralUSDC) *
               nairaRate
@@ -101,8 +101,8 @@ const AjoDetailsStatsGrid = ({
 
       <div className="bg-card p-6 rounded-xl shadow-lg hover:shadow-xl transition-all hover:scale-105 border border-border">
         <div className="flex items-center justify-between mb-2">
-          <div className="w-10 h-10 bg-accent/20 rounded-lg flex items-center justify-center">
-            <ShieldCheckIcon className="w-6 h-6 text-accent" />
+          <div className="w-6 h-6 md:w-10 md:h-10 bg-accent/20 rounded-lg flex items-center justify-center">
+            <ShieldCheckIcon className="w-3 h-3 md:w-6 md:h-6 text-accent" />
           </div>
           <button
             onClick={handleCopy}
@@ -116,7 +116,7 @@ const AjoDetailsStatsGrid = ({
             )}
           </button>
         </div>
-        <div className="text-2xl font-bold text-card-foreground">
+        <div className="text-lg md:text-2xl font-bold text-card-foreground">
           {memberData && formatAddress(memberData?.memberInfo.guarantor)}
         </div>
         <div className="text-sm text-muted-foreground">Guarantor address</div>

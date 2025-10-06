@@ -113,7 +113,7 @@ const AjoDetails = () => {
             isVisible ? "translate-y-0 opacity-100" : "translate-y-20 opacity-0"
           }`}
         >
-          {activeTab === "overview" && <AjoOverviewTab />}
+          {activeTab === "overview" && <AjoOverviewTab ajo={ajo} />}
 
           {/* {activeTab === "members" && <AjoMembers />} */}
           {/* {activeTab === "payments" && <AjoPaymentHistory />} */}

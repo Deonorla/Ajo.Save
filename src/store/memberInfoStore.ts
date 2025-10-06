@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // store/memberInfoStore.ts
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
@@ -38,11 +39,19 @@ interface TokenConfig {
   isActive: boolean;
 }
 
+interface CycleConfig {
+  amount: string;
+  cycle: number;
+  recipient: string;
+  timeStamp: any;
+}
+
 interface MemberStore {
   memberData: MemberInfoResponse | null;
   needsToPayThisCycle: boolean | null;
   queueInfo: QueueInfo | null;
   tokenConfig: TokenConfig | null;
+  cycleConfig: CycleConfig | null;
   loading: boolean;
   error: string | null;
 
@@ -51,6 +60,7 @@ interface MemberStore {
   setNeedsToPay: (value: boolean | null) => void;
   setQueueInfo: (info: QueueInfo | null) => void;
   setTokenConfig: (config: TokenConfig | null) => void;
+  setCycleConfig: (config: CycleConfig | null) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
 }
@@ -65,6 +75,7 @@ export const useMemberStore = create<MemberStore>()(
       needsToPayThisCycle: null,
       queueInfo: null,
       tokenConfig: null,
+      cycleConfig: null,
       loading: false,
       error: null,
 
@@ -97,6 +108,7 @@ export const useMemberStore = create<MemberStore>()(
       setNeedsToPay: (value) => set({ needsToPayThisCycle: value }),
       setQueueInfo: (info) => set({ queueInfo: info }),
       setTokenConfig: (config) => set({ tokenConfig: config }),
+      setCycleConfig: (config) => set({ cycleConfig: config }),
       setLoading: (loading) => set({ loading }),
       setError: (error) => set({ error }),
     }),

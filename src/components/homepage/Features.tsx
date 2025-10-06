@@ -15,7 +15,7 @@ const Features = () => {
             Ajo for the Digital Age
           </h2>
           <p className="text-sm sm:text-lg text-muted-foreground max-w-3xl mx-auto">
-            Powered by Hedera, we’re reinventing Nigeria’s traditional savings
+            Powered by Hedera, we’re reinventing Africa's traditional savings
             culture with on-chain accountability, cultural pride, and real
             wealth opportunities.
           </p>
@@ -121,7 +121,7 @@ const features = [
     icon: Users,
     title: "Community First",
     description:
-      "Empowering groups to save together, build trust, and celebrate Nigerian heritage.",
+      "Empowering groups to save together, build trust, and celebrate African heritage.",
     color: "bg-blue-500",
   },
   {

@@ -1,7 +1,9 @@
 import { useWallet } from "@/auth/WalletContext";
 import useAjoCore from "@/hooks/useAjoCore";
 import { useAjoFactory } from "@/hooks/useAjoFactory";
+import useAjoPayment from "@/hooks/useAjoPayment";
 import { useAjoDetailsStore } from "@/store/ajoDetailsStore";
+import { usePaymentStore } from "@/store/ajoPaymentStore";
 import { useAjoStore, type AjoInfo } from "@/store/ajoStore";
 import { useMemberStore } from "@/store/memberInfoStore";
 import { useTokenStore } from "@/store/tokenStore";
@@ -36,13 +38,15 @@ const AjoDetailsCard = ({
   monthlyPayment,
 }: AjoDetailsCardProps) => {
   const { memberData, needsToPayThisCycle: needTo } = useMemberStore();
+  const { cycleConfig } = usePaymentStore();
   const { nairaRate } = useTokenStore();
   const { ajoInfos } = useAjoStore();
   const [loading, setLoading] = useState(false);
   const [makingPayment, setMakingPayment] = useState(false);
   const [collateralRequired, setCollateralRequired] = useState(0);
   const [requesting, setRequesting] = useState(false);
-  const { ajoId, ajoCore } = useParams<{ ajoId: string; ajoCore: string }>();
+  const { ajoCore } = useParams<{ ajoId: string; ajoCore: string }>();
+  const cycle = memberData?.memberInfo.queueNumber;
   const {
     joinAjo,
     getContractStats,
@@ -52,32 +56,39 @@ const AjoDetailsCard = ({
     needsToPayThisCycle,
     makePayment,
   } = useAjoCore(ajoCore ? ajoCore : "");
+  const { getPayOut, getCurrentCycle } = useAjoPayment(
+    ajo ? ajo?.ajoPayments : ""
+  );
   const { address } = useWallet();
-  const { getFactoryStats } = useAjoFactory();
+  const [paidAddress, setPaidAddress] = useState("");
+  const [cycleCount, setCycleCount] = useState(0);
   const { activeMembers } = useAjoDetailsStore();
 
-  const getCollateral = useCallback(async () => {
+  const getFunctions = useCallback(async () => {
     try {
       const collateralRequired = await getRequiredCollateralForJoin();
       console.log("collateral---", collateralRequired);
       setCollateralRequired(Number(collateralRequired?.toString()) / 1000000);
-      if (!address) return null;
-      const needsToPay = await needsToPayThisCycle(address);
-      console.log("needsToPay", needsToPay);
+      const queueNumber = Number(cycle);
+      const PayCycle = await getPayOut(queueNumber);
+      setPaidAddress(PayCycle?.recipient);
+      const count = await getCurrentCycle();
+      if (!count) return null;
+      setCycleCount(count);
     } catch (err) {
       console.log("error getting collateral", err);
     }
-  }, [getRequiredCollateralForJoin]);
+  }, [getRequiredCollateralForJoin, getPayOut]);
 
   useEffect(() => {
-    getCollateral();
+    getFunctions();
 
     console.log(
       "locked collateral",
       Number(memberData?.memberInfo.lockedCollateral)
     );
     // console.log("Ajo name", ajo?.name);
-  }, [getCollateral]);
+  }, [getFunctions]);
 
   const _joinAjo = async () => {
     try {
@@ -223,23 +234,47 @@ const AjoDetailsCard = ({
                       </>
                     )}
                   </button>
+                ) : cycleCount > Number(cycle) ? (
+                  <div className="text-xs flex text-primary">
+                    you have been paid for this cycle
+                  </div>
+                ) : cycleCount < Number(cycle) ? (
+                  <div className="text-xs flex text-primary">
+                    You will be able to request for payout in the{" "}
+                    {cycle === "1"
+                      ? `${cycle}st`
+                      : cycle === "2"
+                      ? `${cycle}nd`
+                      : cycle === "3"
+                      ? `${cycle}rd`
+                      : `${cycle}th`}{" "}
+                    month of this ajo cycle
+                  </div>
+                ) : cycleCount == Number(cycle) ? (
+                  address == paidAddress ? (
+                    <div className="text-xs flex text-primary">
+                      you have been paid for this cycle
+                    </div>
+                  ) : (
+                    <button
+                      onClick={_requestPayout}
+                      className="w-full bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg font-semibold text-sm transition-all hover:scale-105 hover:shadow-lg flex items-center justify-center space-x-2 cursor-pointer"
+                    >
+                      {requesting ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></div>
+                          <span>Processing payment...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CreditCard className="w-5 h-5" />
+                          <span>Request payout</span>
+                        </>
+                      )}
+                    </button>
+                  )
                 ) : (
-                  <button
-                    onClick={_requestPayout}
-                    className="w-full bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg font-semibold text-sm transition-all hover:scale-105 hover:shadow-lg flex items-center justify-center space-x-2 cursor-pointer"
-                  >
-                    {requesting ? (
-                      <>
-                        <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></div>
-                        <span>Processing payment...</span>
-                      </>
-                    ) : (
-                      <>
-                        <CreditCard className="w-5 h-5" />
-                        <span>Request payout</span>
-                      </>
-                    )}
-                  </button>
+                  <></>
                 )}
               </div>
             </div>
@@ -380,23 +415,47 @@ const AjoDetailsCard = ({
                   </>
                 )}
               </button>
+            ) : cycleCount > Number(cycle) ? (
+              <div className="text-xs flex text-primary">
+                you have been paid for this cycle
+              </div>
+            ) : cycleCount < Number(cycle) ? (
+              <div className="text-xs flex text-primary">
+                You will be able to request for payout in the{" "}
+                {cycle === "1"
+                  ? `${cycle}st`
+                  : cycle === "2"
+                  ? `${cycle}nd`
+                  : cycle === "3"
+                  ? `${cycle}rd`
+                  : `${cycle}th`}{" "}
+                month of this ajo cycle
+              </div>
+            ) : cycleCount == Number(cycle) ? (
+              address == paidAddress ? (
+                <div className="text-xs flex text-primary">
+                  you have been paid for this cycle
+                </div>
+              ) : (
+                <button
+                  onClick={_requestPayout}
+                  className="w-full bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg font-semibold text-sm transition-all hover:scale-105 hover:shadow-lg flex items-center justify-center space-x-2 cursor-pointer"
+                >
+                  {requesting ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></div>
+                      <span>Processing payment...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="w-5 h-5" />
+                      <span>Request payout</span>
+                    </>
+                  )}
+                </button>
+              )
             ) : (
-              <button
-                onClick={_requestPayout}
-                className="w-full bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-4 py-2 rounded-lg font-semibold text-sm transition-all hover:scale-105 hover:shadow-lg flex items-center justify-center space-x-2 cursor-pointer"
-              >
-                {requesting ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></div>
-                    <span>Processing payment...</span>
-                  </>
-                ) : (
-                  <>
-                    <CreditCard className="w-5 h-5" />
-                    <span>Request payout</span>
-                  </>
-                )}
-              </button>
+              <></>
             )}
           </div>
         </div>

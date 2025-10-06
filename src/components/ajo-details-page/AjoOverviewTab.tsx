@@ -1,6 +1,7 @@
 import useAjoCore from "@/hooks/useAjoCore";
+import useAjoPayment from "@/hooks/useAjoPayment";
 import { useAjoDetailsStore } from "@/store/ajoDetailsStore";
-import { useAjoStore } from "@/store/ajoStore";
+import { useAjoStore, type AjoInfo } from "@/store/ajoStore";
 import { useMemberStore } from "@/store/memberInfoStore";
 import { useTokenStore } from "@/store/tokenStore";
 import { ajoData, paymentHistory } from "@/temp-data";
@@ -17,14 +18,16 @@ import {
   Shield,
   Target,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
-const AjoOverviewTab = () => {
+const AjoOverviewTab = ({ ajo }: { ajo: AjoInfo | null | undefined }) => {
   const { ajoCore } = useParams<{ ajoId: string; ajoCore: string }>();
   const { getCollateralDemo } = useAjoCore(ajoCore ? ajoCore : "");
+  const [cycleCount, setCycleCount] = useState(0);
   const { nairaRate } = useTokenStore();
   const { memberData } = useMemberStore();
+  const { getCurrentCycle } = useAjoPayment(ajo ? ajo?.ajoPayments : "");
   const {
     activeMembers,
     totalMembers,
@@ -39,15 +42,18 @@ const AjoOverviewTab = () => {
     collaterals: string[];
   } | null>(null);
 
-  const getDemo = async () => {
+  const getDemo = useCallback(async () => {
     try {
       const demo = await getCollateralDemo(10, "50");
       // console.log("demo", demo);
       setDemoData(demo);
+      const count = await getCurrentCycle();
+      if (!count) return null;
+      setCycleCount(count);
     } catch (err) {
       console.log("Error getting collateral demo", err);
     }
-  };
+  }, []);
 
   useEffect(() => {
     getDemo();
@@ -103,11 +109,11 @@ const AjoOverviewTab = () => {
 
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">
-                Cycle {0} of {12}
+              <span className=" text-sm text-muted-foreground">
+                Cycle {cycleCount} of {10}
               </span>
-              <span className="font-semibold text-card-foreground">
-                Next payout: Pending
+              <span className="text-sm font-semibold text-card-foreground">
+                {/* Next payout: Queue {cycleCount} */}
               </span>
             </div>
 
@@ -115,7 +121,7 @@ const AjoOverviewTab = () => {
               <div
                 className="bg-gradient-to-r from-primary to-accent h-3 rounded-full transition-all duration-1000"
                 style={{
-                  width: `${(0 / 12) * 100}%`,
+                  width: `${(cycleCount / 10) * 100}%`,
                 }}
               ></div>
             </div>
