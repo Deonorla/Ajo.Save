@@ -2,58 +2,88 @@ import { useWallet } from "@/auth/WalletContext";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import Header from "@/components/header/Header";
 import AjoCard from "@/components/shared/AjoCard";
-import useAjoCore from "@/hooks/useAjoCore";
 import { useAjoFactory } from "@/hooks/useAjoFactory";
 import { useTokenHook } from "@/hooks/useTokenHook";
 import { useAjoStore } from "@/store/ajoStore";
-import { Shield, Users, Star } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Shield, Users, Star, RefreshCw } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
 import { getNaira } from "@/utils/utils";
 import { useTokenStore } from "@/store/tokenStore";
 import { useNavigate } from "react-router-dom";
 import formatCurrency from "@/utils/formatCurrency";
+import { toast } from "sonner";
 
 const Dashboard = () => {
   const { connected: isConnected } = useWallet();
-  // const { getContractStats } = useAjoCore();
   const { getAllAjos } = useAjoFactory();
   const navigate = useNavigate();
   const { getWhbarBalance, getUsdcBalance } = useTokenHook();
   const { setNaira } = useTokenStore();
   const [isVisible, setIsVisible] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const { ajoInfos } = useAjoStore();
 
+  // Fetch Ajos function
+  const fetchAjos = useCallback(
+    async (showToast = false) => {
+      try {
+        setIsRefreshing(true);
+        console.log("🔄 Fetching Ajos...");
+
+        await getAllAjos();
+
+        const naira = await getNaira();
+        setNaira(naira);
+        setLastUpdate(new Date());
+
+        if (showToast) {
+          toast.success(`Loaded ${ajoInfos.length} Ajos`);
+        }
+
+        console.log("✅ Ajos fetched:", ajoInfos.length);
+      } catch (err) {
+        console.error("❌ Failed to fetch ajos:", err);
+        if (showToast) {
+          toast.error("Failed to refresh Ajos");
+        }
+      } finally {
+        setIsRefreshing(false);
+      }
+    },
+    [getAllAjos, setNaira, ajoInfos.length]
+  );
+
+  // Initial load animation
   useEffect(() => {
     const timer = setTimeout(() => setIsVisible(true), 100);
-
     return () => clearTimeout(timer);
   }, []);
 
+  // Initial fetch + wallet balances
   useEffect(() => {
     setIsVisible(true);
     getWhbarBalance();
     getUsdcBalance();
-    const fetchStats = async () => {
-      try {
-        await getAllAjos();
-        const naira = await getNaira();
-        setNaira(naira);
-        // const data = await getContractStats();
-        console.log("All Ajos:", ajoInfos);
-        // console.log("Contract response:", data);
-      } catch (err) {
-        console.error("❌ Failed to fetch ajos:", err);
-      }
-    };
-
-    fetchStats();
-
-    // if (isConnected) {
-    // }
+    fetchAjos();
   }, [isConnected]);
+
+  // ✅ AUTO-REFRESH: Poll every 15 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      console.log("⏰ Auto-refreshing Ajos...");
+      fetchAjos(false); // Silent refresh
+    }, 15000); // 15 seconds
+
+    return () => clearInterval(interval);
+  }, [fetchAjos]);
 
   const handleRoute = () => {
     navigate("/ajo/create-ajo");
+  };
+
+  const handleManualRefresh = () => {
+    fetchAjos(true); // Show toast on manual refresh
   };
 
   return (
@@ -65,14 +95,39 @@ const Dashboard = () => {
             isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
           }`}
         >
-          {/* Welcome Banner */}
+          {/* Welcome Banner with Refresh Button */}
           <div className="bg-gradient-to-br from-primary to-accent text-primary-foreground p-6 rounded-xl shadow-lg border border-border">
-            <h2 className="text-2xl font-bold mb-2">Welcome</h2>
-            <p className="text-primary-foreground/90"> Ajo Platform</p>
-            <p className="text-sm text-primary-foreground/80 mt-2">
-              Transparency on-chain, blockchain-powered savings groups. Build
-              wealth with your community.
-            </p>
+            <div className="flex justify-between items-start">
+              <div>
+                <h2 className="text-2xl font-bold mb-2">Welcome</h2>
+                <p className="text-primary-foreground/90">Ajo Platform</p>
+                <p className="text-sm text-primary-foreground/80 mt-2">
+                  Transparency on-chain, blockchain-powered savings groups.
+                  Build wealth with your community.
+                </p>
+              </div>
+
+              {/* ✅ Refresh Button */}
+              <button
+                onClick={handleManualRefresh}
+                disabled={isRefreshing}
+                className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors disabled:opacity-50"
+                title="Refresh Ajos"
+              >
+                <RefreshCw
+                  size={18}
+                  className={isRefreshing ? "animate-spin" : ""}
+                />
+                <span className="text-sm font-medium">Refresh</span>
+              </button>
+            </div>
+
+            {/* ✅ Last Update Timestamp */}
+            {lastUpdate && (
+              <p className="text-xs text-primary-foreground/70 mt-3">
+                Last updated: {lastUpdate.toLocaleTimeString()}
+              </p>
+            )}
           </div>
 
           {/* Stats Cards */}
@@ -119,12 +174,13 @@ const Dashboard = () => {
               </div>
             </div>
           </div>
-          {ajoInfos.length != 0 ? (
+
+          {/* Ajo Cards */}
+          {ajoInfos.length !== 0 ? (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {ajoInfos &&
-                ajoInfos.map((ajo, index) => (
-                  <AjoCard key={ajo.ajoCore} ajo={ajo} isVisible={isVisible} />
-                ))}
+              {ajoInfos.map((ajo) => (
+                <AjoCard key={ajo.ajoCore} ajo={ajo} isVisible={isVisible} />
+              ))}
             </div>
           ) : (
             <EmptyState onCreateAjo={handleRoute} />

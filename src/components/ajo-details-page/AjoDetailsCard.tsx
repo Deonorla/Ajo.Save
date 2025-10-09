@@ -9,11 +9,12 @@ import { useMemberStore } from "@/store/memberInfoStore";
 import { useTokenStore } from "@/store/tokenStore";
 import { ajoData } from "@/temp-data";
 import formatCurrency from "@/utils/formatCurrency";
-import { formatAddress } from "@/utils/utils";
+import { formatAddress, formatTimestamp } from "@/utils/utils";
 import {
   Bell,
   CheckCircle,
   Clock,
+  Clock3Icon,
   CreditCard,
   Database,
   ExternalLink,
@@ -88,7 +89,7 @@ const AjoDetailsCard = ({
       Number(memberData?.memberInfo.lockedCollateral)
     );
     // console.log("Ajo name", ajo?.name);
-  }, [getFunctions]);
+  }, [getFunctions, memberData?.memberInfo.lockedCollateral]);
 
   const _joinAjo = async () => {
     try {
@@ -101,17 +102,19 @@ const AjoDetailsCard = ({
       if (!ajo) return null;
       console.log("ajoCollateral", ajo.ajoCollateral);
       console.log("ajoPayments", ajo.ajoPayments);
+
       const join = await joinAjo(
         0,
         import.meta.env.VITE_MOCK_USDC_ADDRESS,
         ajo?.ajoCollateral,
         ajo?.ajoPayments
       );
+
       // join is a receipt (ethers v5 transaction receipt)
       console.log("✅ Joined Ajo, tx hash:", join.transactionHash);
       // Check logs
       console.log("📜 Logs:", join.logs);
-      toast.success("Collateral Locked Successfully");
+      toast.success("Collateral Locked and Ajo joined Successfully");
       // Step 2: refresh global stats
       const stats = await getContractStats();
       console.log("📊 Updated stats:", stats);
@@ -134,9 +137,10 @@ const AjoDetailsCard = ({
   const _processPayment = async () => {
     try {
       setMakingPayment(true);
-      const receipt = await makePayment();
+      toast.info("Processing monthly fee");
+      const receipt = await makePayment(ajo ? ajo?.ajoPayments : "");
       console.log("receipt:", receipt);
-      window.location.reload();
+      // window.location.reload();
     } catch (err) {
       console.log("Error making monthly payment:", err);
     } finally {
@@ -147,6 +151,7 @@ const AjoDetailsCard = ({
   const _requestPayout = async () => {
     try {
       setRequesting(true);
+      toast.info("Requesting payout");
       const payout = distributePayout();
       console.log("receipt:", payout);
     } catch (err) {
@@ -187,12 +192,15 @@ const AjoDetailsCard = ({
                         {activeMembers == "10" ? "Active" : "Forming"}
                       </span>
                     </div>
+                    <div className="text-xs mx-2">
+                      by {formatAddress(ajo ? ajo?.creator : "")}
+                    </div>
                   </div>
                 </div>
               </div>
-
+              {/* Desktop */}
               <div className=" hidden sm:flex flex-col sm:flex-row gap-3">
-                {Number(memberData?.memberInfo.lockedCollateral) == 0 ? (
+                {memberData?.memberInfo.isActive == false ? (
                   activeMembers == "10" ? (
                     <></>
                   ) : (
@@ -286,9 +294,15 @@ const AjoDetailsCard = ({
                 Not taking in members
               </div>
             ) : ( */}
+
             <div className="mb-6 p-4 bg-primary/10 border border-primary/20 rounded-lg flex flex-col space-y-3 sm:w-50%">
               {/* Collateral Section */}
-              {Number(memberData?.memberInfo.lockedCollateral) == 0 && (
+              {activeMembers == "10" && (
+                <div className="mb-6 p-4 text-xs text-primary bg-primary/10 border border-primary/20 rounded-lg flex flex-col space-y-3 sm:w-50%">
+                  Not taking in members
+                </div>
+              )}
+              {activeMembers !== "10" && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-primary font-medium ">
                     Collateral Required:
@@ -300,6 +314,7 @@ const AjoDetailsCard = ({
                   </span>
                 </div>
               )}
+
               {Number(memberData?.memberInfo.lastPaymentCycle) == 0 && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-primary font-medium ">
@@ -314,12 +329,12 @@ const AjoDetailsCard = ({
               {/* Collateral Lock Status */}
               <div
                 className={`px-3 py-1 rounded-md text-xs font-semibold flex items-center space-x-2 w-fit ${
-                  Number(memberData?.memberInfo.lockedCollateral) != 0
+                  memberData?.memberInfo.isActive == true
                     ? "bg-[#111E18] text-[#3DB569] "
                     : " bg-[#211416] text-[#EA4343] "
                 }`}
               >
-                {Number(memberData?.memberInfo.lockedCollateral) != 0 ? (
+                {memberData?.memberInfo.isActive == true ? (
                   <>
                     <CheckCircle className="w-4 h-4" />
                     <span>Collateral Locked</span>
@@ -354,26 +369,36 @@ const AjoDetailsCard = ({
               </div>
             </div>
 
-            <div className="mt-4 flex items-center space-x-2 text-sm">
-              <Database className="w-4 h-4 text-primary" />
-              <span className="text-xs text-muted-foreground">
-                Smart Contract:
-              </span>
-              <span className="font-mono text-primary">
-                {ajo
-                  ? formatAddress(ajo?.ajoCore)
-                  : formatAddress(
-                      import.meta.env.VITE_AJO_CORE_CONTRACT_ADDRESS
-                    )}
-              </span>
-              {/* <button className="text-primary hover:text-primary/80">
-                <ExternalLink className="w-4 h-4" />
-              </button> */}
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row items-center space-x-2 text-sm">
+              <div className="flex items-center">
+                <Database className="w-4 h-4 text-primary mx-1" />
+                <span className="text-xs text-muted-foreground">
+                  Smart Contract:
+                </span>
+                <span className="font-mono text-primary mx-1">
+                  {ajo
+                    ? formatAddress(ajo?.ajoCore)
+                    : formatAddress(
+                        import.meta.env.VITE_AJO_CORE_CONTRACT_ADDRESS
+                      )}
+                </span>
+              </div>
+              <div className="flex items-center">
+                <Clock3Icon className="w-4 h-4 text-primary ml-2 mr-1" />
+                <p className="text-xs text-muted-foreground">
+                  {" "}
+                  Created:{" "}
+                  <span className="font-mono text-primary">
+                    {formatTimestamp(ajo ? ajo?.createdAt : "")}
+                  </span>{" "}
+                </p>
+              </div>
             </div>
           </div>
 
+          {/* Mobile view */}
           <div className="flex sm:hidden flex-col sm:flex-row  gap-3">
-            {Number(memberData?.memberInfo.lockedCollateral) == 0 ? (
+            {memberData?.memberInfo.isActive == false ? (
               activeMembers == "10" ? (
                 <></>
               ) : (

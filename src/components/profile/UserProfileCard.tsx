@@ -1,3 +1,4 @@
+import { useWallet } from "@/auth/WalletContext";
 import { userStats } from "@/temp-data";
 import { Check, Copy } from "lucide-react";
 
@@ -26,6 +27,7 @@ const UserProfileCard = ({
   usdcBalanceInNGN,
   handleCopy,
 }: UserProfileCardProps) => {
+  const { balance } = useWallet();
   return (
     <div
       className={`bg-white rounded-2xl shadow-xl overflow-hidden mb-8 transform transition-all duration-1000 ${
@@ -86,10 +88,10 @@ const UserProfileCard = ({
               <div className="flex items-center space-x-2 text-sm text-green-100">
                 <div className="flex items-center text-sm font-semibold  sm:text-xl space-x-1">
                   <img src="/images/profile/hedera.png" className="w-6 h-6" />
-                  {loading ? <span>...</span> : <span>{whbar}</span>}
+                  {loading ? <span>...</span> : <span>{balance}</span>}
                 </div>
                 <div className="flex items-center text-sm font-semibold  sm:text-xl space-x-1">
-                  <span>WHBAR</span>
+                  <span>HBAR</span>
                 </div>
                 {/* {balanceInNGN !== null && (
                   <p className="text-green-200 text-sm  font-semibold sm:text-xl">

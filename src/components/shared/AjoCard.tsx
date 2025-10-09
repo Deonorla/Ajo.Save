@@ -4,7 +4,7 @@ import { useTokenStore } from "@/store/tokenStore";
 import formatCurrency from "@/utils/formatCurrency";
 import { formatAddress, formatTimestamp } from "@/utils/utils";
 import {
-  Award,
+  Calendar,
   CheckCircle,
   ChevronRight,
   Clock,
@@ -116,16 +116,32 @@ const AjoCard = ({ ajo, isVisible }: AjoCardProps) => {
         <div className="space-y-3 mb-4">
           <div className="flex justify-between items-center">
             <div className="text-xs text-muted-foreground">Monthly Payment</div>
-            <div className="text-2xl font-bold text-primary">
+            <div className="text-lg font-bold text-primary">
               {formatCurrency(nairaRate * 50)}
             </div>
           </div>
+
           <div className="flex justify-between items-center text-sm">
-            <span className="text-muted-foreground">Payment Token:</span>
+            <span className="text-xs text-muted-foreground">
+              Payment Token:
+            </span>
             <span className="font-semibold text-card-foreground flex items-center space-x-1">
               <Coins className="w-4 h-4 text-primary" />
               <span>USDC</span>
             </span>
+          </div>
+          <div className="flex justify-between items-center text-sm">
+            <span className="text-xs text-muted-foreground">Cycle:</span>
+            <span className="font-semibold text-card-foreground flex items-center space-x-1">
+              <Calendar className="w-4 h-4 text-primary" />
+              <span>10</span>
+            </span>
+          </div>
+          <div className="flex justify-between items-center">
+            <div className="text-xs text-muted-foreground">Expected Payout</div>
+            <div className="text-lg font-bold text-primary">
+              {formatCurrency(nairaRate * 500)}
+            </div>
           </div>
 
           {/* <div className="flex justify-between items-center text-sm">

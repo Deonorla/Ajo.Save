@@ -10,7 +10,7 @@ import { useMemberStore } from "@/store/memberInfoStore";
 import { usePaymentStore } from "@/store/ajoPaymentStore";
 
 const useAjoPayment = (ajoPaymentAddress: string) => {
-  const { provider, connected, error } = useWallet();
+  const { provider } = useWallet();
   const { setCycleConfig } = usePaymentStore();
   const [contractWrite, setContractWrite] = useState<ethers.Contract | null>(
     null

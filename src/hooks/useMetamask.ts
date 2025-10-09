@@ -38,33 +38,52 @@ export function useMetaMask(): MetaState {
   const { setAddress: setAddr } = useTokenStore();
 
   // ---------------------------
-  // Fetch Account Info
+  // Fetch Account Info with Retry
   // ---------------------------
   const fetchAccountInfo = useCallback(
-    async (customProvider?: ethers.providers.Web3Provider) => {
+    async (customProvider?: ethers.providers.Web3Provider, retries = 3) => {
       const activeProvider = customProvider ?? provider;
       if (!activeProvider) return;
 
-      try {
-        const signer = activeProvider.getSigner();
-        const addr = await signer.getAddress();
-        setAddress(addr);
-        setAddr(addr);
-        setConnected(true);
+      for (let attempt = 0; attempt < retries; attempt++) {
+        try {
+          const signer = activeProvider.getSigner();
+          const addr = await signer.getAddress();
+          setAddress(addr);
+          setAddr(addr);
+          setConnected(true);
 
-        const balBig = await activeProvider.getBalance(addr);
-        setBalance(ethers.utils.formatEther(balBig));
+          const balBig = await activeProvider.getBalance(addr);
+          setBalance(ethers.utils.formatEther(balBig));
 
-        const net = await activeProvider.getNetwork();
-        setNetwork(mapChainIdToName(net.chainId));
-        setError(null);
-      } catch (err: any) {
-        setError(err?.message ?? String(err));
-        setConnected(false);
-        localStorage.removeItem(STORAGE_KEY);
+          const net = await activeProvider.getNetwork();
+          setNetwork(mapChainIdToName(net.chainId));
+          setError(null);
+          return; // Success, exit retry loop
+        } catch (err: any) {
+          console.error(`Attempt ${attempt + 1} failed:`, err);
+
+          // If circuit breaker error, wait before retry
+          if (err?.code === -32603 && attempt < retries - 1) {
+            await new Promise((resolve) =>
+              setTimeout(resolve, 2000 * (attempt + 1))
+            );
+            continue;
+          }
+
+          // Final attempt failed
+          if (attempt === retries - 1) {
+            setError(err?.message ?? String(err));
+            setConnected(false);
+            localStorage.removeItem(STORAGE_KEY);
+            toast.error(
+              "Failed to fetch account info. Please try reconnecting."
+            );
+          }
+        }
       }
     },
-    [provider]
+    [provider, setAddr]
   );
 
   // ---------------------------
@@ -94,7 +113,11 @@ export function useMetaMask(): MetaState {
       window.ethereum.on?.("chainChanged", () => {
         setTimeout(() => {
           fetchAccountInfo();
-        }, 500);
+        }, 1000); // Increased delay
+      });
+
+      window.ethereum.on?.("disconnect", () => {
+        handleDisconnect();
       });
     }
 
@@ -112,10 +135,15 @@ export function useMetaMask(): MetaState {
             setConnected(true);
             try {
               setAddress(ethers.utils.getAddress(accounts[0]));
+              setAddr(ethers.utils.getAddress(accounts[0]));
             } catch {
               setAddress(accounts[0]);
+              setAddr(accounts[0]);
             }
-            await fetchAccountInfo(p); // ✅ use fresh provider immediately
+            // Delay fetching to avoid circuit breaker on load
+            setTimeout(() => {
+              fetchAccountInfo(p);
+            }, 1500);
           }
         } catch {
           localStorage.removeItem(STORAGE_KEY);
@@ -128,6 +156,7 @@ export function useMetaMask(): MetaState {
       try {
         window.ethereum?.removeListener?.("accountsChanged", () => {});
         window.ethereum?.removeListener?.("chainChanged", () => {});
+        window.ethereum?.removeListener?.("disconnect", () => {});
       } catch {
         /* empty */
       }
@@ -136,7 +165,7 @@ export function useMetaMask(): MetaState {
   }, []);
 
   // ---------------------------
-  // Network Switch
+  // Network Switch with Better Error Handling
   // ---------------------------
   const switchToHederaTestnet = useCallback(async () => {
     if (!window.ethereum) {
@@ -151,6 +180,9 @@ export function useMetaMask(): MetaState {
         method: "wallet_switchEthereumChain",
         params: [{ chainId: HEDERA_TESTNET.chainIdHex }],
       });
+
+      // Wait for network switch to complete
+      await new Promise((resolve) => setTimeout(resolve, 1000));
     } catch (switchError: any) {
       if (
         switchError?.code === 4902 ||
@@ -169,20 +201,30 @@ export function useMetaMask(): MetaState {
               },
             ],
           });
+
+          // Wait for network to be added
+          await new Promise((resolve) => setTimeout(resolve, 1500));
         } catch (addErr: any) {
+          toast.error("Failed to add Hedera network");
           setError(
             addErr?.message ?? "Failed to add Hedera network to MetaMask"
           );
+          throw addErr;
         }
+      } else if (switchError?.code === 4001) {
+        // User rejected
+        toast.info("Network switch cancelled");
+        throw switchError;
       } else {
         toast.error("Failed to switch network");
         setError(switchError?.message ?? "Failed to switch network");
+        throw switchError;
       }
     }
   }, []);
 
   // ---------------------------
-  // Connect
+  // Connect with Better Flow
   // ---------------------------
   const connect = useCallback(async () => {
     if (!window.ethereum) {
@@ -196,8 +238,7 @@ export function useMetaMask(): MetaState {
       return;
     }
     try {
-      await switchToHederaTestnet();
-
+      // First request accounts
       const accounts: string[] = await window.ethereum.request({
         method: "eth_requestAccounts",
       });
@@ -210,20 +251,47 @@ export function useMetaMask(): MetaState {
         return;
       }
 
+      // Set basic connection state first
+      const addr = ethers.utils.getAddress(accounts[0]);
+      setAddress(addr);
+      setAddr(addr);
+      setConnected(true);
+      localStorage.setItem(STORAGE_KEY, "true");
+
+      // Create provider
       const p = new ethers.providers.Web3Provider(window.ethereum, "any");
       setProvider(p);
-      console.log("New provider set", p);
-      await fetchAccountInfo(p); // ✅ use fresh provider
-      localStorage.setItem(STORAGE_KEY, "true");
+
+      // Check if we need to switch network
+      const currentNetwork = await p.getNetwork();
+      if (currentNetwork.chainId !== HEDERA_TESTNET.chainIdDecimal) {
+        toast.info("Switching to Hedera Testnet...");
+        await switchToHederaTestnet();
+      }
+
+      // Fetch full account info with delay
+      setTimeout(() => {
+        fetchAccountInfo(p);
+      }, 1000);
+
       toast.success("Wallet connected");
       setError(null);
     } catch (err: any) {
-      toast.error("Failed to connect wallet");
+      console.error("Connect error:", err);
+
+      if (err?.code === 4001) {
+        toast.info("Connection cancelled");
+      } else if (err?.code === -32603) {
+        toast.error("Network connection issue. Please try again in a moment.");
+      } else {
+        toast.error("Failed to connect wallet");
+      }
+
       setError(err?.message ?? String(err));
       setConnected(false);
       localStorage.removeItem(STORAGE_KEY);
     }
-  }, [fetchAccountInfo, switchToHederaTestnet]);
+  }, [fetchAccountInfo, switchToHederaTestnet, setAddr]);
 
   // ---------------------------
   // Disconnect

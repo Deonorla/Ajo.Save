@@ -1,31 +1,10 @@
 {
   "_format": "hh-sol-artifact-1",
   "contractName": "AjoCollateral",
-  "sourceName": "contracts/AjoCollateral.sol",
+  "sourceName": "contracts/master_contracts/AjoCollateral.sol",
   "abi": [
     {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "_usdc",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "_hbar",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "_ajoCore",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "_membersContract",
-          "type": "address"
-        }
-      ],
+      "inputs": [],
       "stateMutability": "nonpayable",
       "type": "constructor"
     },
@@ -177,6 +156,19 @@
         }
       ],
       "name": "GuarantorAssigned",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint8",
+          "name": "version",
+          "type": "uint8"
+        }
+      ],
+      "name": "Initialized",
       "type": "event"
     },
     {
@@ -519,6 +511,34 @@
         }
       ],
       "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_usdc",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_hbar",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_ajoCore",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_ajoMembers",
+          "type": "address"
+        }
+      ],
+      "name": "initialize",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {

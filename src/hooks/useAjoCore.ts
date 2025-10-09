@@ -36,13 +36,14 @@ export interface UseAjoCore {
     collateralContract: string,
     paymentsContract: string
   ) => Promise<ethers.providers.TransactionReceipt>;
-  makePayment: () => Promise<void>;
+  makePayment: (paymentsContract: string) => Promise<void>;
   distributePayout: () => Promise<void>;
 }
 
 const useAjoCore = (ajoCoreAddress: string): UseAjoCore => {
   // const { setStats } = useAjoStore();
   const ajoAddress = import.meta.env.VITE_AJO_CORE_CONTRACT_ADDRESS;
+  const { address } = useWallet();
 
   const { provider, connected, error } = useWallet();
   const [contractWrite, setContractWrite] = useState<ethers.Contract | null>(
@@ -332,7 +333,20 @@ const useAjoCore = (ajoCoreAddress: string): UseAjoCore => {
       );
       console.log(`Collateral needed: ${formattedCollateral} tokens`);
 
+      // ===== CHECK TOKEN BALANCE =====
+      toast.info("Checking token balance...");
+      const balance = await token.balanceOf(userAddress);
+      const formattedBalance = ethers.utils.formatUnits(balance, decimals);
+      console.log(`💼 User balance: ${formattedBalance} tokens`);
+
+      if (balance.lt(expectedCollateral)) {
+        const errorMsg = `Insufficient balance. Need ${formattedCollateral}, have ${formattedBalance}`;
+        toast.error(errorMsg);
+        throw new Error(errorMsg);
+      }
+
       // --- 3. Approve Collateral Contract ---
+      toast.info("Approving collateral contract...");
       try {
         const allowanceCollateral = await token.allowance(
           userAddress,
@@ -347,15 +361,19 @@ const useAjoCore = (ajoCoreAddress: string): UseAjoCore => {
           );
           const receipt = await approveTx.wait();
           console.log("✅ Collateral approved", receipt.transactionHash);
+          toast.success("Collateral approved");
         } else {
+          toast.info("Collateral already approved");
           console.log("✅ Collateral already approved");
         }
       } catch (err) {
+        toast.error("Failed to approve collateral contract");
         console.error("❌ allowance() / approve() for collateral failed", err);
       }
 
       // --- 4. Approve Payments Contract ---
       try {
+        toast.info("Approving payments contract...");
         const allowancePayments = await token.allowance(
           userAddress,
           paymentsContract
@@ -368,15 +386,19 @@ const useAjoCore = (ajoCoreAddress: string): UseAjoCore => {
             expectedCollateral
           );
           const receipt = await approveTx.wait();
+          toast.success("Payments approved");
           console.log("✅ Payments approved", receipt.transactionHash);
         } else {
+          toast.info("Payments already approved");
           console.log("✅ Payments already approved");
         }
       } catch (err) {
+        toast.error("Failed to approve payments contract");
         console.error("❌ allowance() / approve() for payments failed", err);
       }
 
       // --- 5. Join Ajo ---
+      toast.info("Joining Ajo...");
       const tx = await contractWrite.joinAjo(tokenChoice);
       const receipt = await tx.wait();
       console.log("🎉 Joined Ajo, tx hash:", receipt.transactionHash);
@@ -385,44 +407,129 @@ const useAjoCore = (ajoCoreAddress: string): UseAjoCore => {
     [contractWrite, contractRead, provider]
   );
 
-  const makePayment = useCallback(async (): Promise<void> => {
+  const makePayment = useCallback(
+    async (paymentsContract: string): Promise<void> => {
+      // signer & user address (ethers v5)
+      console.log("paymentsContract", paymentsContract);
+      const signer = provider?.getSigner();
+      const userAddress = signer ? await signer.getAddress() : null;
+      if (!signer || !userAddress)
+        throw new Error("Could not get signer or user address");
+
+      if (!contractWrite) {
+        toast.error("Wallet not connected or contract not ready");
+        return;
+      }
+      // --- 1. Get expected collateral ---
+      let expectedCollateral;
+      try {
+        expectedCollateral = await contractRead?.getRequiredCollateralForJoin(
+          0
+        );
+        console.log("expectedCollateral", expectedCollateral.toString());
+        const code = await provider?.getCode(
+          import.meta.env.VITE_MOCK_USDC_ADDRESS
+        );
+        console.log("ERC20 deployed code:", code && code.length > 2);
+      } catch (err) {
+        console.warn(
+          "getRequiredCollateralForJoin failed, fallback to tokenConfig",
+          err
+        );
+        const tokenConfig = await contractRead?.getTokenConfig(0);
+        expectedCollateral = tokenConfig?.monthlyPayment;
+      }
+      if (!expectedCollateral)
+        throw new Error("Could not determine collateral requirement");
+      // --- 2. Interact with token ---
+      const token = new ethers.Contract(
+        import.meta.env.VITE_MOCK_USDC_ADDRESS,
+        erc20ABI,
+        signer
+      );
+
+      // Hardcode decimals for Hedera USDC (6) or fallback to token.decimals()
+      let decimals = 6;
+      try {
+        // try to read decimals (some mocks expose decimals)
+        const d = await token.decimals();
+        decimals = Number(d);
+      } catch {
+        // keep default 6
+      }
+      try {
+        toast.info("Approving payments contract...");
+        const allowancePayments = await token.allowance(
+          userAddress,
+          paymentsContract
+        );
+        console.log("allowancePayments", allowancePayments.toString());
+        // Helps 10th position increase allowance fee sinnce collateral is zero
+        const approveTx = await token.approve(
+          paymentsContract,
+          expectedCollateral == 0 ? 50000000 : expectedCollateral
+        );
+        const receipt = await approveTx.wait();
+        toast.success("Payments approved");
+        console.log("✅ Payments approved", receipt.transactionHash);
+      } catch (err) {
+        toast.error("Failed to approve payments contract");
+        console.error("❌ allowance() / approve() for payments failed", err);
+      }
+      try {
+        // send transaction
+        const tx = await contractWrite.processPayment();
+        toast.info("Processing payment...");
+
+        const receipt = await tx.wait();
+        if (receipt.status === 1) {
+          toast.success("Monthly Payment successful!");
+        } else {
+          toast.error("Payment failed");
+        }
+      } catch (err: any) {
+        console.error("makePayment error:", err);
+        toast.error(err?.reason || err?.message || "Payment failed");
+      }
+    },
+    [contractWrite]
+  );
+
+  const distributePayout = useCallback(async () => {
     if (!contractWrite) {
-      toast.error("Wallet not connected or contract not ready");
+      toast.error("Wallet not connected / write contract not ready");
       return;
     }
 
     try {
-      // send transaction
-      const tx = await contractWrite.processPayment();
-      toast.info("Processing payment...");
-
-      const receipt = await tx.wait();
-      if (receipt.status === 1) {
-        toast.success("Monthly Payment successful!");
-      } else {
-        toast.error("Payment failed");
-      }
-    } catch (err: any) {
-      console.error("makePayment error:", err);
-      toast.error(err?.reason || err?.message || "Payment failed");
-    }
-  }, [contractWrite]);
-
-  const distributePayout = useCallback(async () => {
-    if (!contractWrite)
-      throw new Error("Wallet not connected / write contract not ready");
-    try {
       const tx = await contractWrite.distributePayout();
       const receipt = await tx.wait();
+
       if (receipt.status === 1) {
-        toast.success("Cycle ajo distribution successful!");
+        toast.success("Cycle Ajo distribution successful!");
       } else {
         toast.error("Payment failed");
       }
     } catch (err: any) {
       console.error("distributePayout error:", err);
-      toast.error(err?.reason || err?.message || "Payment failed");
-      throw err;
+
+      const errorMessage =
+        err?.reason || err?.data?.message || err?.message || "";
+
+      // 🧠 Match specific revert or gas estimation errors
+      if (
+        errorMessage.includes("transfer amount exceeds balance") ||
+        errorMessage.includes("UNPREDICTABLE_GAS_LIMIT")
+      ) {
+        toast.error(
+          "You can only request for a payout when the whole team has paid this month cycle"
+        );
+      } else {
+        toast.error("Distribution failed, please try again");
+      }
+
+      // Optional: throw again if you want to handle it elsewhere
+      // throw err;
     }
   }, [contractWrite]);
 

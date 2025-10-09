@@ -89,14 +89,17 @@ const CreateAjo = () => {
       // Phase 1
       const { ajoId, receipt } = await createAjo(formData.name);
       console.log("✅ Phase 1 complete. Ajo ID:", ajoId);
+      toast.info("Phase 1 complete");
 
       // Phase 2
       await initializePhase2(ajoId);
       console.log("✅ Phase 2 complete");
+      toast.info("Phase 2 complete");
 
       // Phase 3
       await initializePhase3(ajoId);
       console.log("✅ Phase 3 complete");
+      toast.info("Phase 3 complete");
 
       // Phase 4
       await initializePhase4(ajoId);

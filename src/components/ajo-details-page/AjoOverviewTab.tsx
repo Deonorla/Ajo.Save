@@ -1,19 +1,16 @@
 import useAjoCore from "@/hooks/useAjoCore";
+import useAjoMembers from "@/hooks/useAjoMembers";
 import useAjoPayment from "@/hooks/useAjoPayment";
 import { useAjoDetailsStore } from "@/store/ajoDetailsStore";
-import { useAjoStore, type AjoInfo } from "@/store/ajoStore";
+import { useMembersStore } from "@/store/ajoMembersStore";
+import { type AjoInfo } from "@/store/ajoStore";
 import { useMemberStore } from "@/store/memberInfoStore";
 import { useTokenStore } from "@/store/tokenStore";
-import { ajoData, paymentHistory } from "@/temp-data";
 import formatCurrency from "@/utils/formatCurrency";
-import { formatAddress } from "@/utils/utils";
 import {
-  Activity,
   CheckCircle,
   Coins,
   Database,
-  Gift,
-  Link,
   RefreshCw,
   Shield,
   Target,
@@ -27,10 +24,11 @@ const AjoOverviewTab = ({ ajo }: { ajo: AjoInfo | null | undefined }) => {
   const [cycleCount, setCycleCount] = useState(0);
   const { nairaRate } = useTokenStore();
   const { memberData } = useMemberStore();
+  const { membersDetails } = useMembersStore();
   const { getCurrentCycle } = useAjoPayment(ajo ? ajo?.ajoPayments : "");
+  const { getAllMembersDetails } = useAjoMembers(ajo ? ajo?.ajoMembers : "");
   const {
     activeMembers,
-    totalMembers,
     activeToken,
     totalCollateralUSDC,
     contractBalanceUSDC,
@@ -42,7 +40,7 @@ const AjoOverviewTab = ({ ajo }: { ajo: AjoInfo | null | undefined }) => {
     collaterals: string[];
   } | null>(null);
 
-  const getDemo = useCallback(async () => {
+  const getFunctions = useCallback(async () => {
     try {
       const demo = await getCollateralDemo(10, "50");
       // console.log("demo", demo);
@@ -50,13 +48,15 @@ const AjoOverviewTab = ({ ajo }: { ajo: AjoInfo | null | undefined }) => {
       const count = await getCurrentCycle();
       if (!count) return null;
       setCycleCount(count);
+      await getAllMembersDetails();
     } catch (err) {
-      console.log("Error getting collateral demo", err);
+      console.log("Error", err);
     }
   }, []);
 
   useEffect(() => {
-    getDemo();
+    getFunctions();
+    console.log("Members", membersDetails);
   }, []);
 
   return (
@@ -64,42 +64,7 @@ const AjoOverviewTab = ({ ajo }: { ajo: AjoInfo | null | undefined }) => {
       {/* Main Content */}
       <div className="lg:col-span-2 space-y-6">
         {/* Collateral Simulation  */}
-        {demoData && (
-          <div className="bg-card rounded-xl shadow-lg p-6 border border-border">
-            <h3 className="text-xl font-bold text-card-foreground mb-4 flex items-center space-x-2">
-              <Shield className="w-6 h-6 text-primary" />
-              <span>Collateral Simulation</span>
-            </h3>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm border border-border rounded-lg">
-                <thead>
-                  <tr className="bg-primary/20 text-left">
-                    <th className="p-2">Queue Position</th>
-                    <th className="p-2">Collateral to be paid</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {demoData.positions.map((pos, idx) => (
-                    <tr
-                      key={idx}
-                      className="border-t hover:bg-primary/10 transition"
-                    >
-                      <td className="p-2 font-medium text-card-foreground">
-                        {pos}
-                      </td>
-                      <td className="p-2 text-white">
-                        {formatCurrency(
-                          Number(demoData.collaterals[idx]) * nairaRate
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
         {/* Cycle Progress */}
         <div className="bg-card rounded-xl shadow-lg p-6 border border-border">
           <h3 className="text-xl font-bold text-card-foreground mb-4 flex items-center space-x-2">
@@ -227,45 +192,6 @@ const AjoOverviewTab = ({ ajo }: { ajo: AjoInfo | null | undefined }) => {
             </div>
           )}
         </div>
-      </div>
-
-      {/* Sidebar */}
-      <div className="space-y-6">
-        {/* Key Information */}
-        <div className="bg-card rounded-xl shadow-lg p-6 border border-border">
-          <h3 className="text-lg font-bold text-card-foreground mb-4">
-            Key Information
-          </h3>
-
-          <div className="space-y-3 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Payment Token:</span>
-              <span className="font-semibold text-card-foreground flex items-center space-x-1">
-                <Coins className="w-4 h-4" />
-                <span>USDC</span>
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Cycle Length:</span>
-              <span className="font-semibold text-card-foreground">
-                30 days
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Privacy:</span>
-              <span className="font-semibold text-card-foreground">Public</span>
-            </div>
-            {/* <div className="flex justify-between">
-              <span className="text-muted-foreground">Collateral:</span>
-              <span className="font-semibold text-white">
-                {formatCurrency(
-                  Number(Number(totalCollateralUSDC) / 1000000) * nairaRate
-                )}
-              </span>
-            </div> */}
-          </div>
-        </div>
-
         <div className="bg-gradient-to-br from-primary to-accent rounded-xl shadow-lg p-6 text-primary-foreground border border-primary/30">
           <h3 className="text-lg font-bold mb-4 flex items-center space-x-2">
             <Shield className="w-5 h-5" />
@@ -313,6 +239,80 @@ const AjoOverviewTab = ({ ajo }: { ajo: AjoInfo | null | undefined }) => {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Sidebar */}
+      <div className="space-y-6">
+        {/* Key Information */}
+        <div className="bg-card rounded-xl shadow-lg p-6 border border-border">
+          <h3 className="text-lg font-bold text-card-foreground mb-4">
+            Key Information
+          </h3>
+
+          <div className="space-y-3 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Payment Token:</span>
+              <span className="font-semibold text-card-foreground flex items-center space-x-1">
+                <Coins className="w-4 h-4" />
+                <span>USDC</span>
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Cycle Length:</span>
+              <span className="font-semibold text-card-foreground">
+                30 days
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Privacy:</span>
+              <span className="font-semibold text-card-foreground">Public</span>
+            </div>
+            {/* <div className="flex justify-between">
+              <span className="text-muted-foreground">Collateral:</span>
+              <span className="font-semibold text-white">
+                {formatCurrency(
+                  Number(Number(totalCollateralUSDC) / 1000000) * nairaRate
+                )}
+              </span>
+            </div> */}
+          </div>
+        </div>
+        {demoData && (
+          <div className="bg-card rounded-xl shadow-lg p-6 border border-border">
+            <h3 className="text-xl font-bold text-card-foreground mb-4 flex items-center space-x-2">
+              <Shield className="w-6 h-6 text-primary" />
+              <span>Collateral Simulation</span>
+            </h3>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border border-border rounded-lg">
+                <thead>
+                  <tr className="bg-primary/20 text-left">
+                    <th className="p-2">Queue Position</th>
+                    <th className="p-2">Collateral to be paid</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {demoData.positions.map((pos, idx) => (
+                    <tr
+                      key={idx}
+                      className="border-t hover:bg-primary/10 transition"
+                    >
+                      <td className="p-2 font-medium text-card-foreground">
+                        {pos}
+                      </td>
+                      <td className="p-2 text-white">
+                        {formatCurrency(
+                          Number(demoData.collaterals[idx]) * nairaRate
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

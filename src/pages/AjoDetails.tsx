@@ -4,9 +4,8 @@ import AjoDetailsCard from "@/components/ajo-details-page/AjoDetailsCard";
 import AjoDetailsStatsGrid from "@/components/ajo-details-page/AjoDetailsStatsGrid";
 import AjoDetailsNavigationTab from "@/components/ajo-details-page/AjoDetailsNavigationTab";
 import AjoOverviewTab from "@/components/ajo-details-page/AjoOverviewTab";
-// import AjoMembers from "@/components/ajo-details-page/AjoMembers";
+import AjoMembers from "@/components/ajo-details-page/AjoMembers";
 import AjoGovernance from "@/components/ajo-details-page/AjoGovernance";
-
 // import AjoDetailAnalytics from "@/components/ajo-details-page/AjoDetailAnalytics";
 // import AjoPaymentHistory from "@/components/ajo-details-page/AjoPaymentHistory";
 import useAjoCore from "@/hooks/useAjoCore";
@@ -48,7 +47,7 @@ const AjoDetails = () => {
   const fetchAjoDetails = useCallback(async () => {
     try {
       const status = await getAjoOperationalStatus(parsedId, ajo);
-      console.log("Ajo details:", status);
+      // console.log("Ajo details:", status);
     } catch (err) {
       console.error("Error fetching Ajo operational status:", err);
     }
@@ -65,7 +64,7 @@ const AjoDetails = () => {
       const tokenConfig = await getTokenConfig(0);
       setMonthlyPayment(tokenConfig?.monthlyPayment);
 
-      console.log("monthlyPayment:", monthlyPayment);
+      // console.log("monthlyPayment:", monthlyPayment);
       console.log("Info", data);
     } catch (err) {
       console.log("Error fetching member info:", err);
@@ -115,7 +114,7 @@ const AjoDetails = () => {
         >
           {activeTab === "overview" && <AjoOverviewTab ajo={ajo} />}
 
-          {/* {activeTab === "members" && <AjoMembers />} */}
+          {activeTab === "members" && <AjoMembers ajo={ajo} />}
           {/* {activeTab === "payments" && <AjoPaymentHistory />} */}
 
           {activeTab === "governance" && <AjoGovernance />}

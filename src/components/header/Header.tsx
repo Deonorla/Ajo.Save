@@ -28,7 +28,7 @@ const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const { usdc, whbar, loading, setUsdc } = useTokenStore();
-  const { connected, address, network, connectMetaMask, disconnect } =
+  const { connected, address, balance, network, connectMetaMask, disconnect } =
     useWallet();
   const { getBalance, faucet } = useTokenContract(usdcContract);
   const [minting, setMinting] = useState(false);
@@ -44,9 +44,10 @@ const Header = () => {
   const handleMint = async () => {
     try {
       setMinting(true);
+      toast.info("Minting USDC");
       const tx = await faucet(); // mint 10000 USDC (6 decimals)
       console.log("Mint tx:", tx);
-      toast.success("1000 usdc minted successfully");
+      toast.success("1000 USDC minted successfully");
       if (address) {
         const balance = await getBalance(address);
         setUsdc(ethers.utils.formatUnits(balance, 6));
@@ -115,8 +116,8 @@ const Header = () => {
                     loading={loading}
                   />
                   <FormattedBalance
-                    value={whbar ?? ""}
-                    symbol="WHBAR"
+                    value={balance ?? ""}
+                    symbol="HBAR"
                     loading={loading}
                   />
                   {/* <span className=" text-white/50 truncate max-w-[100px]">
@@ -228,7 +229,7 @@ const Header = () => {
                         {usdc} USDC
                       </span>
                       <span className="text-white font-semibold">
-                        {whbar} WHBAR
+                        {balance} HBAR
                       </span>
                     </div>
                   </div>

@@ -34,7 +34,6 @@ export const useAjoDetails = () => {
         ajoCore && item.ajoCore.toLowerCase() === ajoCore.toLowerCase(); // match by core
       return matchesId || matchesCore;
     });
-    console.log("Selected Ajo:", found);
     return found ?? null;
   }, [ajoId, ajoCore, ajoInfos]);
 
@@ -45,26 +44,22 @@ export const useAjoDetails = () => {
 export function formatTimestamp(timestamp: string | number): string {
   if (!timestamp) return "N/A";
 
-  // Ensure it's a number
+  // Ensure timestamp is a number
   const seconds =
     typeof timestamp === "string" ? parseInt(timestamp, 10) : timestamp;
 
   // Convert seconds → milliseconds
   const date = new Date(seconds * 1000);
 
-  // Format as YYYY-MM-DD HH:mm:ss
-  const formatted =
-    date.getFullYear() +
-    "-" +
-    String(date.getMonth() + 1).padStart(2, "0") +
-    "-" +
-    String(date.getDate()).padStart(2, "0") +
-    " " +
-    String(date.getHours()).padStart(2, "0") +
-    ":" +
-    String(date.getMinutes()).padStart(2, "0") +
-    ":" +
-    String(date.getSeconds()).padStart(2, "0");
+  // Format options
+  const options: Intl.DateTimeFormatOptions = {
+    day: "numeric",
+    month: "long",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  };
 
-  return formatted;
+  // Example output: "25 July, 10:30 PM"
+  return date.toLocaleString("en-US", options).replace(",", "");
 }

@@ -55,7 +55,7 @@ export const useAjoFactory = () => {
 
       const ajoStructs = result[0];
       const hasMore = result[1];
-
+      console.log("All Ajos:", ajoStructs);
       // Save into store
       setAjoInfos(ajoStructs);
 

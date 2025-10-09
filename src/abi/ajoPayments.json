@@ -1,36 +1,10 @@
 {
   "_format": "hh-sol-artifact-1",
   "contractName": "AjoPayments",
-  "sourceName": "contracts/AjoPayments.sol",
+  "sourceName": "contracts/master_contracts/AjoPayments.sol",
   "abi": [
     {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "_usdc",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "_hbar",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "_ajoCore",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "_membersContract",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "_collateralContract",
-          "type": "address"
-        }
-      ],
+      "inputs": [],
       "stateMutability": "nonpayable",
       "type": "constructor"
     },
@@ -70,6 +44,50 @@
         }
       ],
       "name": "CycleAdvanced",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "cycle",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "totalCollected",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "membersPaidCount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        }
+      ],
+      "name": "CycleSummary",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint8",
+          "name": "version",
+          "type": "uint8"
+        }
+      ],
+      "name": "Initialized",
       "type": "event"
     },
     {
@@ -145,6 +163,55 @@
         }
       ],
       "name": "PaymentMade",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "member",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amountPaid",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "penaltyApplied",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "totalPayment",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "cycle",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "enum PaymentToken",
+          "name": "token",
+          "type": "uint8"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        }
+      ],
+      "name": "PaymentMadeDetailed",
       "type": "event"
     },
     {
@@ -404,6 +471,71 @@
       "type": "function"
     },
     {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "currentCyclePayment",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "cycle",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bool",
+          "name": "hasPaid",
+          "type": "bool"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amountPaid",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "penaltyApplied",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "cycleDuration",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "cycleStartTime",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
       "inputs": [],
       "name": "distributePayout",
       "outputs": [],
@@ -462,6 +594,154 @@
         {
           "internalType": "uint256",
           "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getCurrentCycleDashboard",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "currentCycle",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "nextPayoutPosition",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "nextRecipient",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "expectedPayout",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "totalPaidThisCycle",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "remainingToPay",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address[]",
+              "name": "membersPaid",
+              "type": "address[]"
+            },
+            {
+              "internalType": "address[]",
+              "name": "membersUnpaid",
+              "type": "address[]"
+            },
+            {
+              "internalType": "bool",
+              "name": "isPayoutReady",
+              "type": "bool"
+            }
+          ],
+          "internalType": "struct CycleDashboard",
+          "name": "dashboard",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "cycle",
+          "type": "uint256"
+        }
+      ],
+      "name": "getCyclePaymentStatus",
+      "outputs": [
+        {
+          "internalType": "address[]",
+          "name": "paidMembers",
+          "type": "address[]"
+        },
+        {
+          "internalType": "address[]",
+          "name": "unpaidMembers",
+          "type": "address[]"
+        },
+        {
+          "internalType": "uint256",
+          "name": "totalCollected",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "member",
+          "type": "address"
+        }
+      ],
+      "name": "getMemberPaymentHistory",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "cycle",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bool",
+              "name": "hasPaid",
+              "type": "bool"
+            },
+            {
+              "internalType": "uint256",
+              "name": "amountPaid",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "penaltyApplied",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "timestamp",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct PaymentStatus[]",
+          "name": "",
+          "type": "tuple[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getNextPaymentDeadline",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "timestamp",
           "type": "uint256"
         }
       ],
@@ -615,11 +895,85 @@
       "inputs": [
         {
           "internalType": "address",
+          "name": "member",
+          "type": "address"
+        }
+      ],
+      "name": "getUpcomingEvents",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "eventType",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "timestamp",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "affectedMember",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct UpcomingEvent[]",
+          "name": "events",
+          "type": "tuple[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
           "name": "defaulter",
           "type": "address"
         }
       ],
       "name": "handleDefault",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_usdc",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_hbar",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_ajoCore",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_membersContract",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_collateralContract",
+          "type": "address"
+        }
+      ],
+      "name": "initialize",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -648,13 +1002,6 @@
         }
       ],
       "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "makePayment",
-      "outputs": [],
-      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -849,19 +1196,6 @@
         }
       ],
       "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "enum PaymentToken",
-          "name": "newToken",
-          "type": "uint8"
-        }
-      ],
-      "name": "switchPaymentToken",
-      "outputs": [],
-      "stateMutability": "nonpayable",
       "type": "function"
     },
     {

@@ -1,26 +1,10 @@
 {
   "_format": "hh-sol-artifact-1",
   "contractName": "AjoMembers",
-  "sourceName": "contracts/AjoMembers.sol",
+  "sourceName": "contracts/master_contracts/AjoMembers.sol",
   "abi": [
     {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "_ajoCore",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "_usdc",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "_hbar",
-          "type": "address"
-        }
-      ],
+      "inputs": [],
       "stateMutability": "nonpayable",
       "type": "constructor"
     },
@@ -72,6 +56,19 @@
         }
       ],
       "name": "GuarantorAssigned",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint8",
+          "name": "version",
+          "type": "uint8"
+        }
+      ],
+      "name": "Initialized",
       "type": "event"
     },
     {
@@ -383,19 +380,77 @@
     },
     {
       "inputs": [],
-      "name": "exitAjo",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
       "name": "getActiveMembersList",
       "outputs": [
         {
           "internalType": "address[]",
           "name": "",
           "type": "address[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getAllMembersDetails",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "userAddress",
+              "type": "address"
+            },
+            {
+              "internalType": "bool",
+              "name": "hasReceivedPayout",
+              "type": "bool"
+            },
+            {
+              "internalType": "uint256",
+              "name": "queuePosition",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bool",
+              "name": "hasPaidThisCycle",
+              "type": "bool"
+            },
+            {
+              "internalType": "uint256",
+              "name": "collateralLocked",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "guarantorAddress",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "guarantorQueuePosition",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "totalPaid",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "defaultCount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "reputationScore",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct MemberDetails[]",
+          "name": "",
+          "type": "tuple[]"
         }
       ],
       "stateMutability": "view",
@@ -581,6 +636,67 @@
     {
       "inputs": [
         {
+          "internalType": "address",
+          "name": "member",
+          "type": "address"
+        }
+      ],
+      "name": "getMemberActivity",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "cyclesParticipated",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "paymentsCompleted",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "paymentsMissed",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "totalPaid",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "totalReceived",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "netPosition",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "consecutivePayments",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "lastActiveTimestamp",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct MemberActivity",
+          "name": "activity",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
           "internalType": "uint256",
           "name": "index",
           "type": "uint256"
@@ -701,6 +817,132 @@
     {
       "inputs": [
         {
+          "internalType": "bool",
+          "name": "isActive",
+          "type": "bool"
+        }
+      ],
+      "name": "getMembersByStatus",
+      "outputs": [
+        {
+          "internalType": "address[]",
+          "name": "",
+          "type": "address[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "offset",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "limit",
+          "type": "uint256"
+        }
+      ],
+      "name": "getMembersDetailsPaginated",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "userAddress",
+              "type": "address"
+            },
+            {
+              "internalType": "bool",
+              "name": "hasReceivedPayout",
+              "type": "bool"
+            },
+            {
+              "internalType": "uint256",
+              "name": "queuePosition",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bool",
+              "name": "hasPaidThisCycle",
+              "type": "bool"
+            },
+            {
+              "internalType": "uint256",
+              "name": "collateralLocked",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "guarantorAddress",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "guarantorQueuePosition",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "totalPaid",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "defaultCount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "reputationScore",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct MemberDetails[]",
+          "name": "details",
+          "type": "tuple[]"
+        },
+        {
+          "internalType": "bool",
+          "name": "hasMore",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getMembersNeedingPayment",
+      "outputs": [
+        {
+          "internalType": "address[]",
+          "name": "",
+          "type": "address[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getMembersWithDefaults",
+      "outputs": [
+        {
+          "internalType": "address[]",
+          "name": "",
+          "type": "address[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
           "internalType": "address",
           "name": "member",
           "type": "address"
@@ -736,6 +978,30 @@
           "internalType": "address",
           "name": "",
           "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "limit",
+          "type": "uint256"
+        }
+      ],
+      "name": "getTopMembersByReputation",
+      "outputs": [
+        {
+          "internalType": "address[]",
+          "name": "members_",
+          "type": "address[]"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "reputations",
+          "type": "uint256[]"
         }
       ],
       "stateMutability": "view",
@@ -790,6 +1056,29 @@
       "inputs": [
         {
           "internalType": "address",
+          "name": "_ajoCore",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_usdc",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_hbar",
+          "type": "address"
+        }
+      ],
+      "name": "initialize",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
           "name": "member",
           "type": "address"
         }
@@ -816,19 +1105,6 @@
         }
       ],
       "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "enum PaymentToken",
-          "name": "tokenChoice",
-          "type": "uint8"
-        }
-      ],
-      "name": "joinAjo",
-      "outputs": [],
-      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
