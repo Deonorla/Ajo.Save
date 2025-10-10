@@ -1,11 +1,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useMemo, useState, useCallback } from "react";
-import { ethers } from "ethers";
-import { useWallet } from "./../auth/WalletContext";
-import AjoCore from "@/abi/ajoCore.json";
-import { useAjoStore } from "@/store/ajoStore";
-import erc20ABI from "@/abi/erc20ABI";
+import { useEffect, useState, useCallback } from "react";
+import {
+  ContractExecuteTransaction,
+  ContractFunctionParameters,
+  ContractCallQuery,
+  AccountId,
+  TokenId,
+  ContractId,
+} from "@hashgraph/sdk";
+import { Interface } from "ethers";
 import { toast } from "sonner";
+import useHashPackWallet from "@/hooks/useHashPackWallet";
+import AjoCore from "@/abi/ajoCore.json";
 import { useMemberStore } from "@/store/memberInfoStore";
 
 export interface UseAjoCore {
@@ -29,123 +35,284 @@ export interface UseAjoCore {
   ) => Promise<{ positions: string[]; collaterals: string[] } | null>;
   owner: () => Promise<string | null>;
   getRequiredCollateralForJoin: () => Promise<string | null>;
+
   // write
   joinAjo: (
     tokenChoice: number,
-    tokenAddress: string,
+    tokenId: string,
     collateralContract: string,
     paymentsContract: string
-  ) => Promise<ethers.providers.TransactionReceipt>;
+  ) => Promise<any>;
   makePayment: (paymentsContract: string) => Promise<void>;
   distributePayout: () => Promise<void>;
 }
 
-const useAjoCore = (ajoCoreAddress: string): UseAjoCore => {
-  // const { setStats } = useAjoStore();
-  const ajoAddress = import.meta.env.VITE_AJO_CORE_CONTRACT_ADDRESS;
-  const { address } = useWallet();
+const MIRROR_NODE_URL = "https://testnet.mirrornode.hedera.com";
 
-  const { provider, connected, error } = useWallet();
-  const [contractWrite, setContractWrite] = useState<ethers.Contract | null>(
-    null
+const useAjoCore = (ajoCoreAddress: string): UseAjoCore => {
+  const wallet = useHashPackWallet();
+  const [error, setError] = useState<string | null>(null);
+
+  // Create ethers interface for ABI encoding/decoding (ethers v6)
+  const contractInterface = new Interface((AjoCore as any).abi);
+
+  // Helper: Encode function call using ABI
+  const encodeFunctionCall = useCallback(
+    (functionName: string, params: any[] = []) => {
+      try {
+        return contractInterface.encodeFunctionData(functionName, params);
+      } catch (err: any) {
+        console.error(`Failed to encode ${functionName}:`, err);
+        throw err;
+      }
+    },
+    [contractInterface]
   );
 
-  // read-only contract (provider)
-  const contractRead = useMemo(() => {
-    if (!provider || !ajoCoreAddress) return null;
-    return new ethers.Contract(ajoCoreAddress, (AjoCore as any).abi, provider);
-  }, [provider, ajoCoreAddress]);
+  // Helper: Decode function result using ABI
+  const decodeFunctionResult = useCallback(
+    (functionName: string, data: string) => {
+      try {
+        return contractInterface.decodeFunctionResult(functionName, data);
+      } catch (err: any) {
+        console.error(`Failed to decode ${functionName}:`, err);
+        throw err;
+      }
+    },
+    [contractInterface]
+  );
 
-  useEffect(() => {
-    if (!provider || !ajoCoreAddress) {
-      setContractWrite(null);
-      return;
-    }
-    try {
-      const signer = provider.getSigner();
-      const writable = new ethers.Contract(
-        ajoCoreAddress,
-        (AjoCore as any).abi,
-        signer
-      );
-      setContractWrite(writable);
-    } catch (err) {
-      console.error("Failed to create write contract", err);
-      setContractWrite(null);
-    }
-  }, [provider, ajoCoreAddress]);
+  // Helper: Query contract (read-only via Mirror Node)
+  const queryContract = useCallback(
+    async (functionName: string, params: any[] = []) => {
+      try {
+        // Encode the function call using ABI
+        const encodedData = encodeFunctionCall(functionName, params);
+
+        // Query via Mirror Node REST API
+        const response = await fetch(
+          `${MIRROR_NODE_URL}/api/v1/contracts/call`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              data: encodedData,
+              to: ajoCoreAddress,
+              estimate: false,
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Query failed: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+
+        // Decode the result using ABI
+        if (result.result) {
+          const decoded = decodeFunctionResult(functionName, result.result);
+          return decoded;
+        }
+
+        return null;
+      } catch (err: any) {
+        console.error(`Query ${functionName} failed:`, err);
+        setError(err.message);
+        return null;
+      }
+    },
+    [ajoCoreAddress, encodeFunctionCall, decodeFunctionResult]
+  );
+
+  // Helper: Execute contract transaction (write)
+  const executeContract = useCallback(
+    async (
+      functionName: string,
+      params: any[] = [],
+      payableAmount?: number
+    ) => {
+      if (!wallet.connected || !wallet.accountId) {
+        throw new Error("Wallet not connected");
+      }
+
+      try {
+        // Encode function call using ABI
+        const encodedData = encodeFunctionCall(functionName, params);
+
+        // Remove '0x' prefix if present
+        const functionData = encodedData.startsWith("0x")
+          ? encodedData.slice(2)
+          : encodedData;
+
+        // Create contract execute transaction
+        const transaction = new ContractExecuteTransaction()
+          .setContractId(ContractId.fromString(ajoCoreAddress))
+          .setGas(1000000) // Increased gas limit
+          .setFunctionParameters(Buffer.from(functionData, "hex"));
+
+        if (payableAmount) {
+          transaction.setPayableAmount(payableAmount);
+        }
+
+        // Execute through wallet signer
+        const txId = await wallet.sendTransaction(transaction);
+        return txId;
+      } catch (err: any) {
+        console.error(`Execute ${functionName} failed:`, err);
+        throw err;
+      }
+    },
+    [wallet, ajoCoreAddress, encodeFunctionCall]
+  );
+
+  // Helper: Associate token with account
+  const associateTokenIfNeeded = useCallback(
+    async (tokenId: string) => {
+      try {
+        // Check if already associated via mirror node
+        const response = await fetch(
+          `${MIRROR_NODE_URL}/api/v1/accounts/${wallet.accountId}/tokens?token.id=${tokenId}`
+        );
+        const data = await response.json();
+
+        if (data.tokens && data.tokens.length > 0) {
+          console.log("Token already associated");
+          return;
+        }
+
+        // Associate token
+        toast.info("Associating token with your account...");
+        await wallet.associateToken(tokenId);
+      } catch (err: any) {
+        if (!err.message?.includes("TOKEN_ALREADY_ASSOCIATED")) {
+          throw err;
+        }
+      }
+    },
+    [wallet]
+  );
+
+  // Helper: Approve token (using token contract's approve function)
+  const approveToken = useCallback(
+    async (tokenId: string, spender: string, amount: number) => {
+      try {
+        toast.info(`Approving ${spender.slice(0, 10)}...`);
+
+        // Create ERC20 interface for approve function (ethers v6)
+        const erc20Interface = new Interface([
+          "function approve(address spender, uint256 amount) returns (bool)",
+        ]);
+
+        const encodedData = erc20Interface.encodeFunctionData("approve", [
+          spender,
+          amount,
+        ]);
+
+        const functionData = encodedData.startsWith("0x")
+          ? encodedData.slice(2)
+          : encodedData;
+
+        const transaction = new ContractExecuteTransaction()
+          .setContractId(ContractId.fromString(tokenId))
+          .setGas(100000)
+          .setFunctionParameters(Buffer.from(functionData, "hex"));
+
+        const txId = await wallet.sendTransaction(transaction);
+        toast.success("Approval successful");
+        return txId;
+      } catch (err: any) {
+        console.error("Approve failed:", err);
+        toast.error("Approval failed");
+        throw err;
+      }
+    },
+    [wallet]
+  );
 
   // ---------------------------
-  // Read wrappers
+  // Read Functions
   // ---------------------------
+
   const getContractStats =
     useCallback(async (): Promise<ContractStats | null> => {
-      if (!contractRead) return null;
       try {
-        const res = await contractRead.getContractStats();
-        // setStats({
-        //   totalMembers: res[0].toString(),
-        //   activeMembers: res[1].toString(),
-        //   totalCollateralUSDC: (res[2] / 1000000).toString(),
-        //   totalCollateralHBAR: (res[3] / 1000000).toString(),
-        //   contractBalanceUSDC: (res[4] / 1000000).toString(),
-        //   contractBalanceHBAR: (res[5] / 1000000).toString(),
-        //   currentQueuePosition: res[6].toString(),
-        //   activeToken: Number(res[7]),
-        // });
+        const result = await queryContract("getContractStats", []);
+        if (!result) return null;
+
         return {
-          totalMembers: res[0].toString(),
-          activeMembers: res[1].toString(),
-          totalCollateralUSDC: (res[2] / 1000000).toString(),
-          totalCollateralHBAR: (res[3] / 1000000).toString(),
-          contractBalanceUSDC: (res[4] / 1000000).toString(),
-          contractBalanceHBAR: (res[5] / 1000000).toString(),
-          currentQueuePosition: res[6].toString(),
-          activeToken: Number(res[7]),
+          totalMembers: result.totalMembers?.toString() ?? "0",
+          activeMembers: result.activeMembers?.toString() ?? "0",
+          totalCollateralUSDC: (
+            Number(result.totalCollateralUSDC ?? 0) / 1000000
+          ).toString(),
+          totalCollateralHBAR: (
+            Number(result.totalCollateralHBAR ?? 0) / 1000000
+          ).toString(),
+          contractBalanceUSDC: (
+            Number(result.contractBalanceUSDC ?? 0) / 1000000
+          ).toString(),
+          contractBalanceHBAR: (
+            Number(result.contractBalanceHBAR ?? 0) / 1000000
+          ).toString(),
+          currentQueuePosition: result.currentQueuePosition?.toString() ?? "0",
+          activeToken: Number(result.activeToken ?? 0),
         };
       } catch (err) {
         console.error("getContractStats error:", err);
         return null;
       }
-    }, [contractRead]);
+    }, [queryContract]);
 
   const getMemberInfo = useCallback(
     async (memberAddress: string): Promise<MemberInfoResponse | null> => {
-      if (!contractRead) return null;
       const { setMemberData, setLoading, setError } = useMemberStore.getState();
-
       setLoading(true);
+
       try {
-        const res = await contractRead.getMemberInfo(memberAddress);
-        const rawMember = res[0];
+        const result = await queryContract("getMemberInfo", [memberAddress]);
+
+        if (!result || !result.memberInfo) {
+          setLoading(false);
+          return null;
+        }
+
+        const rawMember = result.memberInfo;
 
         const member: MemberStruct = {
-          queueNumber: rawMember.queueNumber.toString(),
-          joinedCycle: rawMember.joinedCycle.toString(),
-          totalPaid: (BigInt(rawMember.totalPaid) / BigInt(1000000)).toString(),
+          queueNumber: rawMember.queueNumber?.toString() ?? "0",
+          joinedCycle: rawMember.joinedCycle?.toString() ?? "0",
+          totalPaid: (
+            BigInt(rawMember.totalPaid ?? 0) / BigInt(1000000)
+          ).toString(),
           requiredCollateral: (
-            BigInt(rawMember.requiredCollateral) / BigInt(1000000)
+            BigInt(rawMember.requiredCollateral ?? 0) / BigInt(1000000)
           ).toString(),
           lockedCollateral: (
-            BigInt(rawMember.lockedCollateral) / BigInt(1000000)
+            BigInt(rawMember.lockedCollateral ?? 0) / BigInt(1000000)
           ).toString(),
-          lastPaymentCycle: rawMember.lastPaymentCycle.toString(),
-          defaultCount: rawMember.defaultCount.toString(),
-          hasReceivedPayout: rawMember.hasReceivedPayout,
-          isActive: rawMember.isActive,
-          guarantor: rawMember.guarantor,
-          preferredToken: Number(rawMember.preferredToken),
-          reputationScore: rawMember.reputationScore.toString(),
+          lastPaymentCycle: rawMember.lastPaymentCycle?.toString() ?? "0",
+          defaultCount: rawMember.defaultCount?.toString() ?? "0",
+          hasReceivedPayout: rawMember.hasReceivedPayout ?? false,
+          isActive: rawMember.isActive ?? false,
+          guarantor:
+            rawMember.guarantor ?? "0x0000000000000000000000000000000000000000",
+          preferredToken: Number(rawMember.preferredToken ?? 0),
+          reputationScore: rawMember.reputationScore?.toString() ?? "0",
           pastPayments: Array.isArray(rawMember.pastPayments)
             ? rawMember.pastPayments.map((x: any) => x.toString())
             : [],
-          guaranteePosition: rawMember.guaranteePosition.toString(),
+          guaranteePosition: rawMember.guaranteePosition?.toString() ?? "0",
         };
 
         const data: MemberInfoResponse = {
           memberInfo: member,
-          pendingPenalty: BigInt(res[1]).toString(), // ✅ fixed
-          effectiveVotingPower: BigInt(res[2]).toString(), // ✅ fixed
+          pendingPenalty: (result.pendingPenalty ?? BigInt(0)).toString(),
+          effectiveVotingPower: (
+            result.effectiveVotingPower ?? BigInt(0)
+          ).toString(),
         };
 
         setMemberData(data);
@@ -158,38 +325,41 @@ const useAjoCore = (ajoCoreAddress: string): UseAjoCore => {
         return null;
       }
     },
-    [contractRead]
+    [queryContract]
   );
 
   const needsToPayThisCycle = useCallback(
     async (memberAddress: string): Promise<boolean | null> => {
-      if (!contractRead) return null;
       const { setNeedsToPay } = useMemberStore.getState();
       try {
-        const data = await contractRead.needsToPayThisCycle(memberAddress);
-        setNeedsToPay(data);
-        return data;
+        const result = await queryContract("needsToPayThisCycle", [
+          memberAddress,
+        ]);
+        const needsPay = result?.[0] || false;
+        setNeedsToPay(needsPay);
+        return needsPay;
       } catch (err) {
         console.error("needsToPayThisCycle error:", err);
         return null;
       }
     },
-    [contractRead]
+    [queryContract]
   );
 
   const getQueueInfo = useCallback(
     async (
       memberAddress: string
     ): Promise<{ position: string; estimatedCyclesWait: string } | null> => {
-      if (!contractRead) return null;
       const { setQueueInfo } = useMemberStore.getState();
       try {
-        const res = await contractRead.getQueueInfo(memberAddress);
+        const result = await queryContract("getQueueInfo", [memberAddress]);
+
+        if (!result) return null;
+
         const info = {
-          position: res[0].toString(),
-          estimatedCyclesWait: res[1].toString(),
+          position: result.position?.toString() ?? "0",
+          estimatedCyclesWait: result.estimatedCyclesWait?.toString() ?? "0",
         };
-        // console.log("QueueInfo:", info);
         setQueueInfo(info);
         return info;
       } catch (err) {
@@ -197,22 +367,23 @@ const useAjoCore = (ajoCoreAddress: string): UseAjoCore => {
         return null;
       }
     },
-    [contractRead]
+    [queryContract]
   );
 
   const getTokenConfig = useCallback(
     async (
       token: number
     ): Promise<{ monthlyPayment: string; isActive: boolean } | null> => {
-      if (!contractRead) return null;
       const { setTokenConfig } = useMemberStore.getState();
       try {
-        const res = await contractRead.getTokenConfig(token);
+        const result = await queryContract("getTokenConfig", [token]);
+
+        if (!result || !result[0]) return null;
+
         const config = {
-          monthlyPayment: res[0].toString(),
-          isActive: Boolean(res[1]),
+          monthlyPayment: result[0]?.monthlyPayment?.toString() ?? "0",
+          isActive: Boolean(result[0]?.isActive ?? false),
         };
-        console.log("TokenConfig:", config);
         setTokenConfig(config);
         return config;
       } catch (err) {
@@ -220,7 +391,7 @@ const useAjoCore = (ajoCoreAddress: string): UseAjoCore => {
         return null;
       }
     },
-    [contractRead]
+    [queryContract]
   );
 
   const getCollateralDemo = useCallback(
@@ -228,313 +399,221 @@ const useAjoCore = (ajoCoreAddress: string): UseAjoCore => {
       participants: number,
       monthlyPayment: string
     ): Promise<{ positions: string[]; collaterals: string[] } | null> => {
-      if (!contractRead) return null;
       try {
-        // monthlyPayment is a string (we keep raw). If your contract expects uint256, pass BigNumber or string as appropriate.
-        const res = await contractRead.getCollateralDemo(
+        const result = await queryContract("getCollateralDemo", [
           participants,
-          monthlyPayment
-        );
-        const positions = Array.isArray(res[0])
-          ? res[0].map((p: any) => p.toString())
+          monthlyPayment,
+        ]);
+
+        if (!result) return null;
+
+        const positions = Array.isArray(result.positions)
+          ? result.positions.map((p: any) => p.toString())
           : [];
-        const collaterals = Array.isArray(res[1])
-          ? res[1].map((c: any) => c.toString())
+        const collaterals = Array.isArray(result.collaterals)
+          ? result.collaterals.map((c: any) => c.toString())
           : [];
+
         return { positions, collaterals };
       } catch (err) {
         console.error("getCollateralDemo error:", err);
         return null;
       }
     },
-    [contractRead]
+    [queryContract]
   );
 
   const owner = useCallback(async (): Promise<string | null> => {
-    if (!contractRead) return null;
     try {
-      return await contractRead.owner();
+      const result = await queryContract("owner", []);
+      return result?.[0] || null;
     } catch (err) {
       console.error("owner() error:", err);
       return null;
     }
-  }, [contractRead]);
+  }, [queryContract]);
 
   const getRequiredCollateralForJoin = useCallback(async (): Promise<
     string | null
   > => {
-    if (!contractRead) return null;
     try {
-      const collateral = await contractRead?.getRequiredCollateralForJoin(0);
-      console.log("collateral", collateral.toString());
-      return collateral;
+      const result = await queryContract("getRequiredCollateralForJoin", [0]);
+      console.log("collateral", result?.[0]?.toString());
+      return result?.[0]?.toString() || null;
     } catch (err) {
       console.error("getRequiredCollateralForJoin failed", err);
       return null;
     }
-  }, [contractRead]);
+  }, [queryContract]);
 
   // ---------------------------
-  // Write wrappers
+  // Write Functions
   // ---------------------------
+
   const joinAjo = useCallback(
     async (
       tokenChoice: number,
-      tokenAddress: string,
+      tokenId: string,
       collateralContract: string,
       paymentsContract: string
     ) => {
-      if (!contractWrite) {
+      if (!wallet.connected) {
         toast.info("Connect Wallet to participate");
-        throw new Error("Wallet not connected / write contract not ready");
+        throw new Error("Wallet not connected");
       }
 
-      // signer & user address (ethers v5)
-      const signer = provider?.getSigner();
-      const userAddress = signer ? await signer.getAddress() : null;
-      if (!signer || !userAddress)
-        throw new Error("Could not get signer or user address");
-
-      // --- 1. Get expected collateral ---
-      let expectedCollateral;
       try {
-        expectedCollateral = await contractRead?.getRequiredCollateralForJoin(
-          tokenChoice
+        // 1. Get required collateral
+        toast.info("Calculating required collateral...");
+        const collateralResult = await queryContract(
+          "getRequiredCollateralForJoin",
+          [tokenChoice]
         );
-        console.log("expectedCollateral", expectedCollateral.toString());
-        const code = await provider?.getCode(tokenAddress);
-        console.log("ERC20 deployed code:", code && code.length > 2);
-      } catch (err) {
-        console.warn(
-          "getRequiredCollateralForJoin failed, fallback to tokenConfig",
-          err
-        );
-        const tokenConfig = await contractRead?.getTokenConfig(tokenChoice);
-        expectedCollateral = tokenConfig?.monthlyPayment;
-      }
-      if (!expectedCollateral)
-        throw new Error("Could not determine collateral requirement");
 
-      // --- 2. Interact with token ---
-      const token = new ethers.Contract(tokenAddress, erc20ABI, signer);
+        let collateralAmount: number;
 
-      // Hardcode decimals for Hedera USDC (6) or fallback to token.decimals()
-      let decimals = 6;
-      try {
-        // try to read decimals (some mocks expose decimals)
-        const d = await token.decimals();
-        decimals = Number(d);
-      } catch {
-        // keep default 6
-      }
-      const formattedCollateral = ethers.utils.formatUnits(
-        expectedCollateral,
-        decimals
-      );
-      console.log(`Collateral needed: ${formattedCollateral} tokens`);
-
-      // ===== CHECK TOKEN BALANCE =====
-      toast.info("Checking token balance...");
-      const balance = await token.balanceOf(userAddress);
-      const formattedBalance = ethers.utils.formatUnits(balance, decimals);
-      console.log(`💼 User balance: ${formattedBalance} tokens`);
-
-      if (balance.lt(expectedCollateral)) {
-        const errorMsg = `Insufficient balance. Need ${formattedCollateral}, have ${formattedBalance}`;
-        toast.error(errorMsg);
-        throw new Error(errorMsg);
-      }
-
-      // --- 3. Approve Collateral Contract ---
-      toast.info("Approving collateral contract...");
-      try {
-        const allowanceCollateral = await token.allowance(
-          userAddress,
-          collateralContract
-        );
-        console.log("allowanceCollateral", allowanceCollateral.toString());
-
-        if (allowanceCollateral.lt(expectedCollateral)) {
-          const approveTx = await token.approve(
-            collateralContract,
-            expectedCollateral
-          );
-          const receipt = await approveTx.wait();
-          console.log("✅ Collateral approved", receipt.transactionHash);
-          toast.success("Collateral approved");
+        if (
+          !collateralResult ||
+          collateralResult.length === 0 ||
+          !collateralResult[0]
+        ) {
+          const tokenConfig = await getTokenConfig(tokenChoice);
+          if (!tokenConfig) {
+            throw new Error("Could not fetch token configuration");
+          }
+          collateralAmount = Number(tokenConfig.monthlyPayment);
         } else {
-          toast.info("Collateral already approved");
-          console.log("✅ Collateral already approved");
+          collateralAmount = Number(collateralResult[0]);
         }
-      } catch (err) {
-        toast.error("Failed to approve collateral contract");
-        console.error("❌ allowance() / approve() for collateral failed", err);
-      }
 
-      // --- 4. Approve Payments Contract ---
-      try {
-        toast.info("Approving payments contract...");
-        const allowancePayments = await token.allowance(
-          userAddress,
-          paymentsContract
-        );
-        console.log("allowancePayments", allowancePayments.toString());
-
-        if (allowancePayments.lt(expectedCollateral)) {
-          const approveTx = await token.approve(
-            paymentsContract,
-            expectedCollateral
-          );
-          const receipt = await approveTx.wait();
-          toast.success("Payments approved");
-          console.log("✅ Payments approved", receipt.transactionHash);
-        } else {
-          toast.info("Payments already approved");
-          console.log("✅ Payments already approved");
+        if (!collateralAmount) {
+          throw new Error("Could not determine collateral requirement");
         }
-      } catch (err) {
-        toast.error("Failed to approve payments contract");
-        console.error("❌ allowance() / approve() for payments failed", err);
-      }
 
-      // --- 5. Join Ajo ---
-      toast.info("Joining Ajo...");
-      const tx = await contractWrite.joinAjo(tokenChoice);
-      const receipt = await tx.wait();
-      console.log("🎉 Joined Ajo, tx hash:", receipt.transactionHash);
-      return receipt;
+        console.log(`Collateral needed: ${collateralAmount / 1000000} tokens`);
+
+        // 2. Check token balance
+        toast.info("Checking token balance...");
+        const balance = await wallet.getTokenBalance(tokenId);
+        const balanceNum = Number(balance ?? 0);
+
+        if (balanceNum < collateralAmount) {
+          const errorMsg = `Insufficient balance. Need ${
+            collateralAmount / 1000000
+          }, have ${balanceNum / 1000000}`;
+          toast.error(errorMsg);
+          throw new Error(errorMsg);
+        }
+
+        // 3. Associate token if needed
+        await associateTokenIfNeeded(tokenId);
+
+        // 4. Approve collateral contract
+        await approveToken(tokenId, collateralContract, collateralAmount);
+
+        // 5. Approve payments contract
+        await approveToken(tokenId, paymentsContract, collateralAmount);
+
+        // 6. Join Ajo
+        toast.info("Joining Ajo...");
+        const txId = await executeContract("joinAjo", [tokenChoice]);
+
+        toast.success("Successfully joined Ajo!");
+        console.log("🎉 Joined Ajo, tx hash:", txId);
+        return txId;
+      } catch (err: any) {
+        console.error("joinAjo error:", err);
+        toast.error(err.message || "Failed to join Ajo");
+        throw err;
+      }
     },
-    [contractWrite, contractRead, provider]
+    [
+      wallet,
+      queryContract,
+      getTokenConfig,
+      associateTokenIfNeeded,
+      approveToken,
+      executeContract,
+    ]
   );
 
   const makePayment = useCallback(
     async (paymentsContract: string): Promise<void> => {
-      // signer & user address (ethers v5)
-      console.log("paymentsContract", paymentsContract);
-      const signer = provider?.getSigner();
-      const userAddress = signer ? await signer.getAddress() : null;
-      if (!signer || !userAddress)
-        throw new Error("Could not get signer or user address");
-
-      if (!contractWrite) {
-        toast.error("Wallet not connected or contract not ready");
+      if (!wallet.connected) {
+        toast.error("Wallet not connected");
         return;
       }
-      // --- 1. Get expected collateral ---
-      let expectedCollateral;
-      try {
-        expectedCollateral = await contractRead?.getRequiredCollateralForJoin(
-          0
-        );
-        console.log("expectedCollateral", expectedCollateral.toString());
-        const code = await provider?.getCode(
-          import.meta.env.VITE_MOCK_USDC_ADDRESS
-        );
-        console.log("ERC20 deployed code:", code && code.length > 2);
-      } catch (err) {
-        console.warn(
-          "getRequiredCollateralForJoin failed, fallback to tokenConfig",
-          err
-        );
-        const tokenConfig = await contractRead?.getTokenConfig(0);
-        expectedCollateral = tokenConfig?.monthlyPayment;
-      }
-      if (!expectedCollateral)
-        throw new Error("Could not determine collateral requirement");
-      // --- 2. Interact with token ---
-      const token = new ethers.Contract(
-        import.meta.env.VITE_MOCK_USDC_ADDRESS,
-        erc20ABI,
-        signer
-      );
 
-      // Hardcode decimals for Hedera USDC (6) or fallback to token.decimals()
-      let decimals = 6;
       try {
-        // try to read decimals (some mocks expose decimals)
-        const d = await token.decimals();
-        decimals = Number(d);
-      } catch {
-        // keep default 6
-      }
-      try {
-        toast.info("Approving payments contract...");
-        const allowancePayments = await token.allowance(
-          userAddress,
-          paymentsContract
+        // 1. Get required payment amount
+        const paymentResult = await queryContract(
+          "getRequiredCollateralForJoin",
+          [0]
         );
-        console.log("allowancePayments", allowancePayments.toString());
-        // Helps 10th position increase allowance fee sinnce collateral is zero
-        const approveTx = await token.approve(
-          paymentsContract,
-          expectedCollateral == 0 ? 50000000 : expectedCollateral
-        );
-        const receipt = await approveTx.wait();
-        toast.success("Payments approved");
-        console.log("✅ Payments approved", receipt.transactionHash);
-      } catch (err) {
-        toast.error("Failed to approve payments contract");
-        console.error("❌ allowance() / approve() for payments failed", err);
-      }
-      try {
-        // send transaction
-        const tx = await contractWrite.processPayment();
-        toast.info("Processing payment...");
 
-        const receipt = await tx.wait();
-        if (receipt.status === 1) {
-          toast.success("Monthly Payment successful!");
+        let paymentAmount: number;
+
+        if (!paymentResult || paymentResult.length === 0 || !paymentResult[0]) {
+          const tokenConfig = await getTokenConfig(0);
+          if (!tokenConfig) {
+            throw new Error("Could not fetch token configuration");
+          }
+          paymentAmount = Number(tokenConfig.monthlyPayment) || 50000000;
         } else {
-          toast.error("Payment failed");
+          paymentAmount = Number(paymentResult[0]) || 50000000;
         }
+
+        // 2. Approve payment
+        const tokenId = import.meta.env.VITE_MOCK_USDC_ADDRESS;
+        toast.info("Approving payment...");
+        await approveToken(tokenId, paymentsContract, paymentAmount);
+
+        // 3. Process payment
+        toast.info("Processing payment...");
+        const txId = await executeContract("processPayment", []);
+
+        toast.success("Monthly payment successful!");
+        console.log("✅ Payment processed:", txId);
       } catch (err: any) {
         console.error("makePayment error:", err);
-        toast.error(err?.reason || err?.message || "Payment failed");
+        toast.error(err?.message || "Payment failed");
       }
     },
-    [contractWrite]
+    [wallet, queryContract, getTokenConfig, approveToken, executeContract]
   );
 
   const distributePayout = useCallback(async () => {
-    if (!contractWrite) {
-      toast.error("Wallet not connected / write contract not ready");
+    if (!wallet.connected) {
+      toast.error("Wallet not connected");
       return;
     }
 
     try {
-      const tx = await contractWrite.distributePayout();
-      const receipt = await tx.wait();
+      toast.info("Distributing payout...");
+      const txId = await executeContract("distributePayout", []);
 
-      if (receipt.status === 1) {
-        toast.success("Cycle Ajo distribution successful!");
-      } else {
-        toast.error("Payment failed");
-      }
+      toast.success("Cycle Ajo distribution successful!");
+      console.log("✅ Payout distributed:", txId);
     } catch (err: any) {
       console.error("distributePayout error:", err);
 
-      const errorMessage =
-        err?.reason || err?.data?.message || err?.message || "";
+      const errorMessage = err?.message || "";
 
-      // 🧠 Match specific revert or gas estimation errors
       if (
         errorMessage.includes("transfer amount exceeds balance") ||
-        errorMessage.includes("UNPREDICTABLE_GAS_LIMIT")
+        errorMessage.includes("PayoutNotReady")
       ) {
         toast.error(
-          "You can only request for a payout when the whole team has paid this month cycle"
+          "You can only request payout when the whole team has paid this cycle"
         );
       } else {
         toast.error("Distribution failed, please try again");
       }
-
-      // Optional: throw again if you want to handle it elsewhere
-      // throw err;
     }
-  }, [contractWrite]);
+  }, [wallet, executeContract]);
 
   return {
-    connected,
+    connected: wallet.connected,
     error,
     // read
     getContractStats,

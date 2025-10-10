@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { BigNumber } from "ethers";
+// import { BigNumber } from "ethers";
 
 export interface AjoInfo {
   ajoId: number;
@@ -32,9 +32,7 @@ const mapAjoStruct = (ajo: any[], index: number): AjoInfo => {
     ajoPayments: ajo[3],
     ajoGovernance: ajo[4],
     creator: ajo[5],
-    createdAt: BigNumber.isBigNumber(ajo[6])
-      ? ajo[6].toString()
-      : String(ajo[6]),
+    createdAt: BigInt(ajo[6]) ? ajo[6].toString() : String(ajo[6]),
     name: ajo[7],
     isActive: ajo[8],
   };

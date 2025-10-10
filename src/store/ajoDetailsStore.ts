@@ -2,7 +2,7 @@
 // src/store/ajoDetailsStore.ts
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { BigNumber } from "ethers";
+// import { BigNumber } from "ethers";
 
 export interface AjoDetailsState {
   ajoId: number | null;
@@ -70,4 +70,4 @@ export const useAjoDetailsStore = create<AjoDetailsState>()(
 );
 
 export const bnToString = (val: any) =>
-  BigNumber.isBigNumber(val) ? val.toString() : String(val);
+  BigInt(val) ? val.toString() : String(val);

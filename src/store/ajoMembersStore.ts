@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { BigNumber } from "ethers";
+// import { BigNumber } from "ethers";
 
 export interface MemberDetail {
   userAddress: string;
@@ -41,12 +41,12 @@ const serializeMembers = (members: any[]): MemberDetail[] =>
 export const deserializeMembers = (members: MemberDetail[]) =>
   members.map((m) => ({
     ...m,
-    queuePosition: BigNumber.from(m.queuePosition),
-    collateralLocked: BigNumber.from(m.collateralLocked),
-    guarantorQueuePosition: BigNumber.from(m.guarantorQueuePosition),
-    totalPaid: BigNumber.from(m.totalPaid),
-    defaultCount: BigNumber.from(m.defaultCount),
-    reputationScore: BigNumber.from(m.reputationScore),
+    queuePosition: BigInt(m.queuePosition),
+    collateralLocked: BigInt(m.collateralLocked),
+    guarantorQueuePosition: BigInt(m.guarantorQueuePosition),
+    totalPaid: BigInt(m.totalPaid),
+    defaultCount: BigInt(m.defaultCount),
+    reputationScore: BigInt(m.reputationScore),
   }));
 
 export const useMembersStore = create<MembersStoreState>()(

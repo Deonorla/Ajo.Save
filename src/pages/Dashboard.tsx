@@ -69,14 +69,14 @@ const Dashboard = () => {
   }, [isConnected]);
 
   // ✅ AUTO-REFRESH: Poll every 15 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      console.log("⏰ Auto-refreshing Ajos...");
-      fetchAjos(false); // Silent refresh
-    }, 15000); // 15 seconds
+  // useEffect(() => {
+  //   const interval = setInterval(() => {
+  //     console.log("⏰ Auto-refreshing Ajos...");
+  //     fetchAjos(false); // Silent refresh
+  //   }, 15000); // 15 seconds
 
-    return () => clearInterval(interval);
-  }, [fetchAjos]);
+  //   return () => clearInterval(interval);
+  // }, [fetchAjos]);
 
   const handleRoute = () => {
     navigate("/ajo/create-ajo");

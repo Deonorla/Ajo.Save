@@ -28,9 +28,9 @@ const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const { usdc, whbar, loading, setUsdc } = useTokenStore();
-  const { connected, address, balance, network, connectMetaMask, disconnect } =
+  const { connected, address, balance, network, connect, disconnect } =
     useWallet();
-  const { getBalance, faucet } = useTokenContract(usdcContract);
+  // const { getBalance, faucet } = useTokenContract(usdcContract);
   const [minting, setMinting] = useState(false);
 
   const handleCopy = async () => {
@@ -41,24 +41,6 @@ const Header = () => {
     }
   };
 
-  const handleMint = async () => {
-    try {
-      setMinting(true);
-      toast.info("Minting USDC");
-      const tx = await faucet(); // mint 10000 USDC (6 decimals)
-      console.log("Mint tx:", tx);
-      toast.success("1000 USDC minted successfully");
-      if (address) {
-        const balance = await getBalance(address);
-        setUsdc(ethers.utils.formatUnits(balance, 6));
-        console.log("New balance:", ethers.utils.formatUnits(balance, 6));
-      }
-    } catch (err) {
-      console.error("Mint failed", err);
-    } finally {
-      setMinting(false);
-    }
-  };
   useEffect(() => {
     const currentPath = location.pathname.replace("/", "") || "dashboard";
     setActiveTab(currentPath || "dashboard");
@@ -135,7 +117,7 @@ const Header = () => {
                     )}
                   </button> */}
                   <button
-                    onClick={handleMint}
+                    // onClick={handleMint}
                     className="ml-2 flex items-center gap-1 text-primary hover:text-primary/80 cursor-pointer"
                   >
                     <BadgeDollarSign className="h-4 w-4" />
@@ -161,12 +143,13 @@ const Header = () => {
                 </div>
               ) : (
                 <button
-                  onClick={connectMetaMask}
+                  onClick={connect}
                   className="flex items-center gap-2 bg-primary text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-primary/90"
                 >
                   <Wallet className="h-4 w-4" />
-                  Connect MetaMask
+                  Connect Wallet
                 </button>
+                // <HashPackConnectButton />
               )}
             </div>
           </div>
@@ -256,7 +239,7 @@ const Header = () => {
                       {copied ? "Copied" : "Copy"}
                     </button>
                     <button
-                      onClick={handleMint}
+                      // onClick={handleMint}
                       className=" px-3 py-1 text-xs flex justify-center items-center gap-1 rounded-lg border border-primary  text-primary hover:text-primary/80"
                     >
                       <BadgeDollarSign className="h-4 w-4" />
@@ -280,7 +263,7 @@ const Header = () => {
                 </div>
               ) : (
                 <button
-                  onClick={connectMetaMask}
+                  onClick={connect}
                   className="w-full flex items-center justify-center gap-2 bg-primary text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-primary/90"
                 >
                   <Wallet className="h-4 w-4" />
