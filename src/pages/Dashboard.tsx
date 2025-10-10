@@ -17,7 +17,7 @@ const Dashboard = () => {
   const { connected: isConnected } = useWallet();
   const { getAllAjos } = useAjoFactory();
   const navigate = useNavigate();
-  const { getWhbarBalance, getUsdcBalance } = useTokenHook();
+  // const { getWhbarBalance, getUsdcBalance } = useTokenHook();
   const { setNaira } = useTokenStore();
   const [isVisible, setIsVisible] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -62,10 +62,10 @@ const Dashboard = () => {
 
   // Initial fetch + wallet balances
   useEffect(() => {
-    setIsVisible(true);
-    getWhbarBalance();
-    getUsdcBalance();
-    fetchAjos();
+    // setIsVisible(true);
+    // getWhbarBalance();
+    // getUsdcBalance();
+    // fetchAjos();
   }, [isConnected]);
 
   // ✅ AUTO-REFRESH: Poll every 15 seconds
