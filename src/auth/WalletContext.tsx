@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { createContext, useContext } from "react";
 import useHashPackWallet from "@/hooks/useHashPackWallet";
+import type { HashConnectSigner } from "hashconnect/dist/esm/provider/signer";
 
 interface WalletContextType {
   // Connection state
@@ -9,6 +10,7 @@ interface WalletContextType {
   network: string;
   hasExtension: boolean;
   isInitializing: boolean;
+  dAppSigner: HashConnectSigner | null;
 
   // Connection methods
   connect: () => Promise<void>;
@@ -62,6 +64,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({
     getTokenBalance: hashpack.getTokenBalance,
     address: hashpack.accountId, // alias
     balance, // cached balance
+    dAppSigner: hashpack.dAppSigner,
   };
 
   return (
