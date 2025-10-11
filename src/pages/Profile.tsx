@@ -14,10 +14,10 @@ import { useAjoStore } from "@/store/ajoStore";
 import { useParams } from "react-router-dom";
 
 const Profile = () => {
-  const { ajoId, ajoCore } = useParams<{ ajoId: string; ajoCore: string }>();
-  const { getMemberInfo, needsToPayThisCycle } = useAjoCore(
-    ajoCore ? ajoCore : ""
-  );
+  // const { ajoId, ajoCore } = useParams<{ ajoId: string; ajoCore: string }>();
+  // const { getMemberInfo, needsToPayThisCycle } = useAjoCore(
+  //   ajoCore ? ajoCore : ""
+  // );
   const [isVisible, setIsVisible] = useState(false);
   const [activeTab, setActiveTab] = useState("ajo");
   const { address, network } = useWallet();
@@ -61,13 +61,13 @@ const Profile = () => {
         console.error("Failed to fetch prices:", error);
       }
     };
-    if (address) {
-      getMemberInfo(address);
-      needsToPayThisCycle(address);
-    }
+    // if (address) {
+    //   getMemberInfo(address);
+    //   needsToPayThisCycle(address);
+    // }
 
     fetchPrices();
-  }, [whbar, usdc, getMemberInfo]);
+  }, [whbar, usdc]);
 
   const handleCopy = async () => {
     if (address) {

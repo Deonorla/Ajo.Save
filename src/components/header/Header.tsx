@@ -16,8 +16,6 @@ import { useWallet } from "../../auth/WalletContext";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTokenStore } from "@/store/tokenStore";
 import FormattedBalance from "@/utils/FormatedBalance";
-import { useTokenContract } from "@/hooks/useTokenContract";
-import { ethers } from "ethers";
 import { toast } from "sonner";
 
 const Header = () => {
@@ -28,9 +26,15 @@ const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const { usdc, whbar, loading, setUsdc } = useTokenStore();
-  const { connected, address, balance, network, connect, disconnect } =
-    useWallet();
-  // const { getBalance, faucet } = useTokenContract(usdcContract);
+  const {
+    connected,
+    address,
+    balance,
+    network,
+    connect,
+    disconnect,
+    getBalance,
+  } = useWallet();
   const [minting, setMinting] = useState(false);
 
   const handleCopy = async () => {
@@ -41,9 +45,15 @@ const Header = () => {
     }
   };
 
+  const getHbarBalance = async () => {
+    const balance = await getBalance();
+    console.log("My Hbar Balance:", balance);
+  };
+
   useEffect(() => {
     const currentPath = location.pathname.replace("/", "") || "dashboard";
     setActiveTab(currentPath || "dashboard");
+    getHbarBalance();
   }, [location]);
 
   const navigateTo = (tabId: string) => {
@@ -218,9 +228,7 @@ const Header = () => {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-white text-sm">Wallet</span>
-                    <span className="text-white font-medium">
-                      {address?.slice(0, 6)}...{address?.slice(-4)}
-                    </span>
+                    <span className="text-white font-medium">{address}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-white text-sm">Network</span>
@@ -267,7 +275,7 @@ const Header = () => {
                   className="w-full flex items-center justify-center gap-2 bg-primary text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-primary/90"
                 >
                   <Wallet className="h-4 w-4" />
-                  Connect MetaMask
+                  Connect Hashpack
                 </button>
               )}
             </div>

@@ -14,7 +14,7 @@ import formatCurrency from "@/utils/formatCurrency";
 import { toast } from "sonner";
 
 const Dashboard = () => {
-  const { connected: isConnected } = useWallet();
+  const { connected: isConnected, getBalance } = useWallet();
   const { getAllAjos } = useAjoFactory();
   const navigate = useNavigate();
   // const { getWhbarBalance, getUsdcBalance } = useTokenHook();
@@ -23,6 +23,11 @@ const Dashboard = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const { ajoInfos } = useAjoStore();
+
+  const getHbarBalance = async () => {
+    const balance = await getBalance();
+    console.log("My Hbar Balance:", balance);
+  };
 
   // Fetch Ajos function
   const fetchAjos = useCallback(
@@ -66,6 +71,7 @@ const Dashboard = () => {
     // getWhbarBalance();
     // getUsdcBalance();
     // fetchAjos();
+    getHbarBalance();
   }, [isConnected]);
 
   // ✅ AUTO-REFRESH: Poll every 15 seconds

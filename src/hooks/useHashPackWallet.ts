@@ -17,8 +17,8 @@ import {
   AccountId,
   Hbar,
   Transaction,
-  TransactionId, // New import for manual transaction ID generation
-  TransactionReceipt, // New import for receipt processing
+  TransactionId, // manual transaction ID generation
+  TransactionReceipt, // receipt processing
   Client, // Retained for getReceipt logic, though less used now
 } from "@hashgraph/sdk";
 import { toast } from "sonner";
@@ -99,7 +99,7 @@ export default function useHashPackWallet(): LegacyHashPackState {
   // === HELPER FUNCTIONS (From the Class Logic) =====================
   // =================================================================
 
-  // Replicates the class's transaction formatting logic to control node selection
+  // transaction formatting logic to control node selection
   const makeBytes = useCallback(
     async (trans: Transaction, signingAcctId: string) => {
       const transId = TransactionId.generate(signingAcctId);
@@ -133,14 +133,14 @@ export default function useHashPackWallet(): LegacyHashPackState {
   const setUpHashConnectEvents = useCallback(
     (hashconnect: HashConnect, mounted: React.MutableRefObject<boolean>) => {
       hashconnect.foundExtensionEvent.on((data) => {
-        console.log("🎉 Extension found event:", data);
+        // console.log("🎉 Extension found event:", data);
         if (mounted.current) {
           setState((prev) => ({ ...prev, hasExtension: true }));
         }
       });
 
       hashconnect.pairingEvent.on((data) => {
-        console.log("🤝 Pairing event:", data);
+        // console.log("🤝 Pairing event:", data);
         if (data.accountIds && data.accountIds.length > 0) {
           const account = data.accountIds[0];
           if (mounted.current) {
@@ -168,17 +168,17 @@ export default function useHashPackWallet(): LegacyHashPackState {
       });
 
       hashconnect.transactionEvent.on((data) => {
-        console.log(
-          "Transaction event callback (data received from wallet, usually just a log):",
-          data
-        );
+        // console.log(
+        //   "Transaction event callback (data received from wallet, usually just a log):",
+        //   data
+        // );
       });
 
       (hashconnect.connectionStatusChangeEvent.on as any)((data: number) => {
         // State 0 is universally 'Disconnected' in HashConnect v0.2.9
         if (data === 0) {
           if (mounted.current) {
-            console.log("Connection Status Change: Disconnected (Value 0)");
+            // console.log("Connection Status Change: Disconnected (Value 0)");
             setState((prev) => ({
               ...prev,
               connected: false,
@@ -199,22 +199,22 @@ export default function useHashPackWallet(): LegacyHashPackState {
 
     const initHashconnect = async () => {
       try {
-        console.log("LOG 1: Entering initHashconnect function.");
+        // console.log("LOG 1: Entering initHashconnect function.");
 
         // 1. Initial check
         const hasExt = !!(window as any).hashpack;
         setState((prev) => ({ ...prev, hasExtension: hasExt }));
 
         // 2. Create HashConnect instance
-        const hashconnect = new HashConnect(true); // 'true' for debug logs, replicating class
+        const hashconnect = new HashConnect(true); // 'true' for debug logs
         hashconnectRef.current = hashconnect;
 
         // 3. Register events BEFORE init
         setUpHashConnectEvents(hashconnect, mounted);
-        console.log("LOG 4: Event listeners set up.");
+        // console.log("LOG 4: Event listeners set up.");
 
         // 4. Initialize HashConnect (using environment NETWORK value)
-        console.log("LOG 5: 🚀 Calling hashconnect.init()...");
+        // console.log("LOG 5: 🚀 Calling hashconnect.init()...");
 
         const initData = await hashconnect.init(
           APP_METADATA,
@@ -224,24 +224,24 @@ export default function useHashPackWallet(): LegacyHashPackState {
 
         if (!mounted.current) return;
 
-        console.log("LOG 6: ✅ HashConnect initialized.");
+        // console.log("LOG 6: ✅ HashConnect initialized.");
         setInitData(initData);
         setTopic(initData.topic);
         console.log("Topic", initData.topic);
         setPairingString(initData.pairingString);
 
-        // 5. Try to restore previous session from savedPairings (as in the class)
+        // 5. Try to restore previous session from savedPairings
         const pairingData = initData.savedPairings[0];
 
         if (pairingData && pairingData.accountIds[0]) {
-          console.log("LOG 7: Session restored from savedPairings.");
+          // console.log("LOG 7: Session restored from savedPairings.");
           setState((prev) => ({
             ...prev,
             connected: true,
             accountId: pairingData.accountIds[0],
             pairingData: pairingData,
           }));
-          toast.success(`Session restored: ${pairingData.accountIds[0]}`);
+          // toast.success(`Session restored: ${pairingData.accountIds[0]}`);
         }
       } catch (error) {
         console.error("LOG CATCH: ❌ HashConnect initialization error:", error);
@@ -263,7 +263,7 @@ export default function useHashPackWallet(): LegacyHashPackState {
   }, [setUpHashConnectEvents, NETWORK]);
 
   // =================================================================
-  // === CONNECT & DISCONNECT (Adapted from the Class) ================
+  // === CONNECT & DISCONNECT  ================
   // =================================================================
 
   const connect = useCallback(async () => {
