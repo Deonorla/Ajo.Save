@@ -103,7 +103,10 @@ const CreateAjo = () => {
 
       // Phase 4
       await initializePhase4(ajoId);
-      console.log("✅ Phase 4 complete - Ajo active");
+      console.log("✅ Phase 4 complete");
+      await finalizeSetup(ajoId);
+
+      console.log("✅ Phase 5 complete - Ajo active");
       setIsSubmitting(false);
       toast.success("Ajo created successfully!");
       setShowSuccess(true);

@@ -76,7 +76,7 @@ const useAjoCore = (ajoCoreAddress: string): UseAjoCore => {
       const writable = new ethers.Contract(
         ajoCoreAddress,
         (AjoCore as any).abi,
-        dAppSigner // 👈 Use dAppSigner as the Ethers Signer
+        dAppSigner // dAppSigner as the Ethers Signer
       );
       setContractWrite(writable);
     } catch (err) {
@@ -86,12 +86,194 @@ const useAjoCore = (ajoCoreAddress: string): UseAjoCore => {
   }, [dAppSigner, ajoCoreAddress]);
 
   // -------------------------------------------------------------
-  // Read wrappers (No functional change, only context variable cleanup)
+  // Read wrappers
   // -------------------------------------------------------------
 
-  // ... (getContractStats, getMemberInfo, needsToPayThisCycle, getQueueInfo,
-  //      getTokenConfig, getCollateralDemo, owner, getRequiredCollateralForJoin remain UNCHANGED)
-  // ... (Keeping existing implementation for brevity, as they rely only on contractRead)
+  const getContractStats =
+    useCallback(async (): Promise<ContractStats | null> => {
+      if (!contractRead) return null;
+      try {
+        const res = await contractRead.getContractStats();
+        return {
+          totalMembers: res[0].toString(),
+          activeMembers: res[1].toString(),
+          totalCollateralUSDC: (res[2] / 1000000).toString(),
+          totalCollateralHBAR: (res[3] / 1000000).toString(),
+          contractBalanceUSDC: (res[4] / 1000000).toString(),
+          contractBalanceHBAR: (res[5] / 1000000).toString(),
+          currentQueuePosition: res[6].toString(),
+          activeToken: Number(res[7]),
+        };
+      } catch (err) {
+        console.error("getContractStats error:", err);
+        return null;
+      }
+    }, [contractRead]);
+
+  const getMemberInfo = useCallback(
+    async (memberAddress: string): Promise<MemberInfoResponse | null> => {
+      if (!contractRead) return null;
+      const { setMemberData, setLoading, setError } = useMemberStore.getState();
+
+      setLoading(true);
+      try {
+        const res = await contractRead.getMemberInfo(memberAddress);
+        const rawMember = res[0];
+
+        const member: MemberStruct = {
+          queueNumber: rawMember.queueNumber.toString(),
+          joinedCycle: rawMember.joinedCycle.toString(),
+          totalPaid: (BigInt(rawMember.totalPaid) / BigInt(1000000)).toString(),
+          requiredCollateral: (
+            BigInt(rawMember.requiredCollateral) / BigInt(1000000)
+          ).toString(),
+          lockedCollateral: (
+            BigInt(rawMember.lockedCollateral) / BigInt(1000000)
+          ).toString(),
+          lastPaymentCycle: rawMember.lastPaymentCycle.toString(),
+          defaultCount: rawMember.defaultCount.toString(),
+          hasReceivedPayout: rawMember.hasReceivedPayout,
+          isActive: rawMember.isActive,
+          guarantor: rawMember.guarantor,
+          preferredToken: Number(rawMember.preferredToken),
+          reputationScore: rawMember.reputationScore.toString(),
+          pastPayments: Array.isArray(rawMember.pastPayments)
+            ? rawMember.pastPayments.map((x: any) => x.toString())
+            : [],
+          guaranteePosition: rawMember.guaranteePosition.toString(),
+        };
+
+        const data: MemberInfoResponse = {
+          memberInfo: member,
+          pendingPenalty: BigInt(res[1]).toString(), // ✅ fixed
+          effectiveVotingPower: BigInt(res[2]).toString(), // ✅ fixed
+        };
+
+        setMemberData(data);
+        setLoading(false);
+        return data;
+      } catch (err: any) {
+        console.error("getMemberInfo error:", err);
+        setError(err.message);
+        setLoading(false);
+        return null;
+      }
+    },
+    [contractRead]
+  );
+
+  const needsToPayThisCycle = useCallback(
+    async (memberAddress: string): Promise<boolean | null> => {
+      if (!contractRead) return null;
+      const { setNeedsToPay } = useMemberStore.getState();
+      try {
+        const data = await contractRead.needsToPayThisCycle(memberAddress);
+        setNeedsToPay(data);
+        return data;
+      } catch (err) {
+        console.error("needsToPayThisCycle error:", err);
+        return null;
+      }
+    },
+    [contractRead]
+  );
+
+  const getQueueInfo = useCallback(
+    async (
+      memberAddress: string
+    ): Promise<{ position: string; estimatedCyclesWait: string } | null> => {
+      if (!contractRead) return null;
+      const { setQueueInfo } = useMemberStore.getState();
+      try {
+        const res = await contractRead.getQueueInfo(memberAddress);
+        const info = {
+          position: res[0].toString(),
+          estimatedCyclesWait: res[1].toString(),
+        };
+        // console.log("QueueInfo:", info);
+        setQueueInfo(info);
+        return info;
+      } catch (err) {
+        console.error("getQueueInfo error:", err);
+        return null;
+      }
+    },
+    [contractRead]
+  );
+
+  const getTokenConfig = useCallback(
+    async (
+      token: number
+    ): Promise<{ monthlyPayment: string; isActive: boolean } | null> => {
+      if (!contractRead) return null;
+      const { setTokenConfig } = useMemberStore.getState();
+      try {
+        const res = await contractRead.getTokenConfig(token);
+        const config = {
+          monthlyPayment: res[0].toString(),
+          isActive: Boolean(res[1]),
+        };
+        console.log("TokenConfig:", config);
+        setTokenConfig(config);
+        return config;
+      } catch (err) {
+        console.error("getTokenConfig error:", err);
+        return null;
+      }
+    },
+    [contractRead]
+  );
+
+  const getCollateralDemo = useCallback(
+    async (
+      participants: number,
+      monthlyPayment: string
+    ): Promise<{ positions: string[]; collaterals: string[] } | null> => {
+      if (!contractRead) return null;
+      try {
+        // monthlyPayment is a string (we keep raw). If your contract expects uint256, pass BigNumber or string as appropriate.
+        const res = await contractRead.getCollateralDemo(
+          participants,
+          monthlyPayment
+        );
+        const positions = Array.isArray(res[0])
+          ? res[0].map((p: any) => p.toString())
+          : [];
+        const collaterals = Array.isArray(res[1])
+          ? res[1].map((c: any) => c.toString())
+          : [];
+        return { positions, collaterals };
+      } catch (err) {
+        console.error("getCollateralDemo error:", err);
+        return null;
+      }
+    },
+    [contractRead]
+  );
+
+  const owner = useCallback(async (): Promise<string | null> => {
+    if (!contractRead) return null;
+    try {
+      return await contractRead.owner();
+    } catch (err) {
+      console.error("owner() error:", err);
+      return null;
+    }
+  }, [contractRead]);
+
+  const getRequiredCollateralForJoin = useCallback(async (): Promise<
+    string | null
+  > => {
+    if (!contractRead) return null;
+    try {
+      const collateral = await contractRead?.getRequiredCollateralForJoin(0);
+      console.log("collateral", collateral.toString());
+      return collateral;
+    } catch (err) {
+      console.error("getRequiredCollateralForJoin failed", err);
+      return null;
+    }
+  }, [contractRead]);
 
   // -------------------------------------------------------------
   // Write wrappers (HTS Token Logic is the major change)
@@ -150,15 +332,22 @@ const useAjoCore = (ajoCoreAddress: string): UseAjoCore => {
         expectedCollateral = await contractRead?.getRequiredCollateralForJoin(
           tokenChoice
         );
-        // ... (rest of collateral logic) ...
+        console.log("expectedCollateral", expectedCollateral.toString());
+        const code = await dAppSigner?.getCode(tokenAddress);
+        console.log("ERC20 deployed code:", code && code.length > 2);
       } catch (err) {
-        // ... (fallback logic) ...
+        console.warn(
+          "getRequiredCollateralForJoin failed, fallback to tokenConfig",
+          err
+        );
+        const tokenConfig = await contractRead?.getTokenConfig(tokenChoice);
+        expectedCollateral = tokenConfig?.monthlyPayment;
       }
       if (!expectedCollateral)
         throw new Error("Could not determine collateral requirement");
 
       // --- 2. HTS: Associate Token (Replaces ERC-20 approval) ---
-      // This is necessary because the contract will execute an HTS Transfer which requires prior association.
+      // The contract will execute an HTS Transfer which requires prior association.
       await associateTokenIfNecessary(tokenAddress);
 
       // ⚠️ DELETE ERC-20 APPROVAL STEPS (Sections 2, 3, and 4 in your original code)
@@ -248,21 +437,20 @@ const useAjoCore = (ajoCoreAddress: string): UseAjoCore => {
     connected,
     error,
     // read
-    // ... (All read functions are returned here)
+    getContractStats,
+    getMemberInfo,
+    needsToPayThisCycle,
+    getQueueInfo,
+    getTokenConfig,
+    getCollateralDemo,
+    owner,
+    getRequiredCollateralForJoin,
     // write
     joinAjo,
     makePayment,
     distributePayout,
     // ... (rest of functions)
     // NOTE: If you need to include the original read functions, paste them back in.
-    getContractStats: {} as any,
-    getMemberInfo: {} as any,
-    needsToPayThisCycle: {} as any,
-    getQueueInfo: {} as any,
-    getTokenConfig: {} as any,
-    getCollateralDemo: {} as any,
-    owner: {} as any,
-    getRequiredCollateralForJoin: {} as any,
   };
 };
 

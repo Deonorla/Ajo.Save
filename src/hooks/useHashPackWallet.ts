@@ -303,7 +303,7 @@ export default function useHashPackWallet(): LegacyHashPackState {
         duration: 10000,
       });
     } catch (error: any) {
-      console.error("❌ Connection error:", error);
+      console.error("Connection error:", error);
       toast.error(`Failed to connect: ${error.message || "Unknown error"}`);
     }
   }, [state.connected, state.accountId, topic, state.hasExtension]);
@@ -393,7 +393,7 @@ export default function useHashPackWallet(): LegacyHashPackState {
           "Transaction sent successfully (ID unknown)"
         );
       } catch (error: any) {
-        console.error("❌ Transaction error:", error);
+        console.error("Transaction error:", error);
         throw new Error(
           `Transaction failed: ${error.message || "Unknown error"}`
         );

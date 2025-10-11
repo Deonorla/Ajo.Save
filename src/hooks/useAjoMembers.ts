@@ -1,273 +1,199 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useCallback } from "react";
-import { ContractExecuteTransaction, ContractId } from "@hashgraph/sdk";
-import { Interface } from "ethers";
-import useHashPackWallet from "@/hooks/useHashPackWallet";
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { ethers } from "ethers";
+import useHashPackWallet from "@/hooks/useHashPackWallet"; // 👈 SWITCHED TO HASH PACK HOOK
 import AjoMembers from "@/abi/ajoMembers.json";
 import { useMembersStore } from "@/store/ajoMembersStore";
 
-const MIRROR_NODE_URL = "https://testnet.mirrornode.hedera.com";
-
 const useAjoMembers = (ajoMembersAddress: string) => {
-  const wallet = useHashPackWallet();
+  const { dAppSigner } = useHashPackWallet();
+
+  // Extract the Ethers Provider from the dAppSigner
+  const provider = dAppSigner?.provider;
+
   const { setMembersDetails } = useMembersStore();
-  const [error, setError] = useState<string | null>(null);
-
-  // Create ethers interface for ABI encoding/decoding
-  const contractInterface = new Interface((AjoMembers as any).abi);
-
-  // Helper: Encode function call using ABI
-  const encodeFunctionCall = useCallback(
-    (functionName: string, params: any[] = []) => {
-      try {
-        return contractInterface.encodeFunctionData(functionName, params);
-      } catch (err: any) {
-        console.error(`Failed to encode ${functionName}:`, err);
-        throw err;
-      }
-    },
-    [contractInterface]
+  const [contractWrite, setContractWrite] = useState<ethers.Contract | null>(
+    null
   );
 
-  // Helper: Decode function result using ABI
-  const decodeFunctionResult = useCallback(
-    (functionName: string, data: string) => {
-      try {
-        return contractInterface.decodeFunctionResult(functionName, data);
-      } catch (err: any) {
-        console.error(`Failed to decode ${functionName}:`, err);
-        throw err;
-      }
-    },
-    [contractInterface]
-  );
+  // ---------------- CONTRACT INSTANCES ----------------
 
-  // Helper: Query contract (read-only via Mirror Node)
-  const queryContract = useCallback(
-    async (functionName: string, params: any[] = []) => {
-      try {
-        // Encode the function call using ABI
-        const encodedData = encodeFunctionCall(functionName, params);
+  // ✅ Read-only contract (Uses provider from dAppSigner)
+  const contractRead = useMemo(() => {
+    if (!provider || !ajoMembersAddress) return null;
+    return new ethers.Contract(
+      ajoMembersAddress,
+      (AjoMembers as any).abi,
+      provider
+    );
+  }, [provider, ajoMembersAddress]);
 
-        // Query via Mirror Node REST API
-        const response = await fetch(
-          `${MIRROR_NODE_URL}/api/v1/contracts/call`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              data: encodedData,
-              to: ajoMembersAddress,
-              estimate: false,
-            }),
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(`Query failed: ${response.statusText}`);
-        }
-
-        const result = await response.json();
-
-        // Decode the result using ABI
-        if (result.result) {
-          const decoded = decodeFunctionResult(functionName, result.result);
-          return decoded;
-        }
-
-        return null;
-      } catch (err: any) {
-        console.error(`Query ${functionName} failed:`, err);
-        setError(err.message);
-        return null;
-      }
-    },
-    [ajoMembersAddress, encodeFunctionCall, decodeFunctionResult]
-  );
-
-  // Helper: Execute contract transaction (write)
-  const executeContract = useCallback(
-    async (functionName: string, params: any[] = []) => {
-      if (!wallet.connected || !wallet.accountId) {
-        throw new Error("Wallet not connected");
-      }
-
-      try {
-        // Encode function call using ABI
-        const encodedData = encodeFunctionCall(functionName, params);
-
-        // Remove '0x' prefix if present
-        const functionData = encodedData.startsWith("0x")
-          ? encodedData.slice(2)
-          : encodedData;
-
-        // Create contract execute transaction
-        const transaction = new ContractExecuteTransaction()
-          .setContractId(ContractId.fromString(ajoMembersAddress))
-          .setGas(1000000)
-          .setFunctionParameters(Buffer.from(functionData, "hex"));
-
-        // Execute through wallet signer
-        const txId = await wallet.sendTransaction(transaction);
-        return txId;
-      } catch (err: any) {
-        console.error(`Execute ${functionName} failed:`, err);
-        throw err;
-      }
-    },
-    [wallet, ajoMembersAddress, encodeFunctionCall]
-  );
-
-  // ---------------------------
-  // Read Functions
-  // ---------------------------
-
-  // 🔹 Fetch all member details
-  const getAllMembersDetails = useCallback(async () => {
+  // ✅ Writable contract (with signer) (Uses dAppSigner directly)
+  useEffect(() => {
+    // dAppSigner is the Ethers Signer provided by HashConnect
+    if (!dAppSigner || !ajoMembersAddress) {
+      setContractWrite(null);
+      return;
+    }
     try {
-      const result = await queryContract("getAllMembersDetails", []);
+      // Use dAppSigner directly as the Signer
+      const writable = new ethers.Contract(
+        ajoMembersAddress,
+        (AjoMembers as any).abi,
+        dAppSigner
+      );
+      setContractWrite(writable);
+    } catch (err) {
+      console.error("Failed to create write contract", err);
+      setContractWrite(null);
+    }
+  }, [dAppSigner, ajoMembersAddress]);
 
-      if (!result || result.length === 0) return [];
+  // ---------------- READ FUNCTIONS ----------------
 
-      // The result should be an array of member details
-      const membersArray = Array.isArray(result[0]) ? result[0] : [];
-      setMembersDetails(membersArray);
-      return membersArray;
+  const getAllMembersDetails = useCallback(async () => {
+    if (!contractRead) return [];
+    try {
+      const result = await contractRead.getAllMembersDetails();
+      setMembersDetails(result);
+      return result;
     } catch (err) {
       console.error("❌ Error fetching all member details:", err);
       return [];
     }
-  }, [queryContract, setMembersDetails]);
+  }, [contractRead]);
 
-  // 🔹 Paginated members
   const getMembersDetailsPaginated = useCallback(
     async (offset: number, limit: number) => {
+      if (!contractRead) return [];
       try {
-        const result = await queryContract("getMembersDetailsPaginated", [
+        const result = await contractRead.getMembersDetailsPaginated(
           offset,
-          limit,
-        ]);
-
-        if (!result || result.length === 0) return [];
-
-        return Array.isArray(result[0]) ? result[0] : [];
+          limit
+        );
+        return result;
       } catch (err) {
         console.error("❌ Error fetching paginated members:", err);
         return [];
       }
     },
-    [queryContract]
+    [contractRead]
   );
 
-  // 🔹 Member activity
   const getMemberActivity = useCallback(
     async (memberAddress: string) => {
+      if (!contractRead) return null;
       try {
-        const result = await queryContract("getMemberActivity", [
-          memberAddress,
-        ]);
-
-        if (!result || result.length === 0) return null;
-
-        // Return the member activity object
-        return result[0] ?? null;
+        const result = await contractRead.getMemberActivity(memberAddress);
+        return result;
       } catch (err) {
         console.error("❌ Error fetching member activity:", err);
         return null;
       }
     },
-    [queryContract]
+    [contractRead]
   );
 
-  // 🔹 Members needing payment
   const getMembersNeedingPayment = useCallback(async () => {
+    if (!contractRead) return [];
     try {
-      const result = await queryContract("getMembersNeedingPayment", []);
-
-      if (!result || result.length === 0) return [];
-
-      return Array.isArray(result[0]) ? result[0] : [];
+      const result = await contractRead.getMembersNeedingPayment();
+      return result;
     } catch (err) {
       console.error("❌ Error fetching members needing payment:", err);
       return [];
     }
-  }, [queryContract]);
+  }, [contractRead]);
 
-  // 🔹 Members with defaults
   const getMembersWithDefaults = useCallback(async () => {
+    if (!contractRead) return [];
     try {
-      const result = await queryContract("getMembersWithDefaults", []);
-
-      if (!result || result.length === 0) return [];
-
-      return Array.isArray(result[0]) ? result[0] : [];
+      const result = await contractRead.getMembersWithDefaults();
+      return result;
     } catch (err) {
       console.error("❌ Error fetching members with defaults:", err);
       return [];
     }
-  }, [queryContract]);
+  }, [contractRead]);
 
-  // 🔹 Top members by reputation
   const getTopMembersByReputation = useCallback(
     async (limit: number) => {
+      if (!contractRead) return [];
       try {
-        const result = await queryContract("getTopMembersByReputation", [
-          limit,
-        ]);
-
-        if (!result || result.length === 0) return [];
-
-        return Array.isArray(result[0]) ? result[0] : [];
+        const result = await contractRead.getTopMembersByReputation(limit);
+        return result;
       } catch (err) {
         console.error("❌ Error fetching top members:", err);
         return [];
       }
     },
-    [queryContract]
+    [contractRead]
   );
 
-  // 🔹 Get members by status
   const getMembersByStatus = useCallback(
     async (isActive: boolean) => {
+      if (!contractRead) return [];
       try {
-        const result = await queryContract("getMembersByStatus", [isActive]);
-
-        if (!result || result.length === 0) return [];
-
-        return Array.isArray(result[0]) ? result[0] : [];
+        const result = await contractRead.getMembersByStatus(isActive);
+        return result;
       } catch (err) {
         console.error("❌ Error fetching members by status:", err);
         return [];
       }
     },
-    [queryContract]
+    [contractRead]
   );
 
-  // ---------------------------
-  // Event Listeners (Optional - for future implementation)
-  // ---------------------------
-  // Note: Hedera event listening requires using Mirror Node REST API
-  // or WebSocket subscriptions. This is more complex than Ethereum events.
-  // For now, polling is recommended for updates.
+  // 🔹 Event Listeners (Uncomment and adjust if needed for Ethers v6)
+  // NOTE: Event listeners work the same way in Ethers v6, but BigNumber
+  // access might change if you are using TypeScript with strict types.
 
-  // Example polling function (you can implement this if needed):
-  // const pollForEvents = useCallback(async () => {
-  //   try {
-  //     const response = await fetch(
-  //       `${MIRROR_NODE_URL}/api/v1/contracts/${ajoMembersAddress}/results/logs`
-  //     );
-  //     const data = await response.json();
-  //     // Process logs/events
-  //   } catch (err) {
-  //     console.error("Error polling events:", err);
-  //   }
-  // }, [ajoMembersAddress]);
+  // useEffect(() => {
+  //    if (!contractRead) return;
 
+  //    const handleMemberJoined = (
+  //      member: string,
+  //      queueNumber: BigNumber, // BigNumber is still used in Ethers v6 for large integers
+  //      collateral: BigNumber,
+  //      token: number
+  //    ) => {
+  //      console.log("📥 MemberJoined:", {
+  //        member,
+  //        queueNumber: queueNumber.toString(),
+  //        collateral: collateral.toString(),
+  //        token,
+  //      });
+  //    };
+
+  //    const handleMemberRemoved = (member: string) => {
+  //      console.log("❌ MemberRemoved:", { member });
+  //    };
+
+  //    const handleMemberUpdated = (member: string) => {
+  //      console.log("🔄 MemberUpdated:", { member });
+  //    };
+
+  //    const handleGuarantorAssigned = (member: string, guarantor: string) => {
+  //      console.log("🤝 GuarantorAssigned:", { member, guarantor });
+  //    };
+
+  //    contractRead.on("MemberJoined", handleMemberJoined);
+  //    contractRead.on("MemberRemoved", handleMemberRemoved);
+  //    contractRead.on("MemberUpdated", handleMemberUpdated);
+  //    contractRead.on("GuarantorAssigned", handleGuarantorAssigned);
+
+  //    return () => {
+  //      contractRead.off("MemberJoined", handleMemberJoined);
+  //      contractRead.off("MemberRemoved", handleMemberRemoved);
+  //      contractRead.off("MemberUpdated", handleMemberUpdated);
+  //      contractRead.off("GuarantorAssigned", handleGuarantorAssigned);
+  //    };
+  // }, [contractRead]);
+
+  // ---------------- RETURN HOOK ----------------
   return {
-    connected: wallet.connected,
-    error,
+    contractRead,
+    contractWrite,
     getAllMembersDetails,
     getMembersDetailsPaginated,
     getMemberActivity,
@@ -275,7 +201,6 @@ const useAjoMembers = (ajoMembersAddress: string) => {
     getMembersWithDefaults,
     getTopMembersByReputation,
     getMembersByStatus,
-    executeContract, // Expose for any write operations
   };
 };
 

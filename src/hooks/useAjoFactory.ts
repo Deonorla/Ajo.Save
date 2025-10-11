@@ -1,450 +1,268 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/**
- * hooks/useAjoFactoryHedera.ts
- *
- * Hedera-compatible replacement for your ethers-based useAjoFactory.
- * - Reads via Mirror Node (same pattern as your AjoCore example)
- * - Writes via ContractExecuteTransaction + wallet.sendTransaction (dApp signer)
- *
- * Requirements:
- *  - @hashgraph/sdk
- *  - @hashgraph/hedera-wallet-connect (for useHederaWallet)
- *  - ethers (for ABI log parsing)
- *  - AjoFactory.json ABI in /src/abi
- */
 
-import { useCallback } from "react";
-import {
-  ContractExecuteTransaction,
-  ContractFunctionParameters,
-  ContractCallQuery,
-  ContractId,
-  Hbar,
-} from "@hashgraph/sdk";
-import { toast } from "sonner";
-import useHashPackWallet from "@/hooks/useHashPackWallet";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { ethers, TransactionReceipt } from "ethers";
 import AjoFactory from "@/abi/ajoFactory.json";
+import useHashPackWallet from "@/hooks/useHashPackWallet";
 import { useAjoStore } from "@/store/ajoStore";
 import { bnToString, useAjoDetailsStore } from "@/store/ajoDetailsStore";
-import { Interface } from "ethers";
 
-const DEFAULT_MIRROR_NODE =
-  import.meta.env.VITE_MIRROR_NODE_URL ||
-  "https://testnet.mirrornode.hedera.com";
-
-const AJO_FACTORY_CONTRACT_ID =
-  import.meta.env.VITE_AJO_FACTORY_CONTRACT_ADDRESS || ""; // must be provided
+// NOTE: Assuming AjoOperationalStatus is defined or aliased elsewhere
+type AjoOperationalStatus = any;
 
 export const useAjoFactory = () => {
-  const wallet = useHashPackWallet();
+  const { connected, dAppSigner } = useHashPackWallet();
+
   const { setAjoInfos } = useAjoStore();
   const { setAjoDetails } = useAjoDetailsStore();
 
-  if (!AJO_FACTORY_CONTRACT_ID) {
-    console.warn("VITE_AJO_FACTORY_CONTRACT_ADDRESS is not set");
-  }
-
-  const abiInterface = new Interface((AjoFactory as any).abi);
-  const MIRROR_NODE_URL = DEFAULT_MIRROR_NODE;
-
-  // ---------------- MIRROR-NODE READ HELPER ----------------
-  const queryContract = useCallback(
-    async (functionName: string, params?: ContractFunctionParameters) => {
-      try {
-        // Use the same mirror-node endpoint pattern as your AjoCore example.
-        const url = `${MIRROR_NODE_URL}/api/v1/contracts/${AJO_FACTORY_CONTRACT_ID}/results/${functionName}`;
-
-        const response = await fetch(url);
-        if (!response.ok) {
-          throw new Error(`Query failed: ${response.statusText}`);
-        }
-        const json = await response.json();
-        return json;
-      } catch (err: any) {
-        console.error(`queryContract ${functionName} failed:`, err);
-        toast.error(`Failed to query ${functionName}`);
-        return null;
-      }
-    },
-    [MIRROR_NODE_URL]
+  const [contractWrite, setContractWrite] = useState<ethers.Contract | null>(
+    null
   );
+  const ajoFactoryAddress = import.meta.env.VITE_AJO_FACTORY_CONTRACT_ADDRESS;
 
-  // ---------------- EXECUTE (WRITE) HELPER ----------------
-  const executeContract = useCallback(
-    async (
-      functionName: string,
-      params?: ContractFunctionParameters,
-      payableAmount?: number,
-      gas = 500_000
-    ) => {
-      if (!wallet.connected || !wallet.accountId) {
-        throw new Error("Wallet not connected");
-      }
-      if (!AJO_FACTORY_CONTRACT_ID) {
-        throw new Error("Factory contract id not configured");
-      }
+  // ---------------- CONTRACT INSTANCES ----------------
 
-      try {
-        const tx = new ContractExecuteTransaction()
-          .setContractId(ContractId.fromString(AJO_FACTORY_CONTRACT_ID))
-          .setGas(gas);
+  // contractRead: Uses the Ethers Provider from the HashPack dAppSigner
+  const contractRead = useMemo(() => {
+    const provider = dAppSigner?.provider; // Get Provider from HashPack Signer
+    if (!provider || !ajoFactoryAddress) return null;
+    return new ethers.Contract(ajoFactoryAddress, AjoFactory.abi, provider);
+  }, [ajoFactoryAddress, dAppSigner]); // 👈 Depend on dAppSigner
 
-        if (params) tx.setFunction(functionName, params);
-        else tx.setFunction(functionName);
-
-        if (typeof payableAmount === "number") {
-          tx.setPayableAmount(new Hbar(payableAmount));
-        }
-
-        // Wallet's sendTransaction should executeWithSigner internally and return a txId string
-        const txId: string = await wallet.sendTransaction(tx);
-        return txId;
-      } catch (err: any) {
-        console.error(`executeContract ${functionName} failed:`, err);
-        toast.error(`Failed to execute ${functionName}`);
-        throw err;
-      }
-    },
-    [wallet]
-  );
-
-  // ---------------------
-  // helper to poll mirror node transaction for logs and try to decode event AjoCreated
-  // ---------------------
-  const fetchAjoIdFromTx = useCallback(
-    async (txId: string, timeoutMs = 15000): Promise<number | null> => {
-      if (!txId) return null;
-
-      const start = Date.now();
-      const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-      while (Date.now() - start < timeoutMs) {
-        try {
-          const encoded = encodeURIComponent(txId);
-          const url = `${MIRROR_NODE_URL}/api/v1/transactions/${encoded}`;
-          const res = await fetch(url);
-          if (res.ok) {
-            const json = await res.json();
-            const txs = json?.transactions ?? [];
-            if (txs.length > 0) {
-              const tx = txs[0];
-
-              // Try multiple paths to find logs
-              // 1) tx.contract_function_result.logs
-              // 2) tx.result?.contract_function_result?.logs
-              // 3) tx.logs
-              // 4) tx.contract_function_result?.logs
-              let logs: any[] = [];
-
-              if (tx?.contract_function_result?.logs) {
-                logs = tx.contract_function_result.logs;
-              } else if (tx?.result?.contract_function_result?.logs) {
-                logs = tx.result.contract_function_result.logs;
-              } else if (tx?.logs) {
-                logs = tx.logs;
-              } else if (tx?.contract_function_result) {
-                // maybe contract_function_result is object with 'logs' deeper
-                if (Array.isArray(tx.contract_function_result)) {
-                  logs = tx.contract_function_result;
-                } else if (tx.contract_function_result.logs) {
-                  logs = tx.contract_function_result.logs;
-                }
-              }
-
-              if (Array.isArray(logs) && logs.length > 0) {
-                for (const rawLog of logs) {
-                  // rawLog may be a hex string or an object { data, topics } or { topics: [...], data: "0x..." }
-                  let data: string | undefined;
-                  let topics: string[] | undefined;
-
-                  if (typeof rawLog === "string") {
-                    data = rawLog;
-                    topics = [];
-                  } else if (rawLog && typeof rawLog === "object") {
-                    data = rawLog.data ?? rawLog[0] ?? rawLog;
-                    topics = rawLog.topics ?? rawLog[1] ?? [];
-                  }
-
-                  try {
-                    // ethers.parseLog expects { data, topics }
-                    const parsed = abiInterface.parseLog({
-                      data: data ?? "0x",
-                      topics: topics ?? [],
-                    } as any);
-
-                    if (parsed && parsed.name === "AjoCreated") {
-                      // parsed.args may be a named object or an array-like object
-                      let ajoIdArg: any = null;
-                      if (parsed.args) {
-                        // prefer named field if present
-                        if (
-                          Object.prototype.hasOwnProperty.call(
-                            parsed.args,
-                            "ajoId"
-                          )
-                        ) {
-                          ajoIdArg = parsed.args.ajoId;
-                        } else if (parsed.args[0] !== undefined) {
-                          ajoIdArg = parsed.args[0];
-                        }
-                      }
-
-                      if (ajoIdArg !== null && ajoIdArg !== undefined) {
-                        // ethers BigNumber-like handling
-                        const ajoId =
-                          typeof ajoIdArg.toNumber === "function"
-                            ? ajoIdArg.toNumber()
-                            : Number(ajoIdArg);
-                        if (!Number.isNaN(ajoId)) return ajoId;
-                      }
-                    }
-                  } catch (e) {
-                    // parse failed — continue to next log
-                    continue;
-                  }
-                }
-              }
-            }
-          }
-        } catch (err) {
-          // ignore and retry
-        }
-
-        await sleep(1200);
-      }
-
-      return null;
-    },
-    [MIRROR_NODE_URL]
-  );
+  // contractWrite: Uses the Ethers Signer from the HashPack dAppSigner
+  useEffect(() => {
+    // dAppSigner is the Ethers Signer provided by HashConnect
+    if (!dAppSigner || !ajoFactoryAddress) {
+      setContractWrite(null);
+      return;
+    }
+    try {
+      // dAppSigner is used directly as the Signer/Wallet
+      const writable = new ethers.Contract(
+        ajoFactoryAddress,
+        AjoFactory.abi,
+        dAppSigner
+      );
+      setContractWrite(writable);
+    } catch (err) {
+      console.error("useAjoFactory: failed to create write contract", err);
+      setContractWrite(null);
+    }
+  }, [dAppSigner, ajoFactoryAddress]); // 👈 Depend on dAppSigner
 
   // ---------------- READ FUNCTIONS ----------------
 
   const getFactoryStats = useCallback(async () => {
-    try {
-      const res = await queryContract("getFactoryStats");
-      return res;
-    } catch (err) {
-      console.error("getFactoryStats error:", err);
-      return null;
-    }
-  }, [queryContract]);
+    if (!contractRead) return null;
+    return await contractRead.getFactoryStats();
+  }, [contractRead]);
 
   const getAllAjos = useCallback(
     async (offset = 0, limit = 20) => {
-      try {
-        const res = await queryContract("getAllAjos");
-        const ajoStructs = res ? res[0] ?? res : [];
-        const hasMore = res ? res[1] ?? false : false;
+      if (!contractRead) return { ajoInfos: [], hasMore: false };
 
-        setAjoInfos(ajoStructs ?? []);
+      const result = await contractRead.getAllAjos(offset, limit);
 
-        return {
-          ajoInfos: ajoStructs ?? [],
-          hasMore,
-        };
-      } catch (err) {
-        console.error("getAllAjos error:", err);
-        return { ajoInfos: [], hasMore: false };
-      }
+      const ajoStructs = result[0];
+      const hasMore = result[1];
+      console.log("All Ajos:", ajoStructs);
+      // Save into store
+      setAjoInfos(ajoStructs);
+
+      return {
+        ajoInfos: useAjoStore.getState().ajoInfos,
+        hasMore,
+      };
     },
-    [queryContract, setAjoInfos]
+    [contractRead]
   );
 
   const getAjosByCreator = useCallback(
     async (creator: string) => {
-      try {
-        const params = new ContractFunctionParameters().addAddress(creator);
-        const res = await queryContract("getAjosByCreator", params);
-        return res ?? [];
-      } catch (err) {
-        console.error("getAjosByCreator error:", err);
-        return [];
-      }
+      if (!contractRead) return [];
+      return await contractRead.getAjosByCreator(creator);
     },
-    [queryContract]
+    [contractRead]
   );
 
   const getAjoInfo = useCallback(
     async (ajoId: number) => {
-      try {
-        const params = new ContractFunctionParameters().addUint256(ajoId);
-        const res = await queryContract("getAjo", params);
-        return res ?? null;
-      } catch (err) {
-        console.error("getAjo error:", err);
-        return null;
-      }
+      if (!contractRead) return null;
+      const data = await contractRead.getAjo(ajoId);
+      // NOTE: data is currently unused but fetch successful
+      console.log("Ajo Info:", data);
     },
-    [queryContract]
+    [contractRead]
   );
 
   const getAjoStatus = useCallback(
     async (ajoId: number) => {
-      try {
-        const params = new ContractFunctionParameters().addUint256(ajoId);
-        const res = await queryContract("ajoStatus", params);
-        return res ?? null;
-      } catch (err) {
-        console.error("getAjoStatus error:", err);
-        return null;
-      }
+      if (!contractRead) return null;
+      return await contractRead.ajoStatus(ajoId);
     },
-    [queryContract]
+    [contractRead]
   );
 
   const getAjoInitializationStatus = useCallback(
     async (ajoId: number) => {
-      try {
-        const params = new ContractFunctionParameters().addUint256(ajoId);
-        const res = await queryContract("getAjoInitializationStatus", params);
-        return res ?? null;
-      } catch (err) {
-        console.error("getAjoInitializationStatus error:", err);
-        return null;
-      }
+      if (!contractRead) return null;
+      return await contractRead.getAjoInitializationStatus(ajoId);
     },
-    [queryContract]
+    [contractRead]
   );
 
   const getAjoOperationalStatus = useCallback(
-    async (ajoId: number, ajo: any): Promise<any | null> => {
-      try {
-        const params = new ContractFunctionParameters().addUint256(ajoId);
-        const status = await queryContract("getAjoOperationalStatus", params);
+    async (ajoId: number, ajo: any): Promise<AjoOperationalStatus | null> => {
+      if (!contractRead) return null;
 
-        if (!status) return null;
-
-        setAjoDetails({
-          ajoId: ajoId,
-          ajoCore: ajo?.ajoCore,
-          totalMembers: bnToString(status.totalMembers),
-          activeMembers: bnToString(status.activeMembers),
-          totalCollateralUSDC: bnToString(status.totalCollateralUSDC),
-          totalCollateralHBAR: bnToString(status.totalCollateralHBAR),
-          contractBalanceUSDC: bnToString(status.contractBalanceUSDC),
-          contractBalanceHBAR: bnToString(status.contractBalanceHBAR),
-          currentCycle: bnToString(status.currentCycle),
-          activeToken: String(status.activeToken),
-          canAcceptMembers: status.canAcceptMembers,
-          canProcessPayments: status.canProcessPayments,
-          canDistributePayouts: status.canDistributePayouts,
-        });
-
-        return status;
-      } catch (err) {
-        console.error("getAjoOperationalStatus error:", err);
-        return null;
-      }
+      const status = await contractRead.getAjoOperationalStatus(ajoId);
+      setAjoDetails({
+        ajoId: ajoId,
+        ajoCore: ajo?.ajoCore,
+        totalMembers: bnToString(status.totalMembers),
+        activeMembers: bnToString(status.activeMembers),
+        totalCollateralUSDC: bnToString(status.totalCollateralUSDC),
+        totalCollateralHBAR: bnToString(status.totalCollateralHBAR),
+        contractBalanceUSDC: bnToString(status.contractBalanceUSDC),
+        contractBalanceHBAR: bnToString(status.contractBalanceHBAR),
+        currentCycle: bnToString(status.currentCycle),
+        activeToken: String(status.activeToken),
+        canAcceptMembers: status.canAcceptMembers,
+        canProcessPayments: status.canProcessPayments,
+        canDistributePayouts: status.canDistributePayouts,
+      });
+      // 🔹 Return the typed object
+      return {
+        totalMembers: status.totalMembers,
+        activeMembers: status.activeMembers,
+        totalCollateralUSDC: status.totalCollateralUSDC,
+        totalCollateralHBAR: status.totalCollateralHBAR,
+        contractBalanceUSDC: status.contractBalanceUSDC,
+        contractBalanceHBAR: status.contractBalanceHBAR,
+        currentCycle: status.currentCycle,
+        activeToken: status.activeToken,
+        canAcceptMembers: status.canAcceptMembers,
+        canProcessPayments: status.canProcessPayments,
+        canDistributePayouts: status.canDistributePayouts,
+      };
     },
-    [queryContract, setAjoDetails]
+    [contractRead, setAjoDetails] // Added setAjoDetails dependency for completeness
   );
 
   // ---------------- WRITE FUNCTIONS ----------------
+  // All write functions are UNCHANGED as they rely only on contractWrite (now using dAppSigner)
 
+  // Phase 1: Create Ajo and extract ID
   const createAjo = useCallback(
     async (ajoName: string) => {
-      if (!wallet.connected) throw new Error("Wallet not connected");
-      try {
-        const params = new ContractFunctionParameters().addString(ajoName);
+      if (!contractWrite) throw new Error("Contract not ready");
+      console.log("ajoName", ajoName);
 
-        const txId = await executeContract("createAjo", params);
-        toast.success("createAjo transaction submitted");
+      const tx = await contractWrite.createAjo(ajoName);
 
-        const ajoId = await fetchAjoIdFromTx(txId);
-        if (ajoId !== null) {
-          toast.success(`Ajo created with ID ${ajoId}`);
-        } else {
-          toast.info("Ajo created — could not fetch ajoId immediately");
-        }
+      // Use TransactionReceipt from ethers v6 directly
+      const receipt: TransactionReceipt = await tx.wait();
+      console.log("receipt", receipt);
 
-        return { ajoId, txId };
-      } catch (err: any) {
-        console.error("createAjo error:", err);
-        toast.error(err.message || "Failed to create Ajo");
-        throw err;
+      // --- FIX: Decode the Log using the Contract's Interface ---
+
+      // Find the raw log entry (now in receipt.logs)
+      // need to manually check the topic to find the event signature.
+      // A way is to loop or filter the logs.
+
+      // Find the AjoCreated event signature (topic)
+      const eventTopic =
+        contractWrite.interface.getEvent("AjoCreated")?.topicHash;
+
+      if (!eventTopic) {
+        throw new Error("AjoCreated event signature not found in ABI.");
       }
+
+      const rawLog = receipt.logs.find(
+        (log: any) => log.topics[0] === eventTopic
+      );
+
+      if (!rawLog) {
+        throw new Error("AjoCreated log not found in receipt.");
+      }
+
+      // 2. Decode the raw log to get the arguments
+      // Use the writable contract's interface to parse the raw log object.
+      const parsedEvent = contractWrite.interface.parseLog(rawLog);
+
+      if (!parsedEvent) {
+        throw new Error("Failed to parse AjoCreated event log.");
+      }
+
+      // 3. Access arguments via parsedEvent.args
+      const ajoId =
+        parsedEvent.args[0]?.toNumber() || parsedEvent.args.ajoId?.toNumber(); // Access by index (0) or name
+      console.log("🎉 Ajo created with ID:", ajoId);
+
+      return {
+        ajoId,
+        receipt,
+      };
     },
-    [wallet.connected, executeContract, fetchAjoIdFromTx]
+    [contractWrite]
   );
 
+  // Phase 2
   const initializePhase2 = useCallback(
     async (ajoId: number) => {
-      if (!wallet.connected) throw new Error("Wallet not connected");
-      try {
-        const params = new ContractFunctionParameters().addUint256(ajoId);
-        const txId = await executeContract("initializeAjoPhase2", params);
-        return txId;
-      } catch (err: any) {
-        console.error("initializePhase2 error:", err);
-        throw err;
-      }
+      if (!contractWrite) throw new Error("Contract not ready");
+      const tx = await contractWrite.initializeAjoPhase2(ajoId);
+      return await tx.wait();
     },
-    [wallet.connected, executeContract]
+    [contractWrite]
   );
 
+  // Phase 3
   const initializePhase3 = useCallback(
     async (ajoId: number) => {
-      if (!wallet.connected) throw new Error("Wallet not connected");
-      try {
-        const params = new ContractFunctionParameters().addUint256(ajoId);
-        const txId = await executeContract("initializeAjoPhase3", params);
-        return txId;
-      } catch (err: any) {
-        console.error("initializePhase3 error:", err);
-        throw err;
-      }
+      if (!contractWrite) throw new Error("Contract not ready");
+      const tx = await contractWrite.initializeAjoPhase3(ajoId);
+      return await tx.wait();
     },
-    [wallet.connected, executeContract]
+    [contractWrite]
   );
 
+  // Phase 4
   const initializePhase4 = useCallback(
     async (ajoId: number) => {
-      if (!wallet.connected) throw new Error("Wallet not connected");
-      try {
-        const params = new ContractFunctionParameters().addUint256(ajoId);
-        const txId = await executeContract("initializeAjoPhase4", params);
-        return txId;
-      } catch (err: any) {
-        console.error("initializePhase4 error:", err);
-        throw err;
-      }
+      if (!contractWrite) throw new Error("Contract not ready");
+      const tx = await contractWrite.initializeAjoPhase4(ajoId);
+      return await tx.wait();
     },
-    [wallet.connected, executeContract]
+    [contractWrite]
   );
 
+  // Finalize setup (optional last step)
   const finalizeSetup = useCallback(
     async (ajoId: number) => {
-      if (!wallet.connected) throw new Error("Wallet not connected");
-      try {
-        const params = new ContractFunctionParameters().addUint256(ajoId);
-        const txId = await executeContract("finalizeAjoSetup", params);
-        return txId;
-      } catch (err: any) {
-        console.error("finalizeSetup error:", err);
-        throw err;
-      }
+      if (!contractWrite) throw new Error("Contract not ready");
+      const tx = await contractWrite.finalizeAjoSetup(ajoId);
+      return await tx.wait();
     },
-    [wallet.connected, executeContract]
+    [contractWrite]
   );
 
   const deactivateAjo = useCallback(
     async (ajoId: number) => {
-      if (!wallet.connected) throw new Error("Wallet not connected");
-      try {
-        const params = new ContractFunctionParameters().addUint256(ajoId);
-        const txId = await executeContract("deactivateAjo", params);
-        return txId;
-      } catch (err: any) {
-        console.error("deactivateAjo error:", err);
-        throw err;
-      }
+      if (!contractWrite) throw new Error("Contract not ready");
+      const tx = await contractWrite.deactivateAjo(ajoId);
+      return await tx.wait();
     },
-    [wallet.connected, executeContract]
+    [contractWrite]
   );
 
+  // ---------------- RETURN HOOK ----------------
   return {
-    // read
+    contractWrite,
+    contractRead,
+    connected,
+    // Read
     getFactoryStats,
     getAllAjos,
     getAjosByCreator,
@@ -452,7 +270,7 @@ export const useAjoFactory = () => {
     getAjoStatus,
     getAjoInitializationStatus,
     getAjoOperationalStatus,
-    // write
+    // Write
     createAjo,
     initializePhase2,
     initializePhase3,
@@ -461,5 +279,3 @@ export const useAjoFactory = () => {
     deactivateAjo,
   };
 };
-
-export default useAjoFactory;
