@@ -36,17 +36,22 @@ const Dashboard = () => {
         setIsRefreshing(true);
         console.log("🔄 Fetching Ajos...");
 
-        await getAllAjos();
+        // NOTE: getAllAjos() updates the store asynchronously.
+        // It returns { ajoInfos: AjoStruct[], hasMore: boolean }
+        const result = await getAllAjos();
 
         const naira = await getNaira();
         setNaira(naira);
         setLastUpdate(new Date());
 
-        if (showToast) {
-          toast.success(`Loaded ${ajoInfos.length} Ajos`);
-        }
+        // 💡 FIX: Use the length from the function result (if available) or the current state
+        const fetchedLength = result?.ajoInfos?.length ?? ajoInfos.length;
 
-        console.log("✅ Ajos fetched:", ajoInfos.length);
+        // if (showToast) {
+        //   toast.success(`Loaded ${fetchedLength} Ajos`);
+        // }
+
+        console.log("✅ Ajos fetched:", fetchedLength);
       } catch (err) {
         console.error("❌ Failed to fetch ajos:", err);
         if (showToast) {
@@ -56,7 +61,9 @@ const Dashboard = () => {
         setIsRefreshing(false);
       }
     },
-    [getAllAjos, setNaira, ajoInfos.length]
+    // 🛑 CRITICAL FIX: Removed ajoInfos.length from dependencies
+    // Dependencies are only `getAllAjos` and `setNaira`.
+    [getAllAjos, setNaira]
   );
 
   // Initial load animation
@@ -70,9 +77,9 @@ const Dashboard = () => {
     // setIsVisible(true);
     // getWhbarBalance();
     // getUsdcBalance();
-    // fetchAjos();
+    fetchAjos();
     getHbarBalance();
-  }, [isConnected]);
+  }, []);
 
   // ✅ AUTO-REFRESH: Poll every 15 seconds
   // useEffect(() => {

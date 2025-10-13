@@ -10,6 +10,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { HashConnect } from "hashconnect";
 import type { HashConnectTypes } from "hashconnect";
+import type { Signer } from "ethers";
 import {
   TransferTransaction,
   TokenAssociateTransaction,
@@ -17,9 +18,9 @@ import {
   AccountId,
   Hbar,
   Transaction,
-  TransactionId, // manual transaction ID generation
-  TransactionReceipt, // receipt processing
-  Client, // Retained for getReceipt logic, though less used now
+  TransactionId,
+  TransactionReceipt,
+  Client,
 } from "@hashgraph/sdk";
 import { toast } from "sonner";
 
@@ -29,17 +30,35 @@ import { toast } from "sonner";
 // ==========================================================
 import { Buffer } from "buffer";
 
-// We need to manually inject Buffer into the global scope for HashConnect v0.2.9
-// This is safe because we only use it for the pairing string generation.
 if (typeof (window as any).Buffer === "undefined") {
   (window as any).Buffer = Buffer;
 }
 // ==========================================================
 
-// --- UTILITY FUNCTION ---
-// Replicating the helper from the class for node selection
+// --- UTILITY FUNCTIONS ---
 const randomIntFromInterval = (min: number, max: number) => {
   return Math.floor(Math.random() * (max - min + 1) + min);
+};
+
+// Helper to convert token ID to Hedera format for Mirror Node queries
+const normalizeTokenIdForMirrorNode = (tokenId: string): string => {
+  // If already in Hedera format (0.0.X), return as is
+  if (tokenId.match(/^\d+\.\d+\.\d+$/)) {
+    return tokenId;
+  }
+
+  // If in EVM format (0x...), convert to Hedera format
+  if (tokenId.startsWith("0x")) {
+    try {
+      const accountNum = parseInt(tokenId.slice(2), 16);
+      return `0.0.${accountNum}`;
+    } catch (error) {
+      console.error("Failed to convert EVM token ID to Hedera format:", error);
+      return tokenId;
+    }
+  }
+
+  return tokenId;
 };
 
 // --- CONFIGURATION ---
@@ -63,7 +82,7 @@ export interface LegacyHashPackState {
   pairingData: any | null;
   hasExtension: boolean;
   isInitializing: boolean;
-  dAppSigner: any; // Retained for compatibility, though less crucial now
+  dAppSigner: any;
 
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
@@ -89,31 +108,27 @@ export default function useHashPackWallet(): LegacyHashPackState {
     isInitializing: true,
   });
 
-  // Now storing topic/pairingString explicitly, similar to the class
   const [topic, setTopic] = useState("");
   const [pairingString, setPairingString] = useState("");
   const [initData, setInitData] =
     useState<HashConnectTypes.InitilizationData | null>(null);
 
   // =================================================================
-  // === HELPER FUNCTIONS (From the Class Logic) =====================
+  // === HELPER FUNCTIONS =====================
   // =================================================================
 
-  // transaction formatting logic to control node selection
   const makeBytes = useCallback(
     async (trans: Transaction, signingAcctId: string) => {
       const transId = TransactionId.generate(signingAcctId);
       trans.setTransactionId(transId);
 
-      let nodeId = 5; // Default node
+      let nodeId = 5;
 
-      // Choose random node ID based on network, replicating class logic
       if (NETWORK === "testnet") {
         nodeId = randomIntFromInterval(3, 7);
       } else if (NETWORK === "mainnet") {
         nodeId = randomIntFromInterval(11, 24);
       } else if (NETWORK === "previewnet") {
-        // Assuming a default range for previewnet if needed, using a safe node ID
         nodeId = randomIntFromInterval(1, 4);
       }
 
@@ -127,20 +142,18 @@ export default function useHashPackWallet(): LegacyHashPackState {
   );
 
   // =================================================================
-  // === INITIALIZATION & EVENTS (Adapted from the Class) =============
+  // === INITIALIZATION & EVENTS =============
   // =================================================================
 
   const setUpHashConnectEvents = useCallback(
     (hashconnect: HashConnect, mounted: React.MutableRefObject<boolean>) => {
       hashconnect.foundExtensionEvent.on((data) => {
-        // console.log("🎉 Extension found event:", data);
         if (mounted.current) {
           setState((prev) => ({ ...prev, hasExtension: true }));
         }
       });
 
       hashconnect.pairingEvent.on((data) => {
-        // console.log("🤝 Pairing event:", data);
         if (data.accountIds && data.accountIds.length > 0) {
           const account = data.accountIds[0];
           if (mounted.current) {
@@ -168,17 +181,12 @@ export default function useHashPackWallet(): LegacyHashPackState {
       });
 
       hashconnect.transactionEvent.on((data) => {
-        // console.log(
-        //   "Transaction event callback (data received from wallet, usually just a log):",
-        //   data
-        // );
+        // Transaction callback
       });
 
       (hashconnect.connectionStatusChangeEvent.on as any)((data: number) => {
-        // State 0 is universally 'Disconnected' in HashConnect v0.2.9
         if (data === 0) {
           if (mounted.current) {
-            // console.log("Connection Status Change: Disconnected (Value 0)");
             setState((prev) => ({
               ...prev,
               connected: false,
@@ -192,29 +200,20 @@ export default function useHashPackWallet(): LegacyHashPackState {
       });
     },
     []
-  ); // Dependencies are stable
+  );
 
   useEffect(() => {
-    const mounted = { current: true }; // Use a ref for the mounted state inside the async function
+    const mounted = { current: true };
 
     const initHashconnect = async () => {
       try {
-        // console.log("LOG 1: Entering initHashconnect function.");
-
-        // 1. Initial check
         const hasExt = !!(window as any).hashpack;
         setState((prev) => ({ ...prev, hasExtension: hasExt }));
 
-        // 2. Create HashConnect instance
-        const hashconnect = new HashConnect(true); // 'true' for debug logs
+        const hashconnect = new HashConnect(true);
         hashconnectRef.current = hashconnect;
 
-        // 3. Register events BEFORE init
         setUpHashConnectEvents(hashconnect, mounted);
-        // console.log("LOG 4: Event listeners set up.");
-
-        // 4. Initialize HashConnect (using environment NETWORK value)
-        // console.log("LOG 5: 🚀 Calling hashconnect.init()...");
 
         const initData = await hashconnect.init(
           APP_METADATA,
@@ -224,31 +223,26 @@ export default function useHashPackWallet(): LegacyHashPackState {
 
         if (!mounted.current) return;
 
-        // console.log("LOG 6: ✅ HashConnect initialized.");
         setInitData(initData);
         setTopic(initData.topic);
         console.log("Topic", initData.topic);
         setPairingString(initData.pairingString);
 
-        // 5. Try to restore previous session from savedPairings
         const pairingData = initData.savedPairings[0];
 
         if (pairingData && pairingData.accountIds[0]) {
-          // console.log("LOG 7: Session restored from savedPairings.");
           setState((prev) => ({
             ...prev,
             connected: true,
             accountId: pairingData.accountIds[0],
             pairingData: pairingData,
           }));
-          // toast.success(`Session restored: ${pairingData.accountIds[0]}`);
         }
       } catch (error) {
-        console.error("LOG CATCH: ❌ HashConnect initialization error:", error);
+        console.error("HashConnect initialization error:", error);
         toast.error("Failed to initialize HashPack connection");
       } finally {
         if (mounted.current) {
-          console.log("LOG FINAL: Setting isInitializing to false.");
           setState((prev) => ({ ...prev, isInitializing: false }));
         }
       }
@@ -258,7 +252,6 @@ export default function useHashPackWallet(): LegacyHashPackState {
 
     return () => {
       mounted.current = false;
-      // Optional: Cleanup listeners if needed, though HashConnect instance is cleared on unmount
     };
   }, [setUpHashConnectEvents, NETWORK]);
 
@@ -279,11 +272,9 @@ export default function useHashPackWallet(): LegacyHashPackState {
     }
 
     try {
-      // 1. Trust the current state first. If it's false, perform a final, immediate check.
       const isCurrentlyDetected =
         state.hasExtension || !!(window as any).hashpack;
 
-      // Update state if the direct check found it now
       if (isCurrentlyDetected !== state.hasExtension) {
         setState((prev) => ({ ...prev, hasExtension: isCurrentlyDetected }));
       }
@@ -311,11 +302,9 @@ export default function useHashPackWallet(): LegacyHashPackState {
   const disconnect = useCallback(async () => {
     const hashconnect = hashconnectRef.current;
     if (hashconnect && topic) {
-      //  clearPairings
       await hashconnect.disconnect(topic);
     }
 
-    // Manual state cleanup (now also covered by connectionStatusChangeEvent)
     setState({
       connected: false,
       accountId: null,
@@ -342,11 +331,9 @@ export default function useHashPackWallet(): LegacyHashPackState {
       }
 
       try {
-        // makeBytes logic
         const transactionBytes = await makeBytes(transaction, state.accountId);
 
         const transactionObj: any = {
-          // <-- Use 'any' to bypass strict type definition issue
           topic: topic,
           byteArray: transactionBytes,
           metadata: {
@@ -356,7 +343,6 @@ export default function useHashPackWallet(): LegacyHashPackState {
           },
         };
 
-        // sendTransaction call
         const response = await hashconnect.sendTransaction(
           topic,
           transactionObj
@@ -373,10 +359,7 @@ export default function useHashPackWallet(): LegacyHashPackState {
           receipt: null,
         };
 
-        // 4. Process receipt (uses fromBytes)
-        // For v0.2.3, the response.receipt is often a byte array which we process
         if (response.receipt) {
-          // NOTE: Client is not needed for fromBytes
           responseData.receipt = TransactionReceipt.fromBytes(
             response.receipt as Uint8Array
           );
@@ -387,7 +370,6 @@ export default function useHashPackWallet(): LegacyHashPackState {
           );
         }
 
-        // Fallback for success without explicit receipt data
         return (
           transaction.transactionId?.toString() ||
           "Transaction sent successfully (ID unknown)"
@@ -399,15 +381,10 @@ export default function useHashPackWallet(): LegacyHashPackState {
         );
       }
     },
-    [state, topic, makeBytes] // makeBytes is now a dependency
+    [state, topic, makeBytes]
   );
 
-  // Remaining wrapper functions (sendHBAR, sendToken, associateToken, etc.) remain the same
-  // as they rely on the updated sendTransaction
-
-  // NOTE: The dAppSigner logic becomes less useful if we use the byte-based transaction flow,
-  // but we keep it for compatibility if other parts of the dApp rely on it.
-  const dAppSigner =
+  const dAppSigner: Signer | null =
     state.pairingData && hashconnectRef.current
       ? (() => {
           const provider = hashconnectRef.current!.getProvider(
@@ -415,12 +392,10 @@ export default function useHashPackWallet(): LegacyHashPackState {
             state.pairingData.topic,
             state.accountId!
           );
-          return hashconnectRef.current!.getSigner(provider);
+          // Cast to 'any' first to satisfy TypeScript when converting v5 HashConnect type to v6 Ethers Signer
+          return hashconnectRef.current!.getSigner(provider) as any as Signer;
         })()
       : null;
-
-  // The remaining HBAR, Token, and Mirror Node functions are wrappers around
-  // sendTransaction and mirror node fetching, and do not need modification.
 
   const sendHBAR = useCallback(
     async (to: string, amount: number) => {
@@ -467,9 +442,17 @@ export default function useHashPackWallet(): LegacyHashPackState {
       if (!state.connected || !state.accountId) {
         throw new Error("Wallet not connected");
       }
+
+      // Convert EVM format to Hedera format if needed for the transaction
+      const hederaTokenId = normalizeTokenIdForMirrorNode(tokenId);
+      console.log("Associating token:", {
+        input: tokenId,
+        normalized: hederaTokenId,
+      });
+
       const tx = new TokenAssociateTransaction()
         .setAccountId(AccountId.fromString(state.accountId))
-        .setTokenIds([TokenId.fromString(tokenId)]);
+        .setTokenIds([TokenId.fromString(hederaTokenId)]);
       const txId = await sendTransaction(tx);
       toast.success("Token association successful");
       return txId;
@@ -497,16 +480,41 @@ export default function useHashPackWallet(): LegacyHashPackState {
   const getTokenBalance = useCallback(
     async (tokenId: string): Promise<string | null> => {
       if (!state.accountId) return null;
+
+      // Normalize token ID to Hedera format for Mirror Node query
+      const normalizedTokenId = normalizeTokenIdForMirrorNode(tokenId);
+      console.log("Fetching token balance:", {
+        input: tokenId,
+        normalized: normalizedTokenId,
+        account: state.accountId,
+      });
+
       try {
         const url = `${MIRROR_NODE}/api/v1/accounts/${encodeURIComponent(
           state.accountId
-        )}/tokens?token.id=${encodeURIComponent(tokenId)}`;
+        )}/tokens?token.id=${encodeURIComponent(normalizedTokenId)}`;
+
+        console.log("Mirror Node query URL:", url);
+
         const res = await fetch(url);
-        if (!res.ok) throw new Error("Mirror node token fetch failed");
-        const json = await res.json();
-        if (json.tokens && json.tokens.length > 0) {
-          return String(json.tokens[0].balance ?? "0");
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error("Mirror node response error:", errorText);
+          throw new Error(
+            `Mirror node token fetch failed: ${res.status} ${res.statusText}`
+          );
         }
+
+        const json = await res.json();
+        console.log("Mirror Node response:", json);
+
+        if (json.tokens && json.tokens.length > 0) {
+          const balance = String(json.tokens[0].balance ?? "0");
+          console.log("Token balance found:", balance);
+          return balance;
+        }
+
+        console.log("No token balance found, returning 0");
         return "0";
       } catch (err) {
         console.error("getTokenBalance error:", err);

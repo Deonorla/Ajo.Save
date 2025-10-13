@@ -23,7 +23,7 @@ interface AjoCardProps {
 const AjoCard = ({ ajo, isVisible }: AjoCardProps) => {
   const navigate = useNavigate();
   const { nairaRate } = useTokenStore();
-
+  console.log("Cached Ajos:", ajo);
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "active":

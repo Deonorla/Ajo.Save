@@ -63,3 +63,23 @@ export function formatTimestamp(timestamp: string | number): string {
   // Example output: "25 July, 10:30 PM"
   return date.toLocaleString("en-US", options).replace(",", "");
 }
+
+// Utility function to convert a Hedera Account ID (0.0.X) to a long-zero EVM address (0x...)
+export const hederaAccountToEvmAddress = (accountId: string): string => {
+  // Extract the account number (e.g., '6976876' from '0.0.6976876')
+  const accountNum = accountId.split(".").pop();
+  if (!accountNum) {
+    throw new Error("Invalid Hedera account ID format.");
+  }
+
+  // Convert the decimal account number to a hex string
+  // 6976876 (decimal) is 6a86c4 (hex)
+  const hexAccountNum = BigInt(accountNum).toString(16);
+
+  // Pad the hex string with leading zeros to 40 characters (20 bytes)
+  // The address format is 0x + 20 bytes (40 hex chars)
+  // The account number is padded to the *rightmost* part of the address.
+  const paddedAddress = hexAccountNum.padStart(40, "0");
+
+  return `0x${paddedAddress}`;
+};

@@ -1,6 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { ethers, TransactionReceipt } from "ethers";
+// 💡 V5 CORRECT FIX: Import BigNumber directly from "ethers".
+import {
+  BigNumber, // <-- CORRECT: BigNumber is now a direct import
+  ethers,
+} from "ethers";
 import useHashPackWallet from "@/hooks/useHashPackWallet";
 import { TokenAssociateTransaction, TokenId } from "@hashgraph/sdk";
 
@@ -10,14 +14,57 @@ import erc20ABI from "@/abi/erc20ABI";
 import { toast } from "sonner";
 import { useMemberStore } from "@/store/memberInfoStore";
 
+// 💡 V5 CHANGE: Alias for Ethers v5 TransactionReceipt
+type TransactionReceipt = ethers.providers.TransactionReceipt;
+
+// 💡 V5 CORRECT FIX: utils is now the full object, no longer destructuring BigNumber from it.
+// You can destructure other utilities if needed, or just use `utils.functionName`.
+// const { getAddress } = utils;
+
+// 💡 Define V5 BigNumber constants for common operations
+const ONE_MILLION_BN = BigNumber.from(1000000);
+
+// Assuming these structs/interfaces are defined elsewhere and need to use V5 BigNumber in their stores
+interface ContractStats {
+  totalMembers: string;
+  activeMembers: string;
+  totalCollateralUSDC: string;
+  totalCollateralHBAR: string;
+  contractBalanceUSDC: string;
+  contractBalanceHBAR: string;
+  currentQueuePosition: string;
+  activeToken: number;
+}
+interface MemberStruct {
+  queueNumber: string;
+  joinedCycle: string;
+  totalPaid: string;
+  requiredCollateral: string;
+  lockedCollateral: string;
+  lastPaymentCycle: string;
+  defaultCount: string;
+  hasReceivedPayout: boolean;
+  isActive: boolean;
+  guarantor: string;
+  preferredToken: number;
+  reputationScore: string;
+  pastPayments: string[];
+  guaranteePosition: string;
+}
+interface MemberInfoResponse {
+  memberInfo: MemberStruct;
+  pendingPenalty: string;
+  effectiveVotingPower: string;
+}
+
 export interface UseAjoCore {
   // status
   connected: boolean;
   error: string | null;
 
   // read
-  getContractStats: () => Promise<any | null>;
-  getMemberInfo: (memberAddress: string) => Promise<any | null>;
+  getContractStats: () => Promise<ContractStats | null>; // Use the specific type
+  getMemberInfo: (memberAddress: string) => Promise<MemberInfoResponse | null>; // Use the specific type
   needsToPayThisCycle: (memberAddress: string) => Promise<boolean | null>;
   getQueueInfo: (
     memberAddress: string
@@ -60,6 +107,7 @@ const useAjoCore = (ajoCoreAddress: string): UseAjoCore => {
 
   // Read-only contract (Provider from HashPack's dAppSigner)
   const contractRead = useMemo(() => {
+    // V5: provider needs to be compatible with Ethers Provider
     const provider = dAppSigner?.provider;
     if (!provider || !ajoCoreAddress) return null;
     return new ethers.Contract(ajoCoreAddress, (AjoCore as any).abi, provider);
@@ -93,16 +141,18 @@ const useAjoCore = (ajoCoreAddress: string): UseAjoCore => {
     useCallback(async (): Promise<ContractStats | null> => {
       if (!contractRead) return null;
       try {
+        // V5 returns BigNumber objects in the result array
         const res = await contractRead.getContractStats();
         return {
           totalMembers: res[0].toString(),
           activeMembers: res[1].toString(),
-          totalCollateralUSDC: (res[2] / 1000000).toString(),
-          totalCollateralHBAR: (res[3] / 1000000).toString(),
-          contractBalanceUSDC: (res[4] / 1000000).toString(),
-          contractBalanceHBAR: (res[5] / 1000000).toString(),
+          // 💡 V5 CHANGE: Use .div() for BigNumber division
+          totalCollateralUSDC: res[2].div(ONE_MILLION_BN).toString(),
+          totalCollateralHBAR: res[3].div(ONE_MILLION_BN).toString(),
+          contractBalanceUSDC: res[4].div(ONE_MILLION_BN).toString(),
+          contractBalanceHBAR: res[5].div(ONE_MILLION_BN).toString(),
           currentQueuePosition: res[6].toString(),
-          activeToken: Number(res[7]),
+          activeToken: res[7].toNumber(), // Use toNumber() on BigNumber
         };
       } catch (err) {
         console.error("getContractStats error:", err);
@@ -117,25 +167,27 @@ const useAjoCore = (ajoCoreAddress: string): UseAjoCore => {
 
       setLoading(true);
       try {
+        // V5 returns BigNumber objects
         const res = await contractRead.getMemberInfo(memberAddress);
         const rawMember = res[0];
 
+        // 💡 V5 CHANGE: Replace BigInt and native division with BigNumber methods
         const member: MemberStruct = {
           queueNumber: rawMember.queueNumber.toString(),
           joinedCycle: rawMember.joinedCycle.toString(),
-          totalPaid: (BigInt(rawMember.totalPaid) / BigInt(1000000)).toString(),
-          requiredCollateral: (
-            BigInt(rawMember.requiredCollateral) / BigInt(1000000)
-          ).toString(),
-          lockedCollateral: (
-            BigInt(rawMember.lockedCollateral) / BigInt(1000000)
-          ).toString(),
+          totalPaid: rawMember.totalPaid.div(ONE_MILLION_BN).toString(),
+          requiredCollateral: rawMember.requiredCollateral
+            .div(ONE_MILLION_BN)
+            .toString(),
+          lockedCollateral: rawMember.lockedCollateral
+            .div(ONE_MILLION_BN)
+            .toString(),
           lastPaymentCycle: rawMember.lastPaymentCycle.toString(),
           defaultCount: rawMember.defaultCount.toString(),
           hasReceivedPayout: rawMember.hasReceivedPayout,
           isActive: rawMember.isActive,
           guarantor: rawMember.guarantor,
-          preferredToken: Number(rawMember.preferredToken),
+          preferredToken: rawMember.preferredToken.toNumber(), // Ensure it's a number
           reputationScore: rawMember.reputationScore.toString(),
           pastPayments: Array.isArray(rawMember.pastPayments)
             ? rawMember.pastPayments.map((x: any) => x.toString())
@@ -145,8 +197,9 @@ const useAjoCore = (ajoCoreAddress: string): UseAjoCore => {
 
         const data: MemberInfoResponse = {
           memberInfo: member,
-          pendingPenalty: BigInt(res[1]).toString(), // ✅ fixed
-          effectiveVotingPower: BigInt(res[2]).toString(), // ✅ fixed
+          // 💡 V5 CHANGE: Convert BigNumber to string
+          pendingPenalty: res[1].toString(),
+          effectiveVotingPower: res[2].toString(),
         };
 
         setMemberData(data);
@@ -186,6 +239,7 @@ const useAjoCore = (ajoCoreAddress: string): UseAjoCore => {
       const { setQueueInfo } = useMemberStore.getState();
       try {
         const res = await contractRead.getQueueInfo(memberAddress);
+        // V5: res[0] and res[1] are BigNumber
         const info = {
           position: res[0].toString(),
           estimatedCyclesWait: res[1].toString(),
@@ -209,6 +263,7 @@ const useAjoCore = (ajoCoreAddress: string): UseAjoCore => {
       const { setTokenConfig } = useMemberStore.getState();
       try {
         const res = await contractRead.getTokenConfig(token);
+        // V5: res[0] is BigNumber
         const config = {
           monthlyPayment: res[0].toString(),
           isActive: Boolean(res[1]),
@@ -231,11 +286,12 @@ const useAjoCore = (ajoCoreAddress: string): UseAjoCore => {
     ): Promise<{ positions: string[]; collaterals: string[] } | null> => {
       if (!contractRead) return null;
       try {
-        // monthlyPayment is a string (we keep raw). If your contract expects uint256, pass BigNumber or string as appropriate.
+        // V5: Input 'monthlyPayment' should be handled as BigNumberish if necessary
         const res = await contractRead.getCollateralDemo(
           participants,
           monthlyPayment
         );
+        // V5: res[0] and res[1] are arrays of BigNumber
         const positions = Array.isArray(res[0])
           ? res[0].map((p: any) => p.toString())
           : [];
@@ -266,9 +322,11 @@ const useAjoCore = (ajoCoreAddress: string): UseAjoCore => {
   > => {
     if (!contractRead) return null;
     try {
-      const collateral = await contractRead?.getRequiredCollateralForJoin(0);
+      // Assuming 'getRequiredCollateralForJoin' takes a token ID (0)
+      const collateral = await contractRead.getRequiredCollateralForJoin(0);
+      // V5: collateral is BigNumber
       console.log("collateral", collateral.toString());
-      return collateral;
+      return collateral.toString(); // Return as string as per interface
     } catch (err) {
       console.error("getRequiredCollateralForJoin failed", err);
       return null;
@@ -295,7 +353,6 @@ const useAjoCore = (ajoCoreAddress: string): UseAjoCore => {
           .setTokenIds([tokenId]);
 
         // 2. Send the HTS Transaction using the HashPack helper
-        // This will handle signing and submitting the SDK transaction
         await sendTransaction(associateTx);
 
         toast.success("Token associated successfully");
@@ -319,21 +376,23 @@ const useAjoCore = (ajoCoreAddress: string): UseAjoCore => {
       tokenAddress: string, // HTS Token ID (0.0.x) or EVM Address (0x...)
       collateralContract: string,
       paymentsContract: string
-    ) => {
+    ): Promise<TransactionReceipt> => {
+      // V5 Type
       if (!contractWrite || !accountId) {
-        // Check for accountId instead of Ethers Signer/Address
         toast.info("Connect Wallet to participate");
         throw new Error("Wallet not connected / write contract not ready");
       }
 
       // --- 1. Get expected collateral (Remains the same, uses contractRead) ---
-      let expectedCollateral;
+      let expectedCollateral: BigNumber | undefined;
       try {
+        // V5 returns BigNumber
         expectedCollateral = await contractRead?.getRequiredCollateralForJoin(
           tokenChoice
         );
-        console.log("expectedCollateral", expectedCollateral.toString());
-        const code = await dAppSigner?.getCode(tokenAddress);
+        // V5: Use toHexString() or toString() for console output
+        console.log("expectedCollateral", expectedCollateral?.toHexString());
+        const code = await dAppSigner?.provider.getCode(tokenAddress); // V5 provider method
         console.log("ERC20 deployed code:", code && code.length > 2);
       } catch (err) {
         console.warn(
@@ -341,24 +400,22 @@ const useAjoCore = (ajoCoreAddress: string): UseAjoCore => {
           err
         );
         const tokenConfig = await contractRead?.getTokenConfig(tokenChoice);
-        expectedCollateral = tokenConfig?.monthlyPayment;
+        // Fallback result will be a string, convert to BigNumber for safety
+        expectedCollateral = tokenConfig?.monthlyPayment
+          ? BigNumber.from(tokenConfig.monthlyPayment)
+          : undefined;
       }
       if (!expectedCollateral)
         throw new Error("Could not determine collateral requirement");
 
-      // --- 2. HTS: Associate Token (Replaces ERC-20 approval) ---
-      // The contract will execute an HTS Transfer which requires prior association.
+      // --- 2. HTS: Associate Token ---
       await associateTokenIfNecessary(tokenAddress);
-
-      // ⚠️ DELETE ERC-20 APPROVAL STEPS (Sections 2, 3, and 4 in your original code)
-      // The HTS pre-compile in the smart contract handles the token transfer directly,
-      // eliminating the need for allowance and approval calls.
 
       // --- 3. Join Ajo ---
       toast.info("Joining Ajo...");
-      // Contract function is called via the Ethers Signer (dAppSigner)
+      // V5: tx is a TransactionResponse
       const tx = await contractWrite.joinAjo(tokenChoice);
-      const receipt = await tx.wait(); // Await the Ethers transaction receipt
+      const receipt = await tx.wait(); // V5: tx.wait() returns TransactionReceipt
 
       console.log("🎉 Joined Ajo, tx hash:", receipt.transactionHash);
       return receipt;
@@ -373,15 +430,12 @@ const useAjoCore = (ajoCoreAddress: string): UseAjoCore => {
         return;
       }
 
-      // ⚠️ DELETE ERC-20 APPROVAL STEPS (Sections 1 & 2 in your original makePayment)
-      // We assume the token is already associated from the joinAjo step.
-
       try {
         // send transaction
-        const tx = await contractWrite.processPayment();
+        const tx = await contractWrite.processPayment(); // V5: tx is a TransactionResponse
         toast.info("Processing payment...");
 
-        const receipt = await tx.wait();
+        const receipt = await tx.wait(); // V5: tx.wait() returns TransactionReceipt
         if (receipt.status === 1) {
           toast.success("Monthly Payment successful!");
         } else {
@@ -389,6 +443,7 @@ const useAjoCore = (ajoCoreAddress: string): UseAjoCore => {
         }
       } catch (err: any) {
         console.error("makePayment error:", err);
+        // V5 error handling often uses 'error.reason' or 'error.message'
         toast.error(err?.reason || err?.message || "Payment failed");
       }
     },
@@ -402,8 +457,8 @@ const useAjoCore = (ajoCoreAddress: string): UseAjoCore => {
     }
 
     try {
-      const tx = await contractWrite.distributePayout();
-      const receipt = await tx.wait();
+      const tx = await contractWrite.distributePayout(); // V5: tx is a TransactionResponse
+      const receipt = await tx.wait(); // V5: tx.wait() returns TransactionReceipt
 
       if (receipt.status === 1) {
         toast.success("Cycle Ajo distribution successful!");
@@ -449,8 +504,6 @@ const useAjoCore = (ajoCoreAddress: string): UseAjoCore => {
     joinAjo,
     makePayment,
     distributePayout,
-    // ... (rest of functions)
-    // NOTE: If you need to include the original read functions, paste them back in.
   };
 };
 
