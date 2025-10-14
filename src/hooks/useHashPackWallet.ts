@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /**
- * useHashPackWallet.ts - TAILORED TO CLASS LOGIC
  *
  * HashPack integration using HashConnect v0.2.3, now using the manual
  * transaction byte generation and hashconnect.sendTransaction() from the
@@ -20,7 +19,6 @@ import {
   Transaction,
   TransactionId,
   TransactionReceipt,
-  Client,
 } from "@hashgraph/sdk";
 import { toast } from "sonner";
 
@@ -287,12 +285,10 @@ export default function useHashPackWallet(): LegacyHashPackState {
         return;
       }
 
-      toast.info("Opening HashPack extension...", { duration: 3000 });
+      toast.info("Opening HashPack extension...");
       hashconnect.connectToLocalWallet();
 
-      toast.info("Check HashPack extension to approve connection", {
-        duration: 10000,
-      });
+      toast.info("Check HashPack extension to approve connection");
     } catch (error: any) {
       console.error("Connection error:", error);
       toast.error(`Failed to connect: ${error.message || "Unknown error"}`);

@@ -14,6 +14,8 @@ export interface MemberDetail {
   totalPaid: string; // stringified BigNumber
   defaultCount: string; // stringified BigNumber
   reputationScore: string; // stringified BigNumber
+  isHtsAssociated: boolean;
+  isFrozen: boolean;
 }
 
 interface MembersStoreState {
@@ -35,6 +37,8 @@ const serializeMembers = (members: any[]): MemberDetail[] =>
     totalPaid: m.totalPaid?.toString?.() || "0",
     defaultCount: m.defaultCount?.toString?.() || "0",
     reputationScore: m.reputationScore?.toString?.() || "0",
+    isHtsAssociated: m.isHtsAssociated || false,
+    isFrozen: m.isFrozen || false,
   }));
 
 // helper to restore strings → BigNumbers if needed later

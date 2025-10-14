@@ -16,6 +16,8 @@ import { useMemberStore } from "@/store/memberInfoStore";
 
 // 💡 V5 CHANGE: Alias for Ethers v5 TransactionReceipt
 type TransactionReceipt = ethers.providers.TransactionReceipt;
+// Get the JSON RPC URL from environment variables
+const RPC_URL = import.meta.env.VITE_HEDERA_JSON_RPC_RELAY_URL;
 
 // 💡 V5 CORRECT FIX: utils is now the full object, no longer destructuring BigNumber from it.
 // You can destructure other utilities if needed, or just use `utils.functionName`.
@@ -105,13 +107,21 @@ const useAjoCore = (ajoCoreAddress: string): UseAjoCore => {
     null
   );
 
+  // Read Provider (Standard Ethers v5 JsonRpcProvider, guaranteed to work for read calls)
+  const provider = useMemo(() => {
+    if (!RPC_URL) {
+      console.error("VITE_HEDERA_JSON_RPC_RELAY_URL is not set.");
+      return null;
+    }
+    return new ethers.providers.JsonRpcProvider(RPC_URL);
+  }, []);
+
   // Read-only contract (Provider from HashPack's dAppSigner)
   const contractRead = useMemo(() => {
     // V5: provider needs to be compatible with Ethers Provider
-    const provider = dAppSigner?.provider;
     if (!provider || !ajoCoreAddress) return null;
-    return new ethers.Contract(ajoCoreAddress, (AjoCore as any).abi, provider);
-  }, [dAppSigner, ajoCoreAddress]);
+    return new ethers.Contract(ajoCoreAddress, AjoCore.abi, provider);
+  }, [ajoCoreAddress, provider]);
 
   // Write contract (Signer from HashPack)
   useEffect(() => {
@@ -143,6 +153,7 @@ const useAjoCore = (ajoCoreAddress: string): UseAjoCore => {
       try {
         // V5 returns BigNumber objects in the result array
         const res = await contractRead.getContractStats();
+        console.log("Contract Stats:", res);
         return {
           totalMembers: res[0].toString(),
           activeMembers: res[1].toString(),
@@ -152,7 +163,7 @@ const useAjoCore = (ajoCoreAddress: string): UseAjoCore => {
           contractBalanceUSDC: res[4].div(ONE_MILLION_BN).toString(),
           contractBalanceHBAR: res[5].div(ONE_MILLION_BN).toString(),
           currentQueuePosition: res[6].toString(),
-          activeToken: res[7].toNumber(), // Use toNumber() on BigNumber
+          activeToken: res[7], // Use toNumber() on BigNumber
         };
       } catch (err) {
         console.error("getContractStats error:", err);
@@ -187,7 +198,7 @@ const useAjoCore = (ajoCoreAddress: string): UseAjoCore => {
           hasReceivedPayout: rawMember.hasReceivedPayout,
           isActive: rawMember.isActive,
           guarantor: rawMember.guarantor,
-          preferredToken: rawMember.preferredToken.toNumber(), // Ensure it's a number
+          preferredToken: rawMember.preferredToken, // Ensure it's a number
           reputationScore: rawMember.reputationScore.toString(),
           pastPayments: Array.isArray(rawMember.pastPayments)
             ? rawMember.pastPayments.map((x: any) => x.toString())

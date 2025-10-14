@@ -16,7 +16,7 @@ const App = () => {
         <Route path="/profile" element={<Profile />} />
         {/* <Route path="/ajo" element={<Ajo />} /> */}
         <Route path="/ajo/create-ajo" element={<CreateAjo />} />
-        {/* <Route path="/ajo/:ajoId/:ajoCore" element={<AjoDetails />} /> */}
+        <Route path="/ajo/:ajoId/:ajoCore" element={<AjoDetails />} />
         <Route path="*" element={<div>404 Not Found</div>} />
       </Routes>
       <Toaster richColors position="top-center" />

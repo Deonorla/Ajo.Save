@@ -63,7 +63,7 @@ const AjoDetailsCard = ({
   const { address } = useWallet();
   const [paidAddress, setPaidAddress] = useState("");
   const [cycleCount, setCycleCount] = useState(0);
-  const { activeMembers } = useAjoDetailsStore();
+  const { totalMembers } = useAjoDetailsStore();
 
   const getFunctions = useCallback(async () => {
     try {
@@ -83,7 +83,7 @@ const AjoDetailsCard = ({
 
   useEffect(() => {
     getFunctions();
-
+    // console.log("Total members:", totalMembers);
     console.log(
       "locked collateral",
       Number(memberData?.memberInfo.lockedCollateral)
@@ -182,14 +182,14 @@ const AjoDetailsCard = ({
                   <div className="flex items-center space-x-4">
                     <div
                       className={`px-2 py-1 rounded-full text-xs font-medium flex items-center space-x-1 ${getStatusColor(
-                        activeMembers == "10" ? "active" : "forming"
+                        totalMembers == "10" ? "active" : "forming"
                       )}`}
                     >
                       {getStatusIcon(
-                        activeMembers == "10" ? "active" : "forming"
+                        totalMembers == "10" ? "active" : "forming"
                       )}
                       <span className="capitalize">
-                        {activeMembers == "10" ? "Active" : "Forming"}
+                        {totalMembers == "10" ? "Active" : "Forming"}
                       </span>
                     </div>
                     <div className="text-xs mx-2">
@@ -201,7 +201,7 @@ const AjoDetailsCard = ({
               {/* Desktop */}
               <div className=" hidden sm:flex flex-col sm:flex-row gap-3">
                 {memberData?.memberInfo.isActive == false ? (
-                  activeMembers == "10" ? (
+                  totalMembers == "10" ? (
                     <></>
                   ) : (
                     <button
@@ -221,7 +221,7 @@ const AjoDetailsCard = ({
                       )}
                     </button>
                   )
-                ) : activeMembers !== "10" ? (
+                ) : totalMembers !== "10" ? (
                   <div className="text-xs flex text-primary">
                     Total ajo members incomplete for ajo to start
                   </div>
@@ -289,7 +289,7 @@ const AjoDetailsCard = ({
             {/* <p className="text-muted-foreground leading-relaxed">
               {ajoData.description}
             </p> */}
-            {/* {activeMembers == "10" ? (
+            {/* {totalMembers == "10" ? (
               <div className="mb-6 p-4 text-xs text-primary bg-primary/10 border border-primary/20 rounded-lg flex flex-col space-y-3 sm:w-50%">
                 Not taking in members
               </div>
@@ -297,12 +297,12 @@ const AjoDetailsCard = ({
 
             <div className="mb-6 p-4 bg-primary/10 border border-primary/20 rounded-lg flex flex-col space-y-3 sm:w-50%">
               {/* Collateral Section */}
-              {activeMembers == "10" && (
+              {totalMembers == "10" && (
                 <div className="mb-6 p-4 text-xs text-primary bg-primary/10 border border-primary/20 rounded-lg flex flex-col space-y-3 sm:w-50%">
                   Not taking in members
                 </div>
               )}
-              {activeMembers !== "10" && (
+              {totalMembers !== "10" && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-primary font-medium ">
                     Collateral Required:
@@ -399,7 +399,7 @@ const AjoDetailsCard = ({
           {/* Mobile view */}
           <div className="flex sm:hidden flex-col sm:flex-row  gap-3">
             {memberData?.memberInfo.isActive == false ? (
-              activeMembers == "10" ? (
+              totalMembers == "10" ? (
                 <></>
               ) : (
                 <button
@@ -419,7 +419,7 @@ const AjoDetailsCard = ({
                   )}
                 </button>
               )
-            ) : activeMembers !== "10" ? (
+            ) : totalMembers !== "10" ? (
               <div className="text-xs flex text-primary">
                 Total ajo members incomplete for ajo to start
               </div>

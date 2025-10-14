@@ -9,9 +9,9 @@ import AjoGovernance from "@/components/ajo-details-page/AjoGovernance";
 // import AjoDetailAnalytics from "@/components/ajo-details-page/AjoDetailAnalytics";
 // import AjoPaymentHistory from "@/components/ajo-details-page/AjoPaymentHistory";
 import useAjoCore from "@/hooks/useAjoCore";
-// import { useWallet } from "@/auth/WalletContext";
+import { useWallet } from "@/auth/WalletContext";
 import { useTokenStore } from "@/store/tokenStore";
-import { useAjoDetails } from "@/utils/utils";
+import { hederaAccountToEvmAddress, useAjoDetails } from "@/utils/utils";
 import { useAjoFactory } from "@/hooks/useAjoFactory";
 import { useParams } from "react-router-dom";
 import { useAjoDetailsStore } from "@/store/ajoDetailsStore";
@@ -37,6 +37,7 @@ const AjoDetails = () => {
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [monthlyPayment, setMonthlyPayment] = useState<string | undefined>("");
   const ajo = useAjoDetails();
+  const { accountId } = useWallet();
 
   useEffect(() => {
     if (parsedId) {
@@ -44,28 +45,38 @@ const AjoDetails = () => {
     }
   }, [parsedId, loadNewAjo]);
 
-  const fetchAjoDetails = useCallback(async () => {
+  // operational status
+  const _getAjoOperationalStatus = useCallback(async () => {
     try {
       const status = await getAjoOperationalStatus(parsedId, ajo);
-      // console.log("Ajo details:", status);
+      console.log("✅ Ajo details:", status);
     } catch (err) {
       console.error("Error fetching Ajo operational status:", err);
     }
   }, [parsedId, getAjoOperationalStatus, ajo]);
 
+  //  Get member info
+  const _getMemberInfo = useCallback(async () => {
+    try {
+      const evmAddress = hederaAccountToEvmAddress(accountId ? accountId : "");
+      console.log("✅ evmAddress:", evmAddress);
+      const info = await getMemberInfo(evmAddress);
+      console.log("✅ Info:", info);
+    } catch (err) {
+      console.log("Error getting member info:", err);
+    }
+  }, []);
+
   // GET USER DATA
   const getUserData = useCallback(async () => {
     try {
       if (!address) {
-        throw "Address not found, connect to metamask";
+        throw "Address not found, connect to hashpack";
       }
-      const data = await getMemberInfo(address);
       const queue = await getQueueInfo(address);
       const tokenConfig = await getTokenConfig(0);
       setMonthlyPayment(tokenConfig?.monthlyPayment);
-
       // console.log("monthlyPayment:", monthlyPayment);
-      console.log("Info", data);
     } catch (err) {
       console.log("Error fetching member info:", err);
     }
@@ -73,10 +84,10 @@ const AjoDetails = () => {
 
   useEffect(() => {
     setIsVisible(true);
-    getContractStats();
-    fetchAjoDetails();
+    _getMemberInfo();
+    _getAjoOperationalStatus();
     getUserData();
-  }, [getAjoOperationalStatus]);
+  }, [getAjoOperationalStatus, getMemberInfo]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -94,11 +105,11 @@ const AjoDetails = () => {
 
         {/* Stats Grid */}
 
-        <AjoDetailsStatsGrid
+        {/* <AjoDetailsStatsGrid
           monthlyPayment={monthlyPayment}
           isVisible={isVisible}
           contractStats={contractStats}
-        />
+        /> */}
         {/* Tab Navigation */}
 
         <AjoDetailsNavigationTab

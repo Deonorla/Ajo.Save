@@ -61,8 +61,6 @@ const Dashboard = () => {
         setIsRefreshing(false);
       }
     },
-    // 🛑 CRITICAL FIX: Removed ajoInfos.length from dependencies
-    // Dependencies are only `getAllAjos` and `setNaira`.
     [getAllAjos, setNaira]
   );
 

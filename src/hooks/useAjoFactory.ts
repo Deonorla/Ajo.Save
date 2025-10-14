@@ -18,16 +18,10 @@ const RPC_URL = import.meta.env.VITE_HEDERA_JSON_RPC_RELAY_URL;
 
 export interface AjoOperationalStatus {
   totalMembers: BigNumberType;
-  activeMembers: BigNumberType;
-  totalCollateralUSDC: BigNumberType;
-  totalCollateralHBAR: BigNumberType;
-  contractBalanceUSDC: BigNumberType;
-  contractBalanceHBAR: BigNumberType;
   currentCycle: BigNumberType;
-  activeToken: BigNumberType; // 0 or 1
   canAcceptMembers: boolean;
-  canProcessPayments: boolean;
-  canDistributePayouts: boolean;
+  hasActiveGovernance: boolean;
+  hasActiveScheduling: boolean;
 }
 
 const bnToString = (value: BigNumberType): string => value.toString();
@@ -180,16 +174,10 @@ export const useAjoFactory = () => {
         ajoId: ajoId,
         ajoCore: ajo?.ajoCore,
         totalMembers: bnToString(status.totalMembers),
-        activeMembers: bnToString(status.activeMembers),
-        totalCollateralUSDC: bnToString(status.totalCollateralUSDC),
-        totalCollateralHBAR: bnToString(status.totalCollateralHBAR),
-        contractBalanceUSDC: bnToString(status.contractBalanceUSDC),
-        contractBalanceHBAR: bnToString(status.contractBalanceHBAR),
         currentCycle: bnToString(status.currentCycle),
-        activeToken: bnToString(status.activeToken),
         canAcceptMembers: status.canAcceptMembers,
-        canProcessPayments: status.canProcessPayments,
-        canDistributePayouts: status.canDistributePayouts,
+        hasActiveGovernance: status.hasActiveGovernance,
+        hasActiveScheduling: status.hasActiveScheduling,
       });
 
       return status;
