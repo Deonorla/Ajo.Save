@@ -12,6 +12,7 @@ import { useTokenStore } from "@/store/tokenStore";
 import { useNavigate } from "react-router-dom";
 import formatCurrency from "@/utils/formatCurrency";
 import { toast } from "sonner";
+import WalletDiagnostics from "@/components/dashboard/WalletDiagnotics";
 
 const Dashboard = () => {
   const { connected: isConnected, getBalance } = useWallet();
@@ -106,6 +107,7 @@ const Dashboard = () => {
             isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
           }`}
         >
+          <WalletDiagnostics />
           {/* Welcome Banner with Refresh Button */}
           <div className="bg-gradient-to-br from-primary to-accent text-primary-foreground p-6 rounded-xl shadow-lg border border-border">
             <div className="flex justify-between items-start">

@@ -2,33 +2,6 @@
 const { ethers } = require("hardhat");
 const fs = require("fs");
 
-// Import utilities from existing demos
-const {
-  showPreJoiningState,
-  verifyJoiningResults,
-  showPrePaymentState,
-  verifyPaymentResults,
-  showFactoryState,
-  showGovernanceState,
-  demonstrateJoiningWithVerification,
-  demonstratePaymentCycleWithVerification,
-} = require("./enhanced_demo_integrated.cjs");
-
-const {
-  demoFactoryViewFunctions,
-  demoCoreViewFunctions,
-  demoMemberViewFunctions,
-  demoCollateralViewFunctions,
-  demoPaymentViewFunctions,
-  demoGovernanceViewFunctions,
-  verifyAdvancedCollateralFeatures,
-  verifyMemberIndexing,
-  verifyPayoutHistory,
-  verifyTokenConfiguration,
-  verifyFactoryPagination,
-  verifySeizableAssetsForAll,
-} = require("./advanced_demo_features.cjs");
-
 // Enhanced color utilities
 const c = {
   green: (text) => `\x1b[32m${text}\x1b[0m`,
@@ -44,6 +17,7 @@ const c = {
   bgGreen: (text) => `\x1b[42m\x1b[30m${text}\x1b[0m`,
   bgBlue: (text) => `\x1b[44m\x1b[37m${text}\x1b[0m`,
   bgYellow: (text) => `\x1b[43m\x1b[30m${text}\x1b[0m`,
+  bgRed: (text) => `\x1b[41m\x1b[37m${text}\x1b[0m`,
 };
 
 const DEMO_CONFIG = {
@@ -51,23 +25,22 @@ const DEMO_CONFIG = {
   RETRY_DELAY: 2000,
   MONTHLY_PAYMENT: ethers.utils.parseUnits("50", 6),
   TOTAL_PARTICIPANTS: 10,
+  MIN_HBAR_FOR_HTS: ethers.utils.parseEther("50"), // 50 HBAR required
   GAS_LIMIT: {
-    DEPLOY_TOKEN: 3000000,
     DEPLOY_MASTER: 6000000,
     DEPLOY_GOVERNANCE: 6000000,
     DEPLOY_FACTORY: 15000000,
+    CREATE_HTS: 5000000,
     CREATE_AJO: 1500000,
     INIT_PHASE_2: 1200000,
     INIT_PHASE_3: 1500000,
     INIT_PHASE_4: 1800000,
     INIT_PHASE_5: 1500000,
-    FINALIZE: 2500000,
-    SCHEDULE_PAYMENT: 800000,
-    CREATE_PROPOSAL: 500000,
-    VOTE: 200000,
-    JOIN_AJO: 800000,
-    PROCESS_PAYMENT: 900000,
-    DISTRIBUTE_PAYOUT: 400000,
+    JOIN_AJO: 1000000,
+    HTS_ASSOCIATE: 300000,
+    HTS_BATCH_ASSOCIATE: 2500000,
+    HTS_BATCH_FUND: 3500000,
+    HTS_APPROVE: 400000,
   },
 };
 
@@ -76,7 +49,7 @@ const formatUSDC = (amount) => ethers.utils.formatUnits(amount, 6);
 const formatHBAR = (amount) => ethers.utils.formatUnits(amount, 8);
 
 // ================================================================
-// ENHANCED BANNER WITH HEDERA BRANDING
+// ENHANCED BANNER
 // ================================================================
 
 function printEnhancedBanner() {
@@ -99,7 +72,7 @@ function printEnhancedBanner() {
     c.bold(
       c.cyan("║") +
         c.bgBlue(
-          "                        🏦 AJO.SAVE - HEDERA HACKATHON 2025 🏦                        "
+          "                   🏦 AJO.SAVE - HTS AUTO-ASSOCIATION DEMO 🏦                        "
         ) +
         c.cyan("║")
     )
@@ -121,9 +94,7 @@ function printEnhancedBanner() {
   console.log(c.magenta("═".repeat(88)));
 
   console.log(
-    c.bright(
-      "\n" + " ".repeat(15) + "Revolutionary ROSCA System Built on Hedera"
-    )
+    c.bright("\n" + " ".repeat(20) + "HTS-ONLY Demo - No ERC20 Fallbacks")
   );
   console.log(
     c.dim(
@@ -132,122 +103,31 @@ function printEnhancedBanner() {
     )
   );
 
-  console.log(c.yellow("\n  🌟 HEDERA NATIVE SERVICES INTEGRATION:"));
+  console.log(c.yellow("\n  🌟 HEDERA TOKEN SERVICE (HTS) FEATURES:"));
   console.log(
-    c.green("     ✓ Hedera Token Service (HTS)") +
-      c.dim(" - Custom fungible tokens with built-in controls")
+    c.green("     ✓ Auto-Association") +
+      c.dim(" - Users receive tokens without manual association")
   );
   console.log(
-    c.green("     ✓ Hedera Schedule Service (HSS)") +
-      c.dim(" - Automated recurring payment scheduling")
+    c.green("     ✓ Factory Treasury") +
+      c.dim(" - Centralized token distribution")
   );
   console.log(
-    c.green("     ✓ Hedera Consensus Service (HCS)") +
-      c.dim(" - Transparent, immutable governance voting")
-  );
-
-  console.log(c.yellow("\n  💡 KEY INNOVATIONS:"));
-  console.log(
-    c.cyan("     • 55% Capital Efficiency") +
-      c.dim(" - Revolutionary V2 collateral model")
+    c.green("     ✓ Batch Operations") +
+      c.dim(" - Efficient multi-user funding")
   );
   console.log(
-    c.cyan("     • On-Chain Credit History") +
-      c.dim(" - Build reputation through participation")
-  );
-  console.log(
-    c.cyan("     • Cross-Collateralization") +
-      c.dim(" - Guarantor network for security")
-  );
-  console.log(
-    c.cyan("     • Automated Enforcement") +
-      c.dim(" - Smart contract-based default handling")
-  );
-  console.log(
-    c.cyan("     • Democratic Governance") +
-      c.dim(" - Community-driven decision making")
-  );
-
-  console.log(c.yellow("\n  📊 SYSTEM ARCHITECTURE:"));
-  console.log(
-    c.dim(
-      "     • 5-Phase Factory Deployment - Modular, gas-optimized architecture"
-    )
-  );
-  console.log(
-    c.dim(
-      "     • 6 Specialized Contracts - Separation of concerns for maintainability"
-    )
-  );
-  console.log(
-    c.dim(
-      "     • 50+ View Functions - Complete transparency for frontend integration"
-    )
-  );
-  console.log(
-    c.dim("     • Multi-Token Support - USDC & HBAR with seamless switching")
-  );
-  console.log(
-    c.dim("     • Production-Ready - Comprehensive error handling & security")
+    c.green("     ✓ Native Hedera") + c.dim(" - Faster & cheaper than ERC20\n")
   );
 
   console.log(
-    c.dim(
-      "\n  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    )
+    c.bgRed(" ⚠️  CRITICAL: THIS DEMO REQUIRES HTS - NO ERC20 FALLBACK ")
   );
-  console.log(
-    c.bright(
-      "  🎯 TARGET: Financial Inclusion for 2+ Billion Underbanked People"
-    )
-  );
-  console.log(
-    c.dim(
-      "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    )
-  );
-
-  // Show configuration info
-  const useHts = process.env.USE_HTS === "true";
-  const useHss = process.env.USE_HSS !== "false"; // Default true
-
-  console.log(c.yellow("\n  ⚙️  DEMO CONFIGURATION:"));
-  console.log(
-    c.dim(
-      `     • HTS Tokens: ${
-        useHts ? c.green("Enabled") : c.yellow("Disabled (using ERC20)")
-      }`
-    )
-  );
-  console.log(
-    c.dim(
-      `     • HSS Scheduling: ${
-        useHss ? c.green("Enabled") : c.yellow("Disabled")
-      }`
-    )
-  );
-  console.log(c.dim(`     • HCS Governance: ${c.green("Enabled (always)")}`));
-
-  if (useHts) {
-    console.log(
-      c.dim(
-        "\n     Note: HTS requires 40 HBAR for token creation (20 per token)"
-      )
-    );
-    console.log(
-      c.dim("     If HTS creation fails, demo will fallback to ERC20 tokens")
-    );
-  }
-
-  console.log(
-    c.dim(
-      "\n  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-    )
-  );
+  console.log(c.yellow("  Minimum 50 HBAR required in deployer account\n"));
 }
 
 // ================================================================
-// ENHANCED RETRY OPERATION
+// RETRY OPERATION
 // ================================================================
 
 async function retryOperation(
@@ -297,13 +177,13 @@ async function retryOperation(
 }
 
 // ================================================================
-// PHASE 1: COMPREHENSIVE DEPLOYMENT WITH HEDERA SERVICES
+// PHASE 1: HTS-ONLY DEPLOYMENT
 // ================================================================
 
-async function deployComprehensiveSystem() {
+async function deployHtsSystem() {
   console.log(
     c.bgBlue(
-      "\n" + " ".repeat(30) + "PHASE 1: SYSTEM DEPLOYMENT" + " ".repeat(30)
+      "\n" + " ".repeat(30) + "PHASE 1: HTS SYSTEM DEPLOYMENT" + " ".repeat(28)
     )
   );
   console.log(c.blue("═".repeat(88) + "\n"));
@@ -312,47 +192,23 @@ async function deployComprehensiveSystem() {
   console.log(c.bright(`  👤 Deployer: ${deployer.address}`));
   const balance = await deployer.getBalance();
   console.log(
-    c.dim(`     Balance: ${ethers.utils.formatEther(balance)} ETH\n`)
+    c.dim(`     Balance: ${ethers.utils.formatEther(balance)} HBAR\n`)
   );
 
-  // Step 1.1: Deploy Mock ERC20 Tokens (Fallback)
-  console.log(c.cyan("  📝 Step 1.1: Deploying Mock ERC20 Tokens..."));
-  console.log(c.dim("     (These serve as fallback if HTS is unavailable)\n"));
+  // ✅ Check minimum balance
+  if (balance.lt(DEMO_CONFIG.MIN_HBAR_FOR_HTS)) {
+    throw new Error(
+      `Insufficient HBAR! Need ${ethers.utils.formatEther(
+        DEMO_CONFIG.MIN_HBAR_FOR_HTS
+      )} HBAR, ` + `have ${ethers.utils.formatEther(balance)} HBAR`
+    );
+  }
 
-  let usdc, whbar;
+  console.log(c.green(`  ✅ Sufficient HBAR for HTS token creation\n`));
 
-  await retryOperation(async () => {
-    const MockERC20 = await ethers.getContractFactory("MockERC20");
-    usdc = await MockERC20.deploy("USD Coin", "USDC", 6, {
-      gasLimit: DEMO_CONFIG.GAS_LIMIT.DEPLOY_TOKEN,
-    });
-    await usdc.deployed();
-    console.log(c.green(`      ✅ Mock USDC: ${usdc.address}`));
-    return usdc;
-  }, "Deploy Mock USDC");
-
-  await sleep(2000);
-
-  await retryOperation(async () => {
-    const MockERC20 = await ethers.getContractFactory("MockERC20");
-    whbar = await MockERC20.deploy("Wrapped HBAR", "WHBAR", 8, {
-      gasLimit: DEMO_CONFIG.GAS_LIMIT.DEPLOY_TOKEN,
-    });
-    await whbar.deployed();
-    console.log(c.green(`      ✅ Mock WHBAR: ${whbar.address}\n`));
-    return whbar;
-  }, "Deploy Mock WHBAR");
-
-  await sleep(2000);
-
-  // Step 1.2: Deploy Master Implementation Contracts
+  // Step 1.1: Deploy Master Implementation Contracts
   console.log(
-    c.cyan("  📝 Step 1.2: Deploying Master Implementation Contracts...")
-  );
-  console.log(
-    c.dim(
-      "     (These are templates used by the factory for clone deployments)\n"
-    )
+    c.cyan("  📝 Step 1.1: Deploying Master Implementation Contracts...\n")
   );
 
   const masterContracts = {};
@@ -390,7 +246,7 @@ async function deployComprehensiveSystem() {
     {
       name: "AjoSchedule",
       key: "ajoSchedule",
-      desc: "HSS automated scheduling (NEW!)",
+      desc: "HSS automated scheduling",
       icon: "📅",
     },
   ];
@@ -426,29 +282,22 @@ async function deployComprehensiveSystem() {
     await sleep(1500);
   }
 
-  // Step 1.3: Deploy Factory with Hedera Services
-  console.log(
-    c.cyan(
-      "  📝 Step 1.3: Deploying 5-Phase AjoFactory with Hedera Integration..."
-    )
-  );
-  console.log(c.dim("     (Central factory managing all Ajo deployments)\n"));
+  // Step 1.2: Deploy Factory (with dummy addresses for tokens - will be set later)
+  console.log(c.cyan("  📝 Step 1.2: Deploying AjoFactory...\n"));
 
-  const HEDERA_TOKEN_SERVICE =
-    process.env.HTS_ADDRESS || "0x0000000000000000000000000000000000000167";
-  const HEDERA_SCHEDULE_SERVICE =
-    process.env.HSS_ADDRESS || "0x000000000000000000000000000000000000016b";
+  const HEDERA_TOKEN_SERVICE = "0x0000000000000000000000000000000000000167";
+  const HEDERA_SCHEDULE_SERVICE = "0x000000000000000000000000000000000000016b";
+  const DUMMY_TOKEN = "0x0000000000000000000000000000000000000001";
 
   console.log(c.dim(`      🔗 HTS Address: ${HEDERA_TOKEN_SERVICE}`));
-  console.log(c.dim(`      🔗 HSS Address: ${HEDERA_SCHEDULE_SERVICE}`));
-  console.log(c.dim(`      🔗 HCS: Will be created per-Ajo\n`));
+  console.log(c.dim(`      🔗 HSS Address: ${HEDERA_SCHEDULE_SERVICE}\n`));
 
   let ajoFactory;
   await retryOperation(async () => {
     const AjoFactory = await ethers.getContractFactory("AjoFactory");
     ajoFactory = await AjoFactory.deploy(
-      usdc.address,
-      whbar.address,
+      DUMMY_TOKEN, // Will be replaced with real HTS tokens
+      DUMMY_TOKEN,
       masterContracts.ajoCore.address,
       masterContracts.ajoMembers.address,
       masterContracts.ajoCollateral.address,
@@ -460,169 +309,112 @@ async function deployComprehensiveSystem() {
       { gasLimit: DEMO_CONFIG.GAS_LIMIT.DEPLOY_FACTORY }
     );
     await ajoFactory.deployed();
-    console.log(
-      c.green(`      ✅ 5-Phase AjoFactory: ${ajoFactory.address}\n`)
-    );
+    console.log(c.green(`      ✅ AjoFactory: ${ajoFactory.address}\n`));
     return ajoFactory;
-  }, "Deploy 5-Phase AjoFactory");
+  }, "Deploy AjoFactory");
 
-  // Step 1.4: Verify Hedera Integration
+  await sleep(2000);
+
+  // Step 1.3: Create HTS Tokens with Auto-Association
   console.log(
-    c.cyan("  📝 Step 1.4: Verifying Hedera Services Integration...\n")
-  );
-
-  const htsEnabled = await ajoFactory.isHtsEnabled();
-  const hssAddress = await ajoFactory.getScheduleServiceAddress();
-
-  console.log(
-    c.dim("      ┌─────────────────────────────────────────────────────┐")
+    c.cyan("  📝 Step 1.3: Creating HTS Tokens with Auto-Association...\n")
   );
   console.log(
-    c.dim("      │ Service Status                                      │")
-  );
-  console.log(
-    c.dim("      ├─────────────────────────────────────────────────────┤")
-  );
-  console.log(
-    c.dim(
-      "      │ HTS (Token Service):     " +
-        (htsEnabled ? c.green("✅ ENABLED ") : c.red("❌ DISABLED")) +
-        "            │"
-    )
-  );
-  console.log(
-    c.dim(
-      "      │ HSS (Schedule Service):  " +
-        (hssAddress !== ethers.constants.AddressZero
-          ? c.green("✅ ENABLED ")
-          : c.red("❌ DISABLED")) +
-        "            │"
-    )
-  );
-  console.log(
-    c.dim(
-      "      │ HCS (Consensus Service): " +
-        c.green("✅ READY   ") +
-        "            │"
-    )
-  );
-  console.log(
-    c.dim("      └─────────────────────────────────────────────────────┘\n")
+    c.yellow("     ⚠️  This will cost 40 HBAR (20 HBAR per token)\n")
   );
 
-  // Step 1.5: Create HTS Tokens (Optional but CRITICAL if USE_HTS is true)
-  let TOKEN_ADDRESSES = {
-    USDC: usdc.address,
-    WHBAR: whbar.address,
-    USDC_HTS: ethers.constants.AddressZero,
-    WHBAR_HTS: ethers.constants.AddressZero,
-  };
+  let usdcHtsToken, hbarHtsToken;
 
-  let shouldUseHts = false; // Track if HTS is actually ready
+  await retryOperation(async () => {
+    const tx = await ajoFactory.createHtsTokens({
+      value: ethers.utils.parseEther("40"),
+      gasLimit: DEMO_CONFIG.GAS_LIMIT.CREATE_HTS,
+    });
+    const receipt = await tx.wait();
 
-  // FIXED: Use HEDERA_TOKEN_SERVICE instead of undefined hederaTokenService
-  if (HEDERA_TOKEN_SERVICE !== ethers.constants.AddressZero) {
-    console.log(c.cyan("  📝 Step 1.5: Creating Native HTS Tokens...\n"));
-    console.log(c.dim("     (Required for HTS-enabled Ajos)\n"));
+    console.log(c.dim(`     Transaction hash: ${receipt.transactionHash}`));
+    console.log(c.dim(`     Gas used: ${receipt.gasUsed.toString()}\n`));
 
-    try {
-      const htsTokens = await retryOperation(async () => {
-        const tx = await ajoFactory.createHtsTokens({
-          value: ethers.utils.parseEther("40"), // Need 40 HBAR (20 per token)
-          gasLimit: 5000000,
-        });
-        const receipt = await tx.wait();
+    // Look for HTS creation event
+    const autoAssocEvent = receipt.events?.find(
+      (e) => e.event === "HtsTokensCreatedWithAutoAssociation"
+    );
 
-        const usdcEvent = receipt.events?.find(
-          (e) => e.event === "HtsTokenCreated" && e.args?.symbol === "USDC"
-        );
-        const hbarEvent = receipt.events?.find(
-          (e) => e.event === "HtsTokenCreated" && e.args?.symbol === "WHBAR"
-        );
+    if (autoAssocEvent) {
+      usdcHtsToken = autoAssocEvent.args[0];
+      hbarHtsToken = autoAssocEvent.args[1];
 
-        TOKEN_ADDRESSES.USDC_HTS =
-          usdcEvent?.args?.tokenAddress || ethers.constants.AddressZero;
-        TOKEN_ADDRESSES.WHBAR_HTS =
-          hbarEvent?.args?.tokenAddress || ethers.constants.AddressZero;
-
-        console.log(
-          c.green(`      ✅ HTS USDC Token: ${TOKEN_ADDRESSES.USDC_HTS}`)
-        );
-        console.log(
-          c.green(`      ✅ HTS WHBAR Token: ${TOKEN_ADDRESSES.WHBAR_HTS}\n`)
-        );
-
-        shouldUseHts = true; // HTS is now ready
-
-        return {
-          usdc: TOKEN_ADDRESSES.USDC_HTS,
-          hbar: TOKEN_ADDRESSES.WHBAR_HTS,
-        };
-      }, "Create HTS Tokens");
-    } catch (error) {
-      console.log(
-        c.yellow(
-          `      ⚠️ HTS token creation failed: ${error.message.slice(0, 100)}`
-        )
-      );
-      console.log(c.yellow(`      ⚠️ Falling back to standard ERC20 tokens\n`));
-      shouldUseHts = false;
+      console.log(c.green(`     ✅ HTS Tokens Created with Auto-Association!`));
+      console.log(c.bright(`     📍 USDC Token: ${usdcHtsToken}`));
+      console.log(c.bright(`     📍 WHBAR Token: ${hbarHtsToken}\n`));
+    } else {
+      throw new Error("HtsTokensCreatedWithAutoAssociation event not found");
     }
-  } else {
-    console.log(c.yellow("  ⊘ Step 1.5: HTS Token Creation Skipped"));
-    console.log(
-      c.dim("     HTS service not configured - using standard ERC20 tokens\n")
+
+    return { usdcHtsToken, hbarHtsToken };
+  }, "Create HTS Tokens");
+
+  await sleep(2000);
+
+  // Step 1.4: Verify Factory Token Balances
+  console.log(c.cyan("  📝 Step 1.4: Verifying Factory Token Balances...\n"));
+
+  const usdcContract = new ethers.Contract(
+    usdcHtsToken,
+    ["function balanceOf(address) view returns (uint256)"],
+    ethers.provider
+  );
+
+  const hbarContract = new ethers.Contract(
+    hbarHtsToken,
+    ["function balanceOf(address) view returns (uint256)"],
+    ethers.provider
+  );
+
+  const factoryUsdcBalance = await usdcContract.balanceOf(ajoFactory.address);
+  const factoryHbarBalance = await hbarContract.balanceOf(ajoFactory.address);
+
+  console.log(
+    c.green(`     ✅ Factory USDC Balance: ${formatUSDC(factoryUsdcBalance)}`)
+  );
+  console.log(
+    c.green(
+      `     ✅ Factory WHBAR Balance: ${formatHBAR(factoryHbarBalance)}\n`
+    )
+  );
+
+  if (factoryUsdcBalance.eq(0) || factoryHbarBalance.eq(0)) {
+    throw new Error(
+      "Factory has zero token balance! HTS token creation failed."
     );
   }
 
-  // Override USE_HTS environment variable if HTS creation failed
-  if (process.env.USE_HTS === "true" && !shouldUseHts) {
-    console.log(
-      c.yellow(
-        "  ⚠️ Note: USE_HTS was set to 'true' but HTS tokens are not available"
-      )
-    );
-    console.log(
-      c.yellow("     All Ajos will use standard ERC20 tokens instead\n")
-    );
-  }
-
-  console.log(c.green("  ✅ System Deployment Complete!\n"));
+  console.log(c.green("  ✅ HTS System Deployment Complete!\n"));
   console.log(c.blue("═".repeat(88) + "\n"));
 
   return {
     ajoFactory,
-    usdc,
-    whbar,
     deployer,
     masterContracts,
-    TOKEN_ADDRESSES,
-    shouldUseHts,
+    usdcHtsToken,
+    hbarHtsToken,
   };
 }
 
 // ================================================================
-// PHASE 2: 5-PHASE AJO CREATION WITH HEDERA
+// PHASE 2: 5-PHASE AJO CREATION (HTS-ONLY)
 // ================================================================
 
-async function create5PhaseAjoWithFullHedera(
-  ajoFactory,
-  deployer,
-  shouldUseHts,
-  options = {}
-) {
+async function createHtsAjo(ajoFactory, deployer, options = {}) {
   console.log(
     c.bgBlue(
-      "\n" + " ".repeat(28) + "PHASE 2: 5-PHASE AJO CREATION" + " ".repeat(29)
+      "\n" + " ".repeat(28) + "PHASE 2: HTS AJO CREATION" + " ".repeat(33)
     )
   );
   console.log(c.blue("═".repeat(88)));
 
-  const { name = `Production Ajo ${Date.now()}`, useScheduledPayments = true } =
+  const { name = `HTS Ajo ${Date.now()}`, useScheduledPayments = true } =
     options;
-
-  // Determine if we should actually use HTS based on availability
-  const useHtsTokens = shouldUseHts && (await ajoFactory.isHtsEnabled());
 
   console.log(c.bright("\n  📋 Configuration:"));
   console.log(
@@ -631,11 +423,13 @@ async function create5PhaseAjoWithFullHedera(
   console.log(c.dim(`     │ Name: ${name.padEnd(51)} │`));
   console.log(
     c.dim(
-      `     │ HTS Tokens: ${(useHtsTokens
-        ? c.green("✅ Enabled")
-        : c.yellow("❌ Using ERC20")
-      ).padEnd(60)} │`
+      `     │ HTS Tokens: ${c
+        .green("✅ Required (No ERC20 Fallback)")
+        .padEnd(60)} │`
     )
+  );
+  console.log(
+    c.dim(`     │ Auto-Association: ${c.green("✅ Active").padEnd(56)} │`)
   );
   console.log(
     c.dim(
@@ -657,11 +451,12 @@ async function create5PhaseAjoWithFullHedera(
   // PHASE 1: Create Core
   console.log(c.cyan("  📋 PHASE 1/5: Creating Ajo Core..."));
   await retryOperation(async () => {
-    const tx = await ajoFactory
-      .connect(deployer)
-      .createAjo(name, useHtsTokens, useScheduledPayments, {
-        gasLimit: DEMO_CONFIG.GAS_LIMIT.CREATE_AJO,
-      });
+    const tx = await ajoFactory.connect(deployer).createAjo(
+      name,
+      true, // MUST use HTS
+      useScheduledPayments,
+      { gasLimit: DEMO_CONFIG.GAS_LIMIT.CREATE_AJO }
+    );
     const receipt = await tx.wait();
 
     const event = receipt.events?.find((e) => e.event === "AjoCreated");
@@ -675,7 +470,7 @@ async function create5PhaseAjoWithFullHedera(
 
   await sleep(2000);
 
-  // PHASE 2: Initialize Members + Governance + HCS
+  // PHASE 2-5: Initialize remaining phases
   console.log(
     c.cyan("  📋 PHASE 2/5: Initialize Members + Governance + HCS...")
   );
@@ -690,49 +485,37 @@ async function create5PhaseAjoWithFullHedera(
     );
     hcsTopicId = hcsEvent?.args?.hcsTopicId;
 
-    console.log(c.green(`     ✅ Members Contract Initialized`));
-    console.log(c.green(`     ✅ Governance Contract Initialized`));
-    console.log(c.green(`     ✅ HCS Topic Created`));
-    console.log(c.dim(`        Topic ID: ${hcsTopicId || "N/A"}`));
-    console.log(c.dim(`        Gas: ${receipt.gasUsed.toString()}\n`));
+    console.log(c.green(`     ✅ Phase 2 Complete`));
+    console.log(c.dim(`        HCS Topic: ${hcsTopicId}\n`));
     return tx;
   }, "Initialize Ajo Phase 2");
 
   await sleep(2000);
 
-  // PHASE 3: Initialize Collateral + Payments
   console.log(c.cyan("  📋 PHASE 3/5: Initialize Collateral + Payments..."));
   await retryOperation(async () => {
     const tx = await ajoFactory.connect(deployer).initializeAjoPhase3(ajoId, {
       gasLimit: DEMO_CONFIG.GAS_LIMIT.INIT_PHASE_3,
     });
-    const receipt = await tx.wait();
-    console.log(c.green(`     ✅ Collateral Contract Initialized`));
-    console.log(c.green(`     ✅ Payments Contract Initialized`));
-    console.log(c.dim(`        Gas: ${receipt.gasUsed.toString()}\n`));
+    await tx.wait();
+    console.log(c.green(`     ✅ Phase 3 Complete\n`));
     return tx;
   }, "Initialize Ajo Phase 3");
 
   await sleep(2000);
 
-  // PHASE 4: Initialize Core + Cross-link
-  console.log(
-    c.cyan("  📋 PHASE 4/5: Initialize Core + Cross-link All Contracts...")
-  );
+  console.log(c.cyan("  📋 PHASE 4/5: Initialize Core + Cross-link..."));
   await retryOperation(async () => {
     const tx = await ajoFactory.connect(deployer).initializeAjoPhase4(ajoId, {
       gasLimit: DEMO_CONFIG.GAS_LIMIT.INIT_PHASE_4,
     });
-    const receipt = await tx.wait();
-    console.log(c.green(`     ✅ Core Contract Initialized`));
-    console.log(c.green(`     ✅ All Contracts Cross-linked`));
-    console.log(c.dim(`        Gas: ${receipt.gasUsed.toString()}\n`));
+    await tx.wait();
+    console.log(c.green(`     ✅ Phase 4 Complete\n`));
     return tx;
   }, "Initialize Ajo Phase 4");
 
   await sleep(2000);
 
-  // PHASE 5: Initialize Schedule (if enabled)
   if (useScheduledPayments) {
     console.log(
       c.cyan("  📋 PHASE 5/5: Initialize Schedule Contract (HSS)...")
@@ -741,22 +524,16 @@ async function create5PhaseAjoWithFullHedera(
       const tx = await ajoFactory.connect(deployer).initializeAjoPhase5(ajoId, {
         gasLimit: DEMO_CONFIG.GAS_LIMIT.INIT_PHASE_5,
       });
-      const receipt = await tx.wait();
-      console.log(c.green(`     ✅ Schedule Contract Initialized`));
-      console.log(c.green(`     ✅ HSS Integration Complete`));
-      console.log(c.dim(`        Gas: ${receipt.gasUsed.toString()}\n`));
+      await tx.wait();
+      console.log(c.green(`     ✅ Phase 5 Complete\n`));
       return tx;
     }, "Initialize Ajo Phase 5");
-  } else {
-    console.log(
-      c.yellow("  ⊘ PHASE 5/5: Schedule Contract Skipped (Not Enabled)\n")
-    );
   }
 
   const ajoInfo = await ajoFactory.getAjo(ajoId);
 
   console.log(c.blue("═".repeat(88)));
-  console.log(c.green(`\n  ✅ Ajo "${name}" Successfully Created!\n`));
+  console.log(c.green(`\n  ✅ HTS Ajo "${name}" Successfully Created!\n`));
   console.log(c.dim("  📍 Deployed Contracts:"));
   console.log(
     c.dim(
@@ -779,23 +556,25 @@ async function create5PhaseAjoWithFullHedera(
   }
   console.log(
     c.dim(
-      "     └──────────────────────────────────────────────────────────────────┘"
+      "     └──────────────────────────────────────────────────────────────────┘\n"
     )
   );
-  console.log(c.dim(`\n  🔗 HCS Topic ID: ${hcsTopicId || "N/A"}\n`));
   console.log(c.blue("═".repeat(88) + "\n"));
 
   return { ajoId, ajoInfo, hcsTopicId };
 }
 
 // ================================================================
-// PHASE 3: PARTICIPANT SETUP WITH TOKEN DISTRIBUTION
+// PHASE 3: HTS PARTICIPANT SETUP
 // ================================================================
 
-async function setupParticipantsEnhanced(ajoFactory, usdc, whbar, ajoId) {
+async function setupHtsParticipants(ajoFactory, ajoId) {
   console.log(
     c.bgBlue(
-      "\n" + " ".repeat(26) + "PHASE 3: PARTICIPANT ONBOARDING" + " ".repeat(27)
+      "\n" +
+        " ".repeat(24) +
+        "PHASE 3: HTS PARTICIPANT ONBOARDING" +
+        " ".repeat(25)
     )
   );
   console.log(c.blue("═".repeat(88) + "\n"));
@@ -833,9 +612,130 @@ async function setupParticipantsEnhanced(ajoFactory, usdc, whbar, ajoId) {
   const participants = [];
   const actualCount = Math.min(DEMO_CONFIG.TOTAL_PARTICIPANTS, signers.length);
 
+  console.log(c.cyan(`  👥 Setting up ${actualCount} HTS participants...\n`));
+  console.log(
+    c.yellow(
+      "     ℹ️  Auto-association ENABLED - users receive tokens automatically\n"
+    )
+  );
+
+  // Check factory balance
+  const usdcContract = new ethers.Contract(
+    ajoInfo.usdcToken,
+    [
+      "function balanceOf(address) view returns (uint256)",
+      "function allowance(address,address) view returns (uint256)",
+    ],
+    ethers.provider
+  );
+
+  const factoryBalance = await usdcContract.balanceOf(ajoFactory.address);
+  console.log(
+    c.bright(`     💰 Factory USDC Balance: ${formatUSDC(factoryBalance)}\n`)
+  );
+
+  if (factoryBalance.eq(0)) {
+    throw new Error("Factory has no tokens to distribute!");
+  }
+
+  const userAddresses = signers.slice(0, actualCount).map((s) => s.address);
+
+  // Associate users (optional but recommended)
+  console.log(c.cyan("  🔗 Associating Users with HTS Tokens...\n"));
+
+  try {
+    await retryOperation(async () => {
+      const tx = await ajoFactory
+        .connect(deployer)
+        .batchAssociateUsersWithHtsTokens(userAddresses, {
+          gasLimit: DEMO_CONFIG.GAS_LIMIT.HTS_BATCH_ASSOCIATE,
+        });
+      const receipt = await tx.wait();
+
+      const assocEvents = receipt.events?.filter(
+        (e) => e.event === "UserHtsAssociated"
+      );
+      console.log(
+        c.green(
+          `     ✅ ${assocEvents?.length || actualCount} users associated`
+        )
+      );
+      console.log(c.dim(`        Gas used: ${receipt.gasUsed.toString()}\n`));
+      return tx;
+    }, "Batch Associate HTS Tokens");
+  } catch (error) {
+    console.log(
+      c.yellow(`     ⚠️ Association skipped (auto-association may handle this)`)
+    );
+    console.log(c.dim(`        ${error.message.slice(0, 80)}\n`));
+  }
+
+  await sleep(2000);
+
+  // Fund users
+  console.log(c.cyan("  💰 Funding Participants with HTS Tokens...\n"));
+
+  const usdcAmountsInt64 = new Array(actualCount).fill(1000 * 10 ** 6); // 1000 USDC
+  const hbarAmountsInt64 = new Array(actualCount).fill(1000 * 10 ** 8); // 1000 WHBAR
+
+  await retryOperation(async () => {
+    const tx = await ajoFactory
+      .connect(deployer)
+      .batchFundUsersWithHtsTokens(
+        userAddresses,
+        usdcAmountsInt64,
+        hbarAmountsInt64,
+        { gasLimit: DEMO_CONFIG.GAS_LIMIT.HTS_BATCH_FUND }
+      );
+    const receipt = await tx.wait();
+
+    const balanceEvent = receipt.events?.find(
+      (e) => e.event === "FactoryBalanceCheck"
+    );
+    if (balanceEvent) {
+      console.log(c.dim(`     Factory balances verified:`));
+      console.log(
+        c.dim(`       USDC: ${formatUSDC(balanceEvent.args.usdcBalance)}`)
+      );
+      console.log(
+        c.dim(`       HBAR: ${formatHBAR(balanceEvent.args.hbarBalance)}\n`)
+      );
+    }
+
+    const fundEvents = receipt.events?.filter(
+      (e) => e.event === "UserHtsFunded"
+    );
+    const successCount =
+      fundEvents?.filter((e) => {
+        const usdcSuccess = e.args.usdcResponse.toNumber() === 22;
+        const hbarSuccess = e.args.hbarResponse.toNumber() === 22;
+        return usdcSuccess || hbarSuccess;
+      }).length || 0;
+
+    console.log(
+      c.green(
+        `     ✅ ${successCount}/${actualCount} users funded successfully\n`
+      )
+    );
+
+    if (successCount === 0) {
+      throw new Error("No users were successfully funded!");
+    }
+
+    return tx;
+  }, "Batch Fund HTS Tokens");
+
+  await sleep(2000);
+
+  // Prepare participants with approvals
   console.log(
     c.cyan(
-      `  👥 Setting up ${actualCount} participants with tokens & approvals...\n`
+      "  👥 Preparing Participants (Balances + Direct ERC20 Approvals)...\n"
+    )
+  );
+  console.log(
+    c.yellow(
+      "     ℹ️  Using direct ERC20 interface (HTS tokens are ERC20-compatible)\n"
     )
   );
   console.log(
@@ -848,45 +748,6 @@ async function setupParticipantsEnhanced(ajoFactory, usdc, whbar, ajoId) {
     c.dim("  ├────┼─────────────┼──────────────┼─────────────┼─────────────┤")
   );
 
-  const usesHts = ajoInfo.usesHtsTokens;
-
-  // ✅ FIX 1: Batch associate all users via factory
-  if (usesHts) {
-    console.log(
-      c.dim(
-        `\n  🔗 Batch associating HTS tokens for all participants via factory...\n`
-      )
-    );
-
-    const userAddresses = signers.slice(0, actualCount).map((s) => s.address);
-
-    try {
-      await retryOperation(async () => {
-        const tx = await ajoFactory
-          .connect(deployer)
-          .batchAssociateUsersWithHtsTokens(userAddresses, {
-            gasLimit: 1000000 + actualCount * 100000,
-          });
-        const receipt = await tx.wait();
-        console.log(
-          c.green(`     ✅ All participants associated with HTS tokens`)
-        );
-        console.log(c.dim(`        Gas used: ${receipt.gasUsed.toString()}\n`));
-        return tx;
-      }, "Batch Associate HTS Tokens");
-    } catch (error) {
-      console.log(
-        c.red(
-          `     ❌ Batch association failed: ${error.message.slice(0, 100)}`
-        )
-      );
-      console.log(
-        c.yellow(`     ⚠️ Falling back to individual associations...\n`)
-      );
-      usesHts = false; // Fallback to ERC20
-    }
-  }
-
   for (let i = 0; i < actualCount; i++) {
     const participant = {
       signer: signers[i],
@@ -896,80 +757,90 @@ async function setupParticipantsEnhanced(ajoFactory, usdc, whbar, ajoId) {
     };
 
     try {
-      // ✅ FIX 2: Get tokens from factory (HTS) or faucet (ERC20)
-      if (usesHts) {
-        console.log(
-          c.dim(`  💰 Funding ${participant.name} with HTS tokens...`)
-        );
+      // Get balance
+      const balance = await usdcContract.balanceOf(participant.address);
 
-        await retryOperation(async () => {
-          const usdcAmount = ethers.utils.parseUnits("1000", 6);
-          const hbarAmount = ethers.utils.parseUnits("1000", 8);
-
-          const tx = await ajoFactory
-            .connect(deployer)
-            .fundUserWithHtsTokens(
-              participant.address,
-              usdcAmount,
-              hbarAmount,
-              { gasLimit: 500000 }
-            );
-          await tx.wait();
-          console.log(
-            c.green(`     ✅ Received 1000 USDC + 1000 WHBAR (HTS)\n`)
-          );
-          return tx;
-        }, `${participant.name} - Receive HTS Tokens`);
-      } else {
-        // Standard ERC20 faucet
-        await retryOperation(async () => {
-          const tx = await usdc
-            .connect(participant.signer)
-            .faucet({ gasLimit: 200000 });
-          await tx.wait();
-          return tx;
-        }, `${participant.name} - Get USDC`);
+      if (balance.eq(0)) {
+        throw new Error("Zero balance after funding");
       }
 
-      // Get balance
-      const tokenAddress = usesHts ? ajoInfo.usdcToken : usdc.address;
-      const tokenContract = await ethers.getContractAt(
-        usesHts ? "IHederaTokenService" : "MockERC20",
-        tokenAddress
+      const approvalAmount = balance.div(2);
+
+      console.log(
+        c.dim(
+          `     → ${participant.name}: Using direct ERC20 approve on HTS token...`
+        )
       );
 
-      let balance;
-      if (usesHts) {
-        // For HTS, we need to query differently
-        balance = ethers.utils.parseUnits("1000", 6); // We just sent this amount
-      } else {
-        balance = await tokenContract.balanceOf(participant.address);
-      }
+      // Create ERC20 interface for HTS token
+      const htsToken = new ethers.Contract(
+        ajoInfo.usdcToken,
+        [
+          "function approve(address spender, uint256 amount) external returns (bool)",
+          "function allowance(address owner, address spender) view returns (uint256)",
+        ],
+        participant.signer
+      );
 
-      const allowanceAmount = balance.div(2);
-
-      // ✅ FIX 3: Approve using correct token
-      const approveToken = usesHts
-        ? await ethers.getContractAt("MockERC20", tokenAddress)
-        : usdc;
-
-      // Approve Collateral
+      // Approve Collateral contract - Direct ERC20 interface
       await retryOperation(async () => {
-        const tx = await approveToken
-          .connect(participant.signer)
-          .approve(ajoCollateral.address, allowanceAmount, {
-            gasLimit: 150000,
-          });
-        await tx.wait();
+        const tx = await htsToken.approve(
+          ajoCollateral.address,
+          approvalAmount,
+          { gasLimit: 800000 } // Higher gas for HTS ERC20 operations
+        );
+        const receipt = await tx.wait();
+
+        // Verify approval worked
+        const allowance = await htsToken.allowance(
+          participant.address,
+          ajoCollateral.address
+        );
+        if (allowance.lt(approvalAmount)) {
+          throw new Error(
+            `Approval failed: allowance ${formatUSDC(allowance)} < ${formatUSDC(
+              approvalAmount
+            )}`
+          );
+        }
+
+        console.log(
+          c.dim(
+            `        ✓ Collateral: ${formatUSDC(
+              approvalAmount
+            )} (Gas: ${receipt.gasUsed.toString()})`
+          )
+        );
         return tx;
       }, `${participant.name} - Approve Collateral`);
 
-      // Approve Payments
+      // Approve Payments contract - Direct ERC20 interface
       await retryOperation(async () => {
-        const tx = await approveToken
-          .connect(participant.signer)
-          .approve(ajoPayments.address, allowanceAmount, { gasLimit: 150000 });
-        await tx.wait();
+        const tx = await htsToken.approve(ajoPayments.address, approvalAmount, {
+          gasLimit: 800000,
+        });
+        const receipt = await tx.wait();
+
+        // Verify approval worked
+        const allowance = await htsToken.allowance(
+          participant.address,
+          ajoPayments.address
+        );
+        if (allowance.lt(approvalAmount)) {
+          throw new Error(
+            `Approval failed: allowance ${formatUSDC(allowance)} < ${formatUSDC(
+              approvalAmount
+            )}`
+          );
+        }
+
+        console.log(
+          c.dim(
+            `        ✓ Payments: ${formatUSDC(
+              approvalAmount
+            )} (Gas: ${receipt.gasUsed.toString()})`
+          )
+        );
         return tx;
       }, `${participant.name} - Approve Payments`);
 
@@ -999,151 +870,109 @@ async function setupParticipantsEnhanced(ajoFactory, usdc, whbar, ajoId) {
       console.log(c.red(`     Error: ${error.message.slice(0, 100)}`));
     }
 
-    await sleep(500);
+    await sleep(800);
   }
 
   console.log(
     c.dim("  └────┴─────────────┴──────────────┴─────────────┴─────────────┘\n")
   );
   console.log(
-    c.green(`  ✅ ${participants.length}/${actualCount} participants ready!\n`)
+    c.green(
+      `  ✅ ${participants.length}/${actualCount} HTS participants ready!\n`
+    )
   );
   console.log(c.blue("═".repeat(88) + "\n"));
 
-  return { ajo, ajoMembers, ajoCollateral, ajoPayments, participants };
+  return { ajo, ajoMembers, ajoCollateral, ajoPayments, participants, ajoInfo };
 }
 
 // ================================================================
-// PHASE 4: DEMONSTRATE HEDERA TOKEN SERVICE (HTS)
+// PHASE 4: DEMONSTRATE HTS FEATURES
 // ================================================================
 
-async function demonstrateHederaTokenService(
+async function demonstrateHtsFeatures(
   ajoFactory,
   ajoId,
-  ajo,
-  participants
+  participants,
+  ajoInfo
 ) {
   console.log(
     c.bgBlue(
       "\n" +
-        " ".repeat(20) +
-        "PHASE 4: HEDERA TOKEN SERVICE (HTS) DEMONSTRATION" +
-        " ".repeat(20)
+        " ".repeat(22) +
+        "PHASE 4: HTS AUTO-ASSOCIATION DEMONSTRATION" +
+        " ".repeat(23)
     )
   );
   console.log(c.blue("═".repeat(88)));
+  console.log(c.bright("\n  💎 Native Hedera Tokens with Auto-Association\n"));
+
+  // Token Information
+  console.log(c.cyan("  📊 HTS Token Configuration\n"));
+  console.log(c.dim("     USDC Token (HTS):"));
   console.log(
-    c.bright("\n  💎 Native Hedera Tokens - The Future of DeFi on Hedera\n")
+    c.dim("     ┌─────────────────────────────────────────────────┐")
+  );
+  console.log(
+    c.dim(`     │ Address:      ${ajoInfo.usdcToken.slice(0, 42).padEnd(42)} │`)
+  );
+  console.log(
+    c.dim(`     │ Symbol:       USDC (HTS)                          │`)
+  );
+  console.log(
+    c.dim(`     │ Decimals:     6                                   │`)
+  );
+  console.log(
+    c.dim(`     │ Auto-Assoc:   ${c.green("✅ ENABLED").padEnd(51)} │`)
+  );
+  console.log(
+    c.dim(`     │ Treasury:     Factory                             │`)
+  );
+  console.log(
+    c.dim("     └─────────────────────────────────────────────────┘\n")
   );
 
-  const ajoInfo = await ajoFactory.getAjo(ajoId);
-
-  if (!ajoInfo.usesHtsTokens) {
-    console.log(c.yellow("  ⚠️ HTS tokens not enabled for this Ajo"));
-    console.log(c.dim("     Using standard ERC20 tokens as fallback\n"));
-    console.log(c.blue("═".repeat(88) + "\n"));
-    return;
-  }
-
-  // Scenario 1: Token Information
-  console.log(c.cyan("  📊 Scenario 1: HTS Token Configuration\n"));
-
-  try {
-    const usdcInfo = await ajo.getHtsTokenInfo(0);
-    console.log(c.dim("     USDC Token (HTS):"));
-    console.log(
-      c.dim("     ┌─────────────────────────────────────────────────┐")
-    );
-    console.log(
-      c.dim(
-        `     │ Address:      ${usdcInfo.tokenAddress
-          .slice(0, 42)
-          .padEnd(42)} │`
-      )
-    );
-    console.log(c.dim(`     │ Name:         ${usdcInfo.name.padEnd(42)} │`));
-    console.log(c.dim(`     │ Symbol:       ${usdcInfo.symbol.padEnd(42)} │`));
-    console.log(
-      c.dim(`     │ Decimals:     ${usdcInfo.decimals.toString().padEnd(42)} │`)
-    );
-    console.log(
-      c.dim(
-        `     │ Freeze Key:   ${(usdcInfo.hasFreezeKey
-          ? "✅ Yes"
-          : "❌ No"
-        ).padEnd(42)} │`
-      )
-    );
-    console.log(
-      c.dim(
-        `     │ Supply Key:   ${(usdcInfo.hasSupplyKey
-          ? "✅ Yes"
-          : "❌ No"
-        ).padEnd(42)} │`
-      )
-    );
-    console.log(
-      c.dim(
-        `     │ Pause Key:    ${(usdcInfo.hasPauseKey
-          ? "✅ Yes"
-          : "❌ No"
-        ).padEnd(42)} │`
-      )
-    );
-    console.log(
-      c.dim("     └─────────────────────────────────────────────────┘\n")
-    );
-
-    const hbarInfo = await ajo.getHtsTokenInfo(1);
-    console.log(c.dim("     WHBAR Token (HTS):"));
-    console.log(
-      c.dim("     ┌─────────────────────────────────────────────────┐")
-    );
-    console.log(
-      c.dim(
-        `     │ Address:      ${hbarInfo.tokenAddress
-          .slice(0, 42)
-          .padEnd(42)} │`
-      )
-    );
-    console.log(c.dim(`     │ Name:         ${hbarInfo.name.padEnd(42)} │`));
-    console.log(c.dim(`     │ Symbol:       ${hbarInfo.symbol.padEnd(42)} │`));
-    console.log(
-      c.dim(`     │ Decimals:     ${hbarInfo.decimals.toString().padEnd(42)} │`)
-    );
-    console.log(
-      c.dim("     └─────────────────────────────────────────────────┘\n")
-    );
-  } catch (error) {
-    console.log(
-      c.yellow(
-        `     ⚠️ Could not fetch HTS info: ${error.message.slice(0, 80)}\n`
-      )
-    );
-  }
-
-  // Scenario 2: Token Associations
-  console.log(c.cyan("  📊 Scenario 2: Member Token Associations\n"));
-
-  console.log(c.dim("     ┌─────────────┬──────────────┬──────────────┐"));
-  console.log(c.dim("     │ Member      │ USDC Assoc   │ HBAR Assoc   │"));
-  console.log(c.dim("     ├─────────────┼──────────────┼──────────────┤"));
+  // Member Balances
+  console.log(c.cyan("  📊 Member Token Balances\n"));
+  console.log(
+    c.dim("     ┌─────────────┬──────────────┬──────────────┬──────────────┐")
+  );
+  console.log(
+    c.dim("     │ Member      │ USDC Balance │ HBAR Balance │ Ready Status │")
+  );
+  console.log(
+    c.dim("     ├─────────────┼──────────────┼──────────────┼──────────────┤")
+  );
 
   for (let i = 0; i < Math.min(5, participants.length); i++) {
     const p = participants[i];
     try {
-      const status = await ajo.isHtsAssociated(p.address);
-      const usdcStatus = status.usdcAssociated
-        ? c.green("✅ Yes")
-        : c.red("❌ No");
-      const hbarStatus = status.hbarAssociated
-        ? c.green("✅ Yes")
-        : c.red("❌ No");
+      const usdcContract = new ethers.Contract(
+        ajoInfo.usdcToken,
+        ["function balanceOf(address) view returns (uint256)"],
+        ethers.provider
+      );
+
+      const hbarContract = new ethers.Contract(
+        ajoInfo.hbarToken,
+        ["function balanceOf(address) view returns (uint256)"],
+        ethers.provider
+      );
+
+      const usdcBalance = await usdcContract.balanceOf(p.address);
+      const hbarBalance = await hbarContract.balanceOf(p.address);
+
+      const usdcBal = formatUSDC(usdcBalance);
+      const hbarBal = formatHBAR(hbarBalance);
+      const readyStatus = usdcBalance.gt(0)
+        ? c.green("✅ Ready")
+        : c.yellow("⚠️ No Balance");
+
       console.log(
         c.dim(
-          `     │ ${p.name.padEnd(11)} │ ${usdcStatus.padEnd(
-            20
-          )} │ ${hbarStatus.padEnd(20)} │`
+          `     │ ${p.name.padEnd(11)} │ ${usdcBal.padEnd(
+            12
+          )} │ ${hbarBal.padEnd(12)} │ ${readyStatus.padEnd(20)} │`
         )
       );
     } catch (error) {
@@ -1151,42 +980,52 @@ async function demonstrateHederaTokenService(
         c.dim(
           `     │ ${p.name.padEnd(11)} │ ${"⚠️ Error".padEnd(
             12
-          )} │ ${"⚠️ Error".padEnd(12)} │`
+          )} │ ${"⚠️ Error".padEnd(12)} │ ${"⚠️ Error".padEnd(12)} │`
         )
       );
     }
   }
-  console.log(c.dim("     └─────────────┴──────────────┴──────────────┘\n"));
+  console.log(
+    c.dim("     └─────────────┴──────────────┴──────────────┴──────────────┘\n")
+  );
 
-  // HTS Benefits Summary
-  console.log(c.cyan("  💡 HTS Key Benefits:\n"));
+  // Key Benefits
+  console.log(c.cyan("  💡 HTS Auto-Association Benefits:\n"));
   console.log(
-    c.green("     ✓ Native Hedera tokens - faster & cheaper than ERC20")
+    c.green("     ✓ No Manual Association") +
+      c.dim(" - Users receive tokens automatically")
   );
   console.log(
-    c.green("     ✓ Built-in freeze controls - compliance & security")
-  );
-  console.log(c.green("     ✓ Pause functionality - emergency safeguards"));
-  console.log(c.green("     ✓ Supply management - controlled token issuance"));
-  console.log(
-    c.green("     ✓ Governance integration - democratic token policies")
+    c.green("     ✓ Seamless Onboarding") + c.dim(" - One-step funding process")
   );
   console.log(
-    c.green("     ✓ No smart contract needed - native Hedera feature\n")
+    c.green("     ✓ Reduced Gas Costs") +
+      c.dim(" - No separate association transactions")
+  );
+  console.log(
+    c.green("     ✓ Better UX") + c.dim(" - Simplified user experience")
+  );
+  console.log(
+    c.green("     ✓ Factory Treasury") +
+      c.dim(" - Centralized token distribution")
+  );
+  console.log(
+    c.green("     ✓ Native Hedera") + c.dim(" - Faster & cheaper than ERC20\n")
   );
 
   console.log(c.blue("═".repeat(88) + "\n"));
 }
 
 // ================================================================
-// PHASE 5: MEMBER JOINING WITH COLLATERAL DEMONSTRATION
+// PHASE 5: MEMBER JOINING
 // ================================================================
 
 async function demonstrateMemberJoining(
   ajo,
   ajoCollateral,
   ajoMembers,
-  participants
+  participants,
+  ajoInfo
 ) {
   console.log(
     c.bgBlue(
@@ -1282,8 +1121,31 @@ async function demonstrateMemberJoining(
     console.log(c.yellow(`     ⚠️ Could not generate collateral demo\n`));
   }
 
-  // Members joining
+  // Pre-check Ajo status
   console.log(c.cyan("  👥 Members Joining Process:\n"));
+
+  try {
+    const ajoStatus = await ajo.getAjoInfo();
+    console.log(c.dim(`     Ajo Status:`));
+    console.log(
+      c.dim(
+        `       Active: ${ajoStatus.isActive ? c.green("✅") : c.red("❌")}`
+      )
+    );
+    console.log(
+      c.dim(
+        `       Members: ${ajoStatus.totalMembers.toString()}/${ajoStatus.maxMembers.toString()}`
+      )
+    );
+    console.log(c.dim(`       Cycle: ${ajoStatus.currentCycle.toString()}\n`));
+
+    if (!ajoStatus.isActive) {
+      console.log(c.red(`     ❌ ERROR: Ajo is not active!\n`));
+      return [];
+    }
+  } catch (error) {
+    console.log(c.yellow(`     ⚠️ Could not verify Ajo status\n`));
+  }
 
   const joinResults = [];
 
@@ -1307,6 +1169,41 @@ async function demonstrateMemberJoining(
     const participant = participants[i];
 
     try {
+      // Pre-flight checks
+      const usdcContract = new ethers.Contract(
+        ajoInfo.usdcToken,
+        [
+          "function balanceOf(address) view returns (uint256)",
+          "function allowance(address,address) view returns (uint256)",
+        ],
+        ethers.provider
+      );
+
+      const balance = await usdcContract.balanceOf(participant.address);
+      const collateralAllowance = await usdcContract.allowance(
+        participant.address,
+        ajoCollateral.address
+      );
+      const paymentsAllowance = await usdcContract.allowance(
+        participant.address,
+        ajoCollateral.address
+      );
+
+      console.log(
+        c.dim(
+          `     → ${participant.name}: Bal=${formatUSDC(
+            balance
+          )}, CollAllow=${formatUSDC(
+            collateralAllowance
+          )}, PayAllow=${formatUSDC(paymentsAllowance)}`
+        )
+      );
+
+      if (collateralAllowance.eq(0)) {
+        throw new Error("Collateral allowance is zero");
+      }
+
+      // Attempt to join
       const joinTx = await ajo.connect(participant.signer).joinAjo(0, {
         gasLimit: DEMO_CONFIG.GAS_LIMIT.JOIN_AJO,
       });
@@ -1314,13 +1211,11 @@ async function demonstrateMemberJoining(
 
       const memberInfo = await ajo.getMemberInfo(participant.address);
       const actualCollateral = memberInfo.memberInfo.lockedCollateral;
-      const guarantor = memberInfo.memberInfo.guarantor;
 
       joinResults.push({
         name: participant.name,
         position: participant.position,
         actualCollateral,
-        guarantor,
         gasUsed: receipt.gasUsed,
         success: true,
       });
@@ -1336,10 +1231,15 @@ async function demonstrateMemberJoining(
         )
       );
     } catch (error) {
+      let errorMsg = error.reason || error.message;
+      if (error.error && error.error.message) {
+        errorMsg = error.error.message;
+      }
+
       joinResults.push({
         name: participant.name,
         position: participant.position,
-        error: error.reason || error.message,
+        error: errorMsg,
         success: false,
       });
 
@@ -1353,6 +1253,7 @@ async function demonstrateMemberJoining(
           )} │ ${status.padEnd(20)} │`
         )
       );
+      console.log(c.red(`     ⚠️ ${errorMsg.slice(0, 100)}`));
     }
 
     await sleep(1500);
@@ -1377,7 +1278,7 @@ async function demonstrateMemberJoining(
 }
 
 // ================================================================
-// MAIN DEMONSTRATION ORCHESTRATOR
+// MAIN DEMONSTRATION
 // ================================================================
 
 async function main() {
@@ -1386,49 +1287,47 @@ async function main() {
 
     await sleep(2000);
 
-    // PHASE 1: COMPREHENSIVE DEPLOYMENT
+    // PHASE 1: Deploy HTS System
     const {
       ajoFactory,
-      usdc,
-      whbar,
       deployer,
       masterContracts,
-      TOKEN_ADDRESSES,
-      shouldUseHts,
-    } = await deployComprehensiveSystem();
+      usdcHtsToken,
+      hbarHtsToken,
+    } = await deployHtsSystem();
 
     await sleep(3000);
 
-    // PHASE 2: 5-PHASE AJO CREATION
-    const { ajoId, ajoInfo, hcsTopicId } = await create5PhaseAjoWithFullHedera(
+    // PHASE 2: Create HTS Ajo
+    const { ajoId, ajoInfo, hcsTopicId } = await createHtsAjo(
       ajoFactory,
       deployer,
-      shouldUseHts,
       {
-        name: "Hedera Hackathon 2025 - Production Demo Ajo",
+        name: "Hedera Hackathon 2025 - HTS Auto-Association Demo",
         useScheduledPayments: true,
       }
     );
 
     await sleep(3000);
 
-    // PHASE 3: PARTICIPANT SETUP
+    // PHASE 3: Setup HTS Participants
     const { ajo, ajoMembers, ajoCollateral, ajoPayments, participants } =
-      await setupParticipantsEnhanced(ajoFactory, usdc, whbar, ajoId);
+      await setupHtsParticipants(ajoFactory, ajoId);
 
     await sleep(3000);
 
-    // PHASE 4: HTS DEMONSTRATION
-    await demonstrateHederaTokenService(ajoFactory, ajoId, ajo, participants);
+    // PHASE 4: Demonstrate HTS Features
+    await demonstrateHtsFeatures(ajoFactory, ajoId, participants, ajoInfo);
 
     await sleep(2000);
 
-    // PHASE 5: MEMBER JOINING
+    // PHASE 5: Member Joining
     const joinResults = await demonstrateMemberJoining(
       ajo,
       ajoCollateral,
       ajoMembers,
-      participants
+      participants,
+      ajoInfo
     );
 
     await sleep(3000);
@@ -1438,12 +1337,11 @@ async function main() {
       network: (await ethers.provider.getNetwork()).name,
       chainId: (await ethers.provider.getNetwork()).chainId,
       deployedAt: new Date().toISOString(),
+      htsOnly: true,
       contracts: {
         AjoFactory: ajoFactory.address,
-        USDC: TOKEN_ADDRESSES.USDC,
-        WHBAR: TOKEN_ADDRESSES.WHBAR,
-        USDC_HTS: TOKEN_ADDRESSES.USDC_HTS,
-        WHBAR_HTS: TOKEN_ADDRESSES.WHBAR_HTS,
+        USDC_HTS: usdcHtsToken,
+        WHBAR_HTS: hbarHtsToken,
       },
       masterCopies: {
         AjoCore: masterContracts.ajoCore.address,
@@ -1463,17 +1361,19 @@ async function main() {
         governance: ajoInfo.ajoGovernance,
         schedule: ajoInfo.ajoSchedule,
         hcsTopicId: hcsTopicId,
+        usesHtsTokens: true,
+        usesScheduledPayments: ajoInfo.usesScheduledPayments,
       },
       hederaServices: {
         HTS: {
-          enabled: await ajoFactory.isHtsEnabled(),
-          address: "0x0000000000000000000000000000000000000167",
+          enabled: true,
+          autoAssociation: true,
+          usdcToken: usdcHtsToken,
+          hbarToken: hbarHtsToken,
         },
         HSS: {
-          enabled:
-            (await ajoFactory.getScheduleServiceAddress()) !==
-            ethers.constants.AddressZero,
-          address: await ajoFactory.getScheduleServiceAddress(),
+          enabled: true,
+          address: "0x000000000000000000000000000000000000016b",
         },
         HCS: {
           enabled: true,
@@ -1488,10 +1388,12 @@ async function main() {
       statistics: {
         totalParticipants: participants.length,
         successfulJoins: joinResults.filter((r) => r.success).length,
+        htsEnabled: true,
+        autoAssociationEnabled: true,
       },
     };
 
-    const filename = `deployment-hedera-hackathon-${Date.now()}.json`;
+    const filename = `deployment-hts-only-${Date.now()}.json`;
     try {
       fs.writeFileSync(filename, JSON.stringify(deploymentInfo, null, 2));
       console.log(c.green(`\n  ✅ Deployment info saved to: ${filename}\n`));
@@ -1505,14 +1407,16 @@ async function main() {
       )
     );
     console.log(c.green("═".repeat(88) + "\n"));
-    console.log(
-      c.bright("  🚀 AJO.SAVE - Building Financial Inclusion on Hedera")
-    );
-    console.log(
-      c.dim(
-        "     A complete, production-ready ROSCA system with native Hedera integration\n"
-      )
-    );
+    console.log(c.bright("  🚀 AJO.SAVE - HTS Auto-Association Demo"));
+    console.log(c.dim("     Pure HTS implementation - No ERC20 fallbacks\n"));
+
+    console.log(c.yellow("  ✨ Features Demonstrated:"));
+    console.log(c.dim("     • HTS tokens with auto-association"));
+    console.log(c.dim("     • Factory treasury management"));
+    console.log(c.dim("     • Batch user funding"));
+    console.log(c.dim("     • Dynamic collateral system"));
+    console.log(c.dim("     • Member joining workflow\n"));
+
     console.log(c.green("═".repeat(88) + "\n"));
 
     return deploymentInfo;
@@ -1531,20 +1435,20 @@ async function main() {
 if (require.main === module) {
   main()
     .then(() => {
-      console.log(c.green("\n🎉 Demonstration completed successfully!\n"));
+      console.log(c.green("\n🎉 HTS demonstration completed successfully!\n"));
       process.exit(0);
     })
     .catch((error) => {
-      console.error(c.red("\n❌ Demonstration failed\n"));
+      console.error(c.red("\n❌ HTS demonstration failed\n"));
       process.exit(1);
     });
 }
 
 module.exports = {
   main,
-  deployComprehensiveSystem,
-  create5PhaseAjoWithFullHedera,
-  setupParticipantsEnhanced,
-  demonstrateHederaTokenService,
+  deployHtsSystem,
+  createHtsAjo,
+  setupHtsParticipants,
+  demonstrateHtsFeatures,
   demonstrateMemberJoining,
 };

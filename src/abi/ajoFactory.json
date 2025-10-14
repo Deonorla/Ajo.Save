@@ -267,6 +267,44 @@
       "inputs": [
         {
           "indexed": false,
+          "internalType": "uint256",
+          "name": "successCount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "failCount",
+          "type": "uint256"
+        }
+      ],
+      "name": "BatchAssociationCompleted",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "successCount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "failCount",
+          "type": "uint256"
+        }
+      ],
+      "name": "BatchFundingCompleted",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
           "internalType": "bool",
           "name": "",
           "type": "bool"
@@ -279,6 +317,130 @@
         }
       ],
       "name": "CallResponseEvent",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "usdcBalance",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "hbarBalance",
+          "type": "uint256"
+        }
+      ],
+      "name": "FactoryBalanceCheck",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "owner",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "spender",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "int64",
+          "name": "responseCode",
+          "type": "int64"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "reason",
+          "type": "string"
+        }
+      ],
+      "name": "HtsApprovalFailed",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "int64",
+          "name": "responseCode",
+          "type": "int64"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "reason",
+          "type": "string"
+        }
+      ],
+      "name": "HtsAssociationFailed",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "owner",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "spender",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "HtsTokenApproved",
       "type": "event"
     },
     {
@@ -341,6 +503,62 @@
         }
       ],
       "name": "HtsTokenCreationAttempt",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "usdcToken",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "hbarToken",
+          "type": "address"
+        }
+      ],
+      "name": "HtsTokensCreatedWithAutoAssociation",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "int64",
+          "name": "responseCode",
+          "type": "int64"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "reason",
+          "type": "string"
+        }
+      ],
+      "name": "HtsTransferFailed",
       "type": "event"
     },
     {
@@ -423,6 +641,136 @@
         }
       ],
       "name": "ScheduledPaymentsEnabled",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "usdcToken",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "hbarToken",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "int64",
+          "name": "usdcResponse",
+          "type": "int64"
+        },
+        {
+          "indexed": false,
+          "internalType": "int64",
+          "name": "hbarResponse",
+          "type": "int64"
+        }
+      ],
+      "name": "UserHtsAssociated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "usdcAmount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "hbarAmount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "int64",
+          "name": "usdcResponse",
+          "type": "int64"
+        },
+        {
+          "indexed": false,
+          "internalType": "int64",
+          "name": "hbarResponse",
+          "type": "int64"
+        }
+      ],
+      "name": "UserHtsFunded",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "bool",
+          "name": "success",
+          "type": "bool"
+        }
+      ],
+      "name": "UserHtsTokenAssociated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "int64",
+          "name": "amount",
+          "type": "int64"
+        },
+        {
+          "indexed": false,
+          "internalType": "bool",
+          "name": "success",
+          "type": "bool"
+        }
+      ],
+      "name": "UserHtsTokenFunded",
       "type": "event"
     },
     {
@@ -608,43 +956,141 @@
     {
       "inputs": [
         {
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "spender",
+          "type": "address"
+        },
+        {
           "internalType": "uint256",
-          "name": "ajoId",
+          "name": "amount",
           "type": "uint256"
         }
       ],
-      "name": "ajoStatus",
+      "name": "approveHtsToken",
       "outputs": [
         {
           "internalType": "bool",
-          "name": "exists",
-          "type": "bool"
-        },
-        {
-          "internalType": "bool",
-          "name": "isActive",
+          "name": "success",
           "type": "bool"
         }
       ],
-      "stateMutability": "view",
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
       "inputs": [
         {
-          "internalType": "uint256",
-          "name": "ajoId",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint8",
-          "name": "startFromPhase",
-          "type": "uint8"
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
         }
       ],
-      "name": "completeRemainingPhases",
-      "outputs": [],
+      "name": "associateUserWithHtsTokens",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "usdcSuccess",
+          "type": "bool"
+        },
+        {
+          "internalType": "bool",
+          "name": "hbarSuccess",
+          "type": "bool"
+        }
+      ],
       "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address[]",
+          "name": "users",
+          "type": "address[]"
+        }
+      ],
+      "name": "batchAssociateUsersWithHtsTokens",
+      "outputs": [
+        {
+          "internalType": "int64[]",
+          "name": "usdcResponses",
+          "type": "int64[]"
+        },
+        {
+          "internalType": "int64[]",
+          "name": "hbarResponses",
+          "type": "int64[]"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address[]",
+          "name": "users",
+          "type": "address[]"
+        },
+        {
+          "internalType": "int64[]",
+          "name": "usdcAmounts",
+          "type": "int64[]"
+        },
+        {
+          "internalType": "int64[]",
+          "name": "hbarAmounts",
+          "type": "int64[]"
+        }
+      ],
+      "name": "batchFundUsersWithHtsTokens",
+      "outputs": [
+        {
+          "internalType": "int64[]",
+          "name": "usdcResponses",
+          "type": "int64[]"
+        },
+        {
+          "internalType": "int64[]",
+          "name": "hbarResponses",
+          "type": "int64[]"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        }
+      ],
+      "name": "checkUserHtsAssociation",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "usdcAssociated",
+          "type": "bool"
+        },
+        {
+          "internalType": "bool",
+          "name": "hbarAssociated",
+          "type": "bool"
+        },
+        {
+          "internalType": "uint256",
+          "name": "lastAssociationTime",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
       "type": "function"
     },
     {
@@ -758,102 +1204,50 @@
       "type": "function"
     },
     {
-      "inputs": [
+      "inputs": [],
+      "name": "factoryTokensMinted",
+      "outputs": [
         {
-          "internalType": "uint256",
-          "name": "ajoId",
-          "type": "uint256"
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
         }
       ],
-      "name": "forceCompleteAbandonedAjo",
-      "outputs": [],
-      "stateMutability": "nonpayable",
+      "stateMutability": "view",
       "type": "function"
     },
     {
       "inputs": [
         {
-          "internalType": "uint256",
-          "name": "offset",
-          "type": "uint256"
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
         },
         {
-          "internalType": "uint256",
-          "name": "limit",
-          "type": "uint256"
+          "internalType": "int64",
+          "name": "usdcAmount",
+          "type": "int64"
+        },
+        {
+          "internalType": "int64",
+          "name": "hbarAmount",
+          "type": "int64"
         }
       ],
-      "name": "getActiveAjoSummaries",
+      "name": "fundUserWithHtsTokens",
       "outputs": [
         {
-          "components": [
-            {
-              "internalType": "uint256",
-              "name": "ajoId",
-              "type": "uint256"
-            },
-            {
-              "internalType": "string",
-              "name": "name",
-              "type": "string"
-            },
-            {
-              "internalType": "uint256",
-              "name": "currentCycle",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "totalMembers",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "activeMembers",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "totalCollateral",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "monthlyPayment",
-              "type": "uint256"
-            },
-            {
-              "internalType": "bool",
-              "name": "isAcceptingMembers",
-              "type": "bool"
-            },
-            {
-              "internalType": "address",
-              "name": "creator",
-              "type": "address"
-            },
-            {
-              "internalType": "uint256",
-              "name": "createdAt",
-              "type": "uint256"
-            },
-            {
-              "internalType": "bool",
-              "name": "usesHtsTokens",
-              "type": "bool"
-            },
-            {
-              "internalType": "bool",
-              "name": "usesScheduledPayments",
-              "type": "bool"
-            }
-          ],
-          "internalType": "struct AjoSummary[]",
-          "name": "summaries",
-          "type": "tuple[]"
+          "internalType": "bool",
+          "name": "usdcSuccess",
+          "type": "bool"
+        },
+        {
+          "internalType": "bool",
+          "name": "hbarSuccess",
+          "type": "bool"
         }
       ],
-      "stateMutability": "view",
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -965,118 +1359,6 @@
           "type": "uint256"
         }
       ],
-      "name": "getAjoCore",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "ajoCoreAddr",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "ajoId",
-          "type": "uint256"
-        }
-      ],
-      "name": "getAjoHealthReport",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "initializationPhase",
-          "type": "uint256"
-        },
-        {
-          "internalType": "bool",
-          "name": "isReady",
-          "type": "bool"
-        },
-        {
-          "internalType": "bool",
-          "name": "coreResponsive",
-          "type": "bool"
-        },
-        {
-          "internalType": "bool",
-          "name": "membersResponsive",
-          "type": "bool"
-        },
-        {
-          "internalType": "bool",
-          "name": "collateralResponsive",
-          "type": "bool"
-        },
-        {
-          "internalType": "bool",
-          "name": "paymentsResponsive",
-          "type": "bool"
-        },
-        {
-          "internalType": "bool",
-          "name": "governanceResponsive",
-          "type": "bool"
-        },
-        {
-          "internalType": "bool",
-          "name": "scheduleResponsive",
-          "type": "bool"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "ajoId",
-          "type": "uint256"
-        }
-      ],
-      "name": "getAjoOperationalStatus",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "totalMembers",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "currentCycle",
-          "type": "uint256"
-        },
-        {
-          "internalType": "bool",
-          "name": "canAcceptMembers",
-          "type": "bool"
-        },
-        {
-          "internalType": "bool",
-          "name": "hasActiveGovernance",
-          "type": "bool"
-        },
-        {
-          "internalType": "bool",
-          "name": "hasActiveScheduling",
-          "type": "bool"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "ajoId",
-          "type": "uint256"
-        }
-      ],
       "name": "getAjoScheduleContract",
       "outputs": [
         {
@@ -1112,38 +1394,6 @@
           "internalType": "uint256",
           "name": "executedCount",
           "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "creator",
-          "type": "address"
-        }
-      ],
-      "name": "getAjosByCreator",
-      "outputs": [
-        {
-          "internalType": "uint256[]",
-          "name": "ajoIds",
-          "type": "uint256[]"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "getAjosUsingScheduledPayments",
-      "outputs": [
-        {
-          "internalType": "uint256[]",
-          "name": "ajoIds",
-          "type": "uint256[]"
         }
       ],
       "stateMutability": "view",
@@ -1261,21 +1511,32 @@
       "type": "function"
     },
     {
-      "inputs": [],
-      "name": "getFactoryStats",
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "owner",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "spender",
+          "type": "address"
+        }
+      ],
+      "name": "getHtsAllowance",
       "outputs": [
         {
           "internalType": "uint256",
-          "name": "totalCreated",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "activeCount",
+          "name": "currentAllowance",
           "type": "uint256"
         }
       ],
-      "stateMutability": "view",
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -1290,133 +1551,6 @@
         {
           "internalType": "address",
           "name": "hbar",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "token",
-          "type": "address"
-        }
-      ],
-      "name": "getHtsTokenInfo",
-      "outputs": [
-        {
-          "components": [
-            {
-              "internalType": "address",
-              "name": "tokenAddress",
-              "type": "address"
-            },
-            {
-              "internalType": "bytes32",
-              "name": "tokenId",
-              "type": "bytes32"
-            },
-            {
-              "internalType": "string",
-              "name": "name",
-              "type": "string"
-            },
-            {
-              "internalType": "string",
-              "name": "symbol",
-              "type": "string"
-            },
-            {
-              "internalType": "uint8",
-              "name": "decimals",
-              "type": "uint8"
-            },
-            {
-              "internalType": "uint256",
-              "name": "totalSupply",
-              "type": "uint256"
-            },
-            {
-              "internalType": "bool",
-              "name": "hasFreezeKey",
-              "type": "bool"
-            },
-            {
-              "internalType": "bool",
-              "name": "hasWipeKey",
-              "type": "bool"
-            },
-            {
-              "internalType": "bool",
-              "name": "hasSupplyKey",
-              "type": "bool"
-            },
-            {
-              "internalType": "bool",
-              "name": "hasPauseKey",
-              "type": "bool"
-            },
-            {
-              "internalType": "address",
-              "name": "treasury",
-              "type": "address"
-            }
-          ],
-          "internalType": "struct HtsTokenInfo",
-          "name": "",
-          "type": "tuple"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "getImplementations",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "ajoCoreImpl",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "ajoMembersImpl",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "ajoCollateralImpl",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "ajoPaymentsImpl",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "ajoGovernanceImpl",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "ajoScheduleImpl",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "getScheduleServiceAddress",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
           "type": "address"
         }
       ],
@@ -1708,6 +1842,63 @@
           "internalType": "address",
           "name": "",
           "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "userHbarAssociated",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "userLastAssociationTime",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "userUsdcAssociated",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
         }
       ],
       "stateMutability": "view",

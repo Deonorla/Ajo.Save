@@ -1034,6 +1034,25 @@
       "inputs": [
         {
           "internalType": "enum PaymentToken",
+          "name": "tokenChoice",
+          "type": "uint8"
+        }
+      ],
+      "name": "getRequiredCollateralForJoin",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "enum PaymentToken",
           "name": "token",
           "type": "uint8"
         }

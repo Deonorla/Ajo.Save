@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import type React from "react";
@@ -28,6 +29,7 @@ const CreateAjo = () => {
     initializePhase2,
     initializePhase3,
     initializePhase4,
+    initializePhase5,
     finalizeSetup,
     getAjoInitializationStatus,
     getAjoInfo,
@@ -86,40 +88,47 @@ const CreateAjo = () => {
     try {
       if (!address) throw new Error("Wallet not connected");
 
-      // Phase 1
-      const { ajoId, receipt } = await createAjo(formData.name);
+      // ✅ Phase 1 - Create with required parameters
+      const { ajoId, receipt } = await createAjo(
+        formData.name,
+        true, // useHtsTokens (required as per backend script)
+        true // useScheduledPayments (recommended)
+      );
       console.log("✅ Phase 1 complete. Ajo ID:", ajoId);
       toast.info("Phase 1 complete");
 
-      // Phase 2
+      // Phase 2 - Initialize Members + Governance + HCS
       await initializePhase2(ajoId);
       console.log("✅ Phase 2 complete");
       toast.info("Phase 2 complete");
 
-      // Phase 3
+      // Phase 3 - Initialize Collateral + Payments
       await initializePhase3(ajoId);
       console.log("✅ Phase 3 complete");
       toast.info("Phase 3 complete");
 
-      // Phase 4
+      // Phase 4 - Initialize Core + Cross-link
       await initializePhase4(ajoId);
       console.log("✅ Phase 4 complete");
-      await finalizeSetup(ajoId);
+      toast.info("Phase 4 complete");
 
+      // Phase 5 - Finalize (if using scheduled payments)
+      await initializePhase5(ajoId);
       console.log("✅ Phase 5 complete - Ajo active");
+
       setIsSubmitting(false);
       toast.success("Ajo created successfully!");
       setShowSuccess(true);
+
       // Reset form after success
       setTimeout(() => {
         setShowSuccess(false);
-        setFormData({
-          name: "",
-        });
+        setFormData({ name: "" });
+        // navigate(`/ajo/${ajoId}`); // Navigate to the new Ajo
       }, 3000);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to create Ajo:", err);
-      toast.error("Failed to create Ajo.");
+      toast.error(err?.message || "Failed to create Ajo.");
     } finally {
       setIsSubmitting(false);
     }

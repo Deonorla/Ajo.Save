@@ -1,15 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /**
- *
- * HashPack integration using HashConnect v0.2.3, now using the manual
- * transaction byte generation and hashconnect.sendTransaction() from the
- * class example to bypass potential JSON-RPC relay issues.
+ * FINAL FIX: HashPack integration with proper session restoration
+ * Compatible with hashconnect@0.2.9 and ethers@5.7.2
  */
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { HashConnect } from "hashconnect";
 import type { HashConnectTypes } from "hashconnect";
-import type { Signer } from "ethers";
 import {
   TransferTransaction,
   TokenAssociateTransaction,
@@ -21,31 +18,21 @@ import {
   TransactionReceipt,
 } from "@hashgraph/sdk";
 import { toast } from "sonner";
-
-// ==========================================================
-// 🛠️ FIX FOR: ReferenceError: Buffer is not defined
-// This is required for older HashConnect versions in Vite.
-// ==========================================================
 import { Buffer } from "buffer";
 
 if (typeof (window as any).Buffer === "undefined") {
   (window as any).Buffer = Buffer;
 }
-// ==========================================================
 
 // --- UTILITY FUNCTIONS ---
 const randomIntFromInterval = (min: number, max: number) => {
   return Math.floor(Math.random() * (max - min + 1) + min);
 };
 
-// Helper to convert token ID to Hedera format for Mirror Node queries
 const normalizeTokenIdForMirrorNode = (tokenId: string): string => {
-  // If already in Hedera format (0.0.X), return as is
   if (tokenId.match(/^\d+\.\d+\.\d+$/)) {
     return tokenId;
   }
-
-  // If in EVM format (0x...), convert to Hedera format
   if (tokenId.startsWith("0x")) {
     try {
       const accountNum = parseInt(tokenId.slice(2), 16);
@@ -55,7 +42,6 @@ const normalizeTokenIdForMirrorNode = (tokenId: string): string => {
       return tokenId;
     }
   }
-
   return tokenId;
 };
 
@@ -84,12 +70,10 @@ export interface LegacyHashPackState {
 
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
-
   sendTransaction: (tx: Transaction) => Promise<string>;
   sendHBAR: (to: string, amount: number) => Promise<string>;
   sendToken: (tokenId: string, to: string, amount: number) => Promise<string>;
   associateToken: (tokenId: string) => Promise<string>;
-
   getBalance: () => Promise<string | null>;
   getTokenBalance: (tokenId: string) => Promise<string | null>;
 }
@@ -97,6 +81,7 @@ export interface LegacyHashPackState {
 // --- HOOK IMPLEMENTATION ---
 export default function useHashPackWallet(): LegacyHashPackState {
   const hashconnectRef = useRef<HashConnect | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const [state, setState] = useState({
     connected: false,
@@ -107,9 +92,6 @@ export default function useHashPackWallet(): LegacyHashPackState {
   });
 
   const [topic, setTopic] = useState("");
-  const [pairingString, setPairingString] = useState("");
-  const [initData, setInitData] =
-    useState<HashConnectTypes.InitilizationData | null>(null);
 
   // =================================================================
   // === HELPER FUNCTIONS =====================
@@ -121,7 +103,6 @@ export default function useHashPackWallet(): LegacyHashPackState {
       trans.setTransactionId(transId);
 
       let nodeId = 5;
-
       if (NETWORK === "testnet") {
         nodeId = randomIntFromInterval(3, 7);
       } else if (NETWORK === "mainnet") {
@@ -136,82 +117,85 @@ export default function useHashPackWallet(): LegacyHashPackState {
       const transBytes = trans.toBytes();
       return transBytes;
     },
-    [NETWORK]
+    []
   );
 
   // =================================================================
   // === INITIALIZATION & EVENTS =============
   // =================================================================
 
-  const setUpHashConnectEvents = useCallback(
-    (hashconnect: HashConnect, mounted: React.MutableRefObject<boolean>) => {
-      hashconnect.foundExtensionEvent.on((data) => {
-        if (mounted.current) {
-          setState((prev) => ({ ...prev, hasExtension: true }));
+  const setUpHashConnectEvents = useCallback((hashconnect: HashConnect) => {
+    hashconnect.foundExtensionEvent.once((data) => {
+      console.log("✅ HashPack extension found");
+      setState((prev) => ({ ...prev, hasExtension: true }));
+    });
+
+    hashconnect.pairingEvent.on((data) => {
+      console.log("🔗 Pairing event received:", data);
+
+      if (data.accountIds && data.accountIds.length > 0) {
+        const account = data.accountIds[0];
+
+        setState((prev) => ({
+          ...prev,
+          connected: true,
+          accountId: account,
+          pairingData: data,
+        }));
+
+        // Save session
+        try {
+          localStorage.setItem(
+            LS_KEY,
+            JSON.stringify({
+              topic: data.topic,
+              accountIds: data.accountIds,
+              network: data.network,
+            })
+          );
+          console.log("✅ Session saved to localStorage");
+        } catch (err) {
+          console.error("Failed to save session:", err);
         }
-      });
 
-      hashconnect.pairingEvent.on((data) => {
-        if (data.accountIds && data.accountIds.length > 0) {
-          const account = data.accountIds[0];
-          if (mounted.current) {
-            setState((prev) => ({
-              ...prev,
-              connected: true,
-              accountId: account,
-              pairingData: data,
-            }));
-            try {
-              localStorage.setItem(
-                LS_KEY,
-                JSON.stringify({
-                  topic: data.topic,
-                  accountIds: data.accountIds,
-                  network: data.network,
-                })
-              );
-            } catch (err) {
-              /* no-op */
-            }
-            toast.success(`Connected: ${account}`);
-          }
-        }
-      });
+        toast.success(`Connected: ${account}`);
+      }
+    });
 
-      hashconnect.transactionEvent.on((data) => {
-        // Transaction callback
-      });
+    hashconnect.transactionEvent.on((data) => {
+      console.log("Transaction event:", data);
+    });
 
-      (hashconnect.connectionStatusChangeEvent.on as any)((data: number) => {
-        if (data === 0) {
-          if (mounted.current) {
-            setState((prev) => ({
-              ...prev,
-              connected: false,
-              accountId: null,
-              pairingData: null,
-            }));
-            localStorage.removeItem(LS_KEY);
-            toast.info("Wallet disconnected.");
-          }
-        }
-      });
-    },
-    []
-  );
+    hashconnect.connectionStatusChangeEvent.on((state: any) => {
+      console.log("Connection status changed:", state);
+      if (state === "Disconnected" || state === 0) {
+        setState((prev) => ({
+          ...prev,
+          connected: false,
+          accountId: null,
+          pairingData: null,
+        }));
+        localStorage.removeItem(LS_KEY);
+        toast.info("Wallet disconnected.");
+      }
+    });
+  }, []);
 
+  // Single initialization
   useEffect(() => {
-    const mounted = { current: true };
+    if (isInitialized) return;
 
     const initHashconnect = async () => {
       try {
+        console.log("🚀 Initializing HashConnect...");
+
         const hasExt = !!(window as any).hashpack;
         setState((prev) => ({ ...prev, hasExtension: hasExt }));
 
         const hashconnect = new HashConnect(true);
         hashconnectRef.current = hashconnect;
 
-        setUpHashConnectEvents(hashconnect, mounted);
+        setUpHashConnectEvents(hashconnect);
 
         const initData = await hashconnect.init(
           APP_METADATA,
@@ -219,39 +203,43 @@ export default function useHashPackWallet(): LegacyHashPackState {
           false
         );
 
-        if (!mounted.current) return;
+        console.log("✅ HashConnect initialized");
+        console.log("Topic:", initData.topic);
+        console.log("Saved pairings:", initData.savedPairings);
 
-        setInitData(initData);
         setTopic(initData.topic);
-        console.log("Topic", initData.topic);
-        setPairingString(initData.pairingString);
 
-        const pairingData = initData.savedPairings[0];
+        // 🔥 CRITICAL FIX: Restore session from savedPairings
+        const savedPairing = initData.savedPairings.find(
+          (p: any) => p.network === NETWORK
+        );
 
-        if (pairingData && pairingData.accountIds[0]) {
+        if (savedPairing?.accountIds?.[0]) {
+          console.log("♻️ Restoring session:", savedPairing.accountIds[0]);
+
           setState((prev) => ({
             ...prev,
             connected: true,
-            accountId: pairingData.accountIds[0],
-            pairingData: pairingData,
+            accountId: savedPairing.accountIds[0],
+            pairingData: savedPairing,
           }));
+
+          console.log("✅ Session restored successfully");
+        } else {
+          console.log("ℹ️ No saved session found");
         }
+
+        setIsInitialized(true);
+        setState((prev) => ({ ...prev, isInitializing: false }));
       } catch (error) {
         console.error("HashConnect initialization error:", error);
         toast.error("Failed to initialize HashPack connection");
-      } finally {
-        if (mounted.current) {
-          setState((prev) => ({ ...prev, isInitializing: false }));
-        }
+        setState((prev) => ({ ...prev, isInitializing: false }));
       }
     };
 
     initHashconnect();
-
-    return () => {
-      mounted.current = false;
-    };
-  }, [setUpHashConnectEvents, NETWORK]);
+  }, [isInitialized, setUpHashConnectEvents]);
 
   // =================================================================
   // === CONNECT & DISCONNECT  ================
@@ -272,10 +260,6 @@ export default function useHashPackWallet(): LegacyHashPackState {
     try {
       const isCurrentlyDetected =
         state.hasExtension || !!(window as any).hashpack;
-
-      if (isCurrentlyDetected !== state.hasExtension) {
-        setState((prev) => ({ ...prev, hasExtension: isCurrentlyDetected }));
-      }
 
       if (!isCurrentlyDetected) {
         toast.error("HashPack extension not detected...", { duration: 6000 });
@@ -350,26 +334,18 @@ export default function useHashPackWallet(): LegacyHashPackState {
           );
         }
 
-        const responseData: any = {
-          response,
-          receipt: null,
-        };
-
         if (response.receipt) {
-          responseData.receipt = TransactionReceipt.fromBytes(
+          const receipt: any = TransactionReceipt.fromBytes(
             response.receipt as Uint8Array
           );
           return (
-            responseData.receipt.transactionId?.toString() ||
+            receipt.transactionId?.toString() ||
             transaction.transactionId?.toString() ||
-            "Transaction sent successfully (ID unknown)"
+            "Transaction sent successfully"
           );
         }
 
-        return (
-          transaction.transactionId?.toString() ||
-          "Transaction sent successfully (ID unknown)"
-        );
+        return transaction.transactionId?.toString() || "Transaction sent";
       } catch (error: any) {
         console.error("Transaction error:", error);
         throw new Error(
@@ -380,18 +356,33 @@ export default function useHashPackWallet(): LegacyHashPackState {
     [state, topic, makeBytes]
   );
 
-  const dAppSigner: Signer | null =
-    state.pairingData && hashconnectRef.current
-      ? (() => {
-          const provider = hashconnectRef.current!.getProvider(
-            NETWORK,
-            state.pairingData.topic,
-            state.accountId!
-          );
-          // Cast to 'any' first to satisfy TypeScript when converting v5 HashConnect type to v6 Ethers Signer
-          return hashconnectRef.current!.getSigner(provider) as any as Signer;
-        })()
-      : null;
+  // 🔥 CRITICAL FIX: Use useMemo to create stable dAppSigner reference
+  // This prevents infinite re-renders and properly creates Ethers-compatible signer
+  const dAppSigner = useMemo(() => {
+    if (
+      !state.connected ||
+      !state.accountId ||
+      !state.pairingData ||
+      !hashconnectRef.current
+    ) {
+      return null;
+    }
+
+    try {
+      const provider = hashconnectRef.current.getProvider(
+        NETWORK,
+        state.pairingData.topic,
+        state.accountId
+      );
+
+      const signer = hashconnectRef.current.getSigner(provider);
+      console.log("✅ dAppSigner created successfully");
+      return signer;
+    } catch (error) {
+      console.error("Failed to create dAppSigner:", error);
+      return null;
+    }
+  }, [state.connected, state.accountId, state.pairingData]);
 
   const sendHBAR = useCallback(
     async (to: string, amount: number) => {
@@ -439,7 +430,6 @@ export default function useHashPackWallet(): LegacyHashPackState {
         throw new Error("Wallet not connected");
       }
 
-      // Convert EVM format to Hedera format if needed for the transaction
       const hederaTokenId = normalizeTokenIdForMirrorNode(tokenId);
       console.log("Associating token:", {
         input: tokenId,
@@ -477,40 +467,25 @@ export default function useHashPackWallet(): LegacyHashPackState {
     async (tokenId: string): Promise<string | null> => {
       if (!state.accountId) return null;
 
-      // Normalize token ID to Hedera format for Mirror Node query
       const normalizedTokenId = normalizeTokenIdForMirrorNode(tokenId);
-      console.log("Fetching token balance:", {
-        input: tokenId,
-        normalized: normalizedTokenId,
-        account: state.accountId,
-      });
 
       try {
         const url = `${MIRROR_NODE}/api/v1/accounts/${encodeURIComponent(
           state.accountId
         )}/tokens?token.id=${encodeURIComponent(normalizedTokenId)}`;
 
-        console.log("Mirror Node query URL:", url);
-
         const res = await fetch(url);
         if (!res.ok) {
-          const errorText = await res.text();
-          console.error("Mirror node response error:", errorText);
-          throw new Error(
-            `Mirror node token fetch failed: ${res.status} ${res.statusText}`
-          );
+          throw new Error(`Mirror node token fetch failed: ${res.status}`);
         }
 
         const json = await res.json();
-        console.log("Mirror Node response:", json);
 
         if (json.tokens && json.tokens.length > 0) {
           const balance = String(json.tokens[0].balance ?? "0");
-          console.log("Token balance found:", balance);
           return balance;
         }
 
-        console.log("No token balance found, returning 0");
         return "0";
       } catch (err) {
         console.error("getTokenBalance error:", err);
