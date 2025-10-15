@@ -128,14 +128,7 @@ export const useAjoFactory = () => {
       console.error("❌ Failed to create write contract:", err);
       setContractWrite(null);
     }
-  }, [
-    connected,
-    accountId,
-    dAppSigner,
-    ajoFactoryAddress,
-    createCompatibleSigner,
-    contractWrite,
-  ]);
+  }, [connected]);
 
   // READ FUNCTIONS
   const getFactoryStats = useCallback(async () => {
