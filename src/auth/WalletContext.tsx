@@ -1,8 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { createContext, useContext } from "react";
 import useHashPackWallet from "@/hooks/useHashPackWallet";
-import type { HashConnectSigner } from "hashconnect/dist/esm/provider/signer";
-import type { HashConnect } from "hashconnect";
+import type { HashConnect, SessionData } from "hashconnect";
 
 interface WalletContextType {
   // Connection state
@@ -12,10 +11,11 @@ interface WalletContextType {
   network: string;
   hasExtension: boolean;
   isInitializing: boolean;
-  dAppSigner: HashConnectSigner | null;
+  dAppSigner: any | null; // Hedera SDK Signer
   topic: string;
   hashconnect: HashConnect | null;
-  encryptionKey: string | null; // 🔥 NEW: Expose encryption key
+  encryptionKey: string | null;
+  pairingData: SessionData | null;
 
   // Connection methods
   connect: () => Promise<void>;
@@ -54,14 +54,20 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [hashpack.connected, hashpack.accountId]);
 
-  // 🔥 NEW: Log encryption key on mount and when it changes
+  // Log connection status (v3)
   React.useEffect(() => {
-    console.log("🔑 WalletContext - Encryption Key Status:", {
-      hasKey: !!hashpack.encryptionKey,
-      key: hashpack.encryptionKey,
+    console.log("🔑 WalletContext (v3) - Connection Status:", {
       connected: hashpack.connected,
+      accountId: hashpack.accountId,
+      hasSigner: !!hashpack.dAppSigner,
+      hasHashConnect: !!hashpack.hashconnect,
     });
-  }, [hashpack.encryptionKey, hashpack.connected]);
+  }, [
+    hashpack.connected,
+    hashpack.accountId,
+    hashpack.dAppSigner,
+    hashpack.hashconnect,
+  ]);
 
   const contextValue: WalletContextType = {
     connected: hashpack.connected,
@@ -82,7 +88,8 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({
     dAppSigner: hashpack.dAppSigner,
     topic: hashpack.topic,
     hashconnect: hashpack.hashconnect,
-    encryptionKey: hashpack.encryptionKey, // 🔥 NEW: Expose encryption key
+    encryptionKey: hashpack.encryptionKey,
+    pairingData: hashpack.pairingData,
   };
 
   return (

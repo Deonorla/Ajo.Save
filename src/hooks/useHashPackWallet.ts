@@ -1,12 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /**
- * FIXED: HashPack integration with encryption key exposure
- * Compatible with hashconnect@0.2.9 and ethers@5.7.2
+ * HashPack Integration with HashConnect v3.0.13
+ * Compatible with ethers@5.7.2
+ * Based on official v3 API
  */
 
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
-import { HashConnect } from "hashconnect";
-import type { HashConnectTypes } from "hashconnect";
+import { HashConnect, HashConnectConnectionState } from "hashconnect";
+import type { SessionData } from "hashconnect";
+import { LedgerId } from "@hashgraph/sdk";
 import {
   TransferTransaction,
   TokenAssociateTransaction,
@@ -45,7 +47,7 @@ const normalizeTokenIdForMirrorNode = (tokenId: string): string => {
   return tokenId;
 };
 
-// 🔥 Convert Hedera Account ID to EVM Address
+// Convert Hedera Account ID to EVM Address
 const hederaAccountToEvmAddress = (hederaAccountId: string): string => {
   try {
     const accountId = AccountId.fromString(hederaAccountId);
@@ -62,14 +64,29 @@ const hederaAccountToEvmAddress = (hederaAccountId: string): string => {
 const MIRROR_NODE_DEFAULT = "https://testnet.mirrornode.hedera.com";
 const NETWORK = (import.meta.env.VITE_NETWORK as string) || "testnet";
 const MIRROR_NODE = import.meta.env.VITE_MIRROR_NODE_URL || MIRROR_NODE_DEFAULT;
+const PROJECT_ID = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || "";
 
-const APP_METADATA: HashConnectTypes.AppMetadata = {
+const APP_METADATA = {
   name: "Ajo.Save",
   description: "Blockchain-powered savings groups",
-  icon: "https://www.hedera.com/resources/images/favicon.ico",
+  icons: ["https://www.hedera.com/resources/images/favicon.ico"],
+  url: window.location.origin,
 };
 
-const LS_KEY = "hashconnect_session_v023";
+const LS_KEY = "hashconnect_session_v3";
+
+// Get LedgerId based on network
+const getLedgerId = (): LedgerId => {
+  switch (NETWORK.toLowerCase()) {
+    case "mainnet":
+      return LedgerId.MAINNET;
+    case "previewnet":
+      return LedgerId.PREVIEWNET;
+    case "testnet":
+    default:
+      return LedgerId.TESTNET;
+  }
+};
 
 // --- INTERFACE ---
 export interface LegacyHashPackState {
@@ -77,13 +94,13 @@ export interface LegacyHashPackState {
   accountId: string | null;
   evmAddress: string | null;
   network: string;
-  pairingData: any | null;
+  pairingData: SessionData | null;
   hasExtension: boolean;
   isInitializing: boolean;
   dAppSigner: any;
   topic: string;
   hashconnect: HashConnect | null;
-  encryptionKey: string | null; // 🔥 NEW: Expose encryption key
+  encryptionKey: string | null;
 
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
@@ -104,10 +121,10 @@ export default function useHashPackWallet(): LegacyHashPackState {
     connected: false,
     accountId: null as string | null,
     evmAddress: null as string | null,
-    pairingData: null as any,
+    pairingData: null as SessionData | null,
     hasExtension: false,
     isInitializing: true,
-    encryptionKey: null as string | null, // 🔥 NEW: Store encryption key
+    connectionState: HashConnectConnectionState.Disconnected,
   });
 
   const [topic, setTopic] = useState("");
@@ -144,19 +161,12 @@ export default function useHashPackWallet(): LegacyHashPackState {
   // =================================================================
 
   const setUpHashConnectEvents = useCallback((hashconnect: HashConnect) => {
-    hashconnect.foundExtensionEvent.once((data) => {
-      console.log("✅ HashPack extension found");
-      setState((prev) => ({ ...prev, hasExtension: true }));
-    });
+    // V3: pairingEvent (not pairingApproved)
+    hashconnect.pairingEvent.on((newPairing: SessionData) => {
+      console.log("🔗 Pairing event received:", newPairing);
 
-    hashconnect.pairingEvent.on((data) => {
-      console.log("🔗 Pairing event received:", data);
-      // CRITICAL FIX: Explicitly check for encryptionKey existence
-      const encryptionKey = (data as any).encryptionKey;
-      console.log("🔑 Encryption key from pairing:", encryptionKey); // 🔥 NEW: Log encryption key
-
-      if (data.accountIds && data.accountIds.length > 0) {
-        const account = data.accountIds[0];
+      if (newPairing.accountIds && newPairing.accountIds.length > 0) {
+        const account = newPairing.accountIds[0];
         const evmAddr = hederaAccountToEvmAddress(account);
 
         setState((prev) => ({
@@ -164,22 +174,21 @@ export default function useHashPackWallet(): LegacyHashPackState {
           connected: true,
           accountId: account,
           evmAddress: evmAddr,
-          pairingData: data,
-          encryptionKey: encryptionKey || null, // 🔥 NEW: Store encryption key
+          pairingData: newPairing,
+          connectionState: HashConnectConnectionState.Paired,
         }));
 
-        // Save session with encryption key
+        // Save session
         try {
           localStorage.setItem(
             LS_KEY,
             JSON.stringify({
-              topic: data.topic,
-              accountIds: data.accountIds,
-              network: data.network,
-              encryptionKey: encryptionKey, // 🔥 NEW: Save encryption key
+              accountIds: newPairing.accountIds,
+              network: newPairing.network,
+              metadata: newPairing.metadata,
             })
           );
-          console.log("✅ Session saved to localStorage with encryption key");
+          console.log("✅ Session saved to localStorage");
         } catch (err) {
           console.error("Failed to save session:", err);
         }
@@ -188,25 +197,41 @@ export default function useHashPackWallet(): LegacyHashPackState {
       }
     });
 
-    hashconnect.transactionEvent.on((data) => {
-      console.log("Transaction event:", data);
+    // V3: disconnectionEvent
+    hashconnect.disconnectionEvent.on((data) => {
+      console.log("Disconnection event:", data);
+      setState((prev) => ({
+        ...prev,
+        connected: false,
+        accountId: null,
+        evmAddress: null,
+        pairingData: null,
+        connectionState: HashConnectConnectionState.Disconnected,
+      }));
+      localStorage.removeItem(LS_KEY);
+      toast.info("Wallet disconnected.");
     });
 
-    hashconnect.connectionStatusChangeEvent.on((state: any) => {
-      console.log("Connection status changed:", state);
-      if (state === "Disconnected" || state === 0) {
+    // V3: connectionStatusChangeEvent
+    hashconnect.connectionStatusChangeEvent.on(
+      (connectionStatus: HashConnectConnectionState) => {
+        console.log("Connection status changed:", connectionStatus);
         setState((prev) => ({
           ...prev,
-          connected: false,
-          accountId: null,
-          evmAddress: null,
-          pairingData: null,
-          encryptionKey: null, // 🔥 NEW: Clear encryption key
+          connectionState: connectionStatus,
         }));
-        localStorage.removeItem(LS_KEY);
-        toast.info("Wallet disconnected.");
+
+        if (connectionStatus === HashConnectConnectionState.Disconnected) {
+          setState((prev) => ({
+            ...prev,
+            connected: false,
+            accountId: null,
+            evmAddress: null,
+            pairingData: null,
+          }));
+        }
       }
-    });
+    );
   }, []);
 
   // Single initialization
@@ -215,40 +240,45 @@ export default function useHashPackWallet(): LegacyHashPackState {
 
     const initHashconnect = async () => {
       try {
-        console.log("🚀 Initializing HashConnect...");
+        console.log("🚀 Initializing HashConnect v3...");
+
+        if (!PROJECT_ID) {
+          console.error("❌ WalletConnect Project ID is required!");
+          toast.error("WalletConnect Project ID not configured");
+          setState((prev) => ({ ...prev, isInitializing: false }));
+          return;
+        }
 
         const hasExt = !!(window as any).hashpack;
         setState((prev) => ({ ...prev, hasExtension: hasExt }));
 
-        const hashconnect = new HashConnect(true);
+        // V3: Constructor: new HashConnect(ledgerId, projectId, metadata, debug)
+        const hashconnect = new HashConnect(
+          getLedgerId(),
+          PROJECT_ID,
+          APP_METADATA,
+          true // debug mode
+        );
         hashconnectRef.current = hashconnect;
 
         setUpHashConnectEvents(hashconnect);
 
-        const initData = await hashconnect.init(
-          APP_METADATA,
-          NETWORK as "testnet" | "mainnet" | "previewnet",
-          false
-        );
+        // V3: init() returns InitilizationData with savedPairings
+        const initData: any = await hashconnect.init();
 
-        console.log("✅ HashConnect initialized");
-        console.log("Topic:", initData.topic);
-        console.log("Encryption key:", initData.encryptionKey); // 🔥 NEW: Log encryption key
-        console.log("Saved pairings:", initData.savedPairings);
+        console.log("✅ HashConnect v3 initialized");
+        console.log("Init data:", initData);
 
-        setTopic(initData.topic);
-
-        // 🔥 CRITICAL FIX: Restore session with encryption key
-        const savedPairing = initData.savedPairings.find(
-          (p: any) => p.network === NETWORK
-        );
+        // Check for existing pairing
+        let savedPairing = null;
+        if (initData && Array.isArray(initData.savedPairings)) {
+          savedPairing = initData.savedPairings.find(
+            (p: SessionData) => p.network === NETWORK
+          );
+        }
 
         if (savedPairing?.accountIds?.[0]) {
           console.log("♻️ Restoring session:", savedPairing.accountIds[0]);
-          console.log(
-            "🔑 Restored encryption key:",
-            savedPairing.encryptionKey
-          ); // 🔥 NEW: Log restored key
 
           const account = savedPairing.accountIds[0];
           const evmAddr = hederaAccountToEvmAddress(account);
@@ -259,17 +289,12 @@ export default function useHashPackWallet(): LegacyHashPackState {
             accountId: account,
             evmAddress: evmAddr,
             pairingData: savedPairing,
-            encryptionKey: savedPairing.encryptionKey || initData.encryptionKey, // 🔥 NEW: Use saved or init key
+            connectionState: HashConnectConnectionState.Paired,
           }));
 
-          console.log("✅ Session restored successfully with encryption key");
+          console.log("✅ Session restored successfully");
         } else {
           console.log("ℹ️ No saved session found");
-          // 🔥 NEW: Store init encryption key even without pairing
-          setState((prev) => ({
-            ...prev,
-            encryptionKey: initData.encryptionKey,
-          }));
         }
 
         setIsInitialized(true);
@@ -295,7 +320,7 @@ export default function useHashPackWallet(): LegacyHashPackState {
     }
 
     const hashconnect = hashconnectRef.current;
-    if (!hashconnect || !topic) {
+    if (!hashconnect) {
       toast.error("HashConnect not ready. Please wait...");
       return;
     }
@@ -312,34 +337,36 @@ export default function useHashPackWallet(): LegacyHashPackState {
         return;
       }
 
-      toast.info("Opening HashPack extension...");
-      hashconnect.connectToLocalWallet();
+      toast.info("Opening HashPack pairing modal...");
 
-      toast.info("Check HashPack extension to approve connection");
+      // V3: openPairingModal() - can pass optional theme config
+      hashconnect.openPairingModal();
+
+      toast.info("Check HashPack to approve connection");
     } catch (error: any) {
       console.error("Connection error:", error);
       toast.error(`Failed to connect: ${error.message || "Unknown error"}`);
     }
-  }, [state.connected, state.accountId, topic, state.hasExtension]);
+  }, [state.connected, state.accountId, state.hasExtension]);
 
   const disconnect = useCallback(async () => {
     const hashconnect = hashconnectRef.current;
-    if (hashconnect && topic) {
-      await hashconnect.disconnect(topic);
+    if (hashconnect) {
+      // V3: disconnect() with no parameters
+      await hashconnect.disconnect();
     }
 
-    setState({
+    setState((prev) => ({
+      ...prev,
       connected: false,
       accountId: null,
       evmAddress: null,
       pairingData: null,
-      hasExtension: state.hasExtension,
-      isInitializing: false,
-      encryptionKey: null, // 🔥 NEW: Clear encryption key
-    });
+      connectionState: HashConnectConnectionState.Disconnected,
+    }));
     localStorage.removeItem(LS_KEY);
     toast.success("Disconnected from HashPack");
-  }, [state.hasExtension, topic]);
+  }, []);
 
   // =================================================================
   // === TRANSACTION SENDING  =================
@@ -347,8 +374,8 @@ export default function useHashPackWallet(): LegacyHashPackState {
 
   const sendTransaction = useCallback(
     async (transaction: Transaction): Promise<string> => {
-      if (!state.connected || !state.accountId || !topic) {
-        throw new Error("Wallet not connected or topic not initialized");
+      if (!state.connected || !state.accountId) {
+        throw new Error("Wallet not connected");
       }
       const hashconnect = hashconnectRef.current;
       if (!hashconnect) {
@@ -356,41 +383,25 @@ export default function useHashPackWallet(): LegacyHashPackState {
       }
 
       try {
-        const transactionBytes = await makeBytes(transaction, state.accountId);
-
-        const transactionObj: any = {
-          topic: topic,
-          byteArray: transactionBytes,
-          metadata: {
-            accountToSign: state.accountId,
-            returnTransaction: false,
-            hideNft: true,
-          },
-        };
-
-        const response = await hashconnect.sendTransaction(
-          topic,
-          transactionObj
+        // V3: sendTransaction(accountId, transaction) - accountId must be AccountId object
+        const accountIdObj = AccountId.fromString(state.accountId);
+        const receipt: any = await hashconnect.sendTransaction(
+          accountIdObj,
+          transaction
         );
 
-        if (!response?.success) {
-          throw new Error(
-            `Transaction failed: ${response?.error || "Unknown error"}`
-          );
+        console.log("✅ Transaction sent, receipt:", receipt);
+
+        // V3: Extract transaction ID from receipt
+        if (receipt && receipt.transactionId) {
+          return receipt.transactionId.toString();
         }
 
-        if (response.receipt) {
-          const receipt: any = TransactionReceipt.fromBytes(
-            response.receipt as Uint8Array
-          );
-          return (
-            receipt.transactionId?.toString() ||
-            transaction.transactionId?.toString() ||
-            "Transaction sent successfully"
-          );
+        if (transaction.transactionId) {
+          return transaction.transactionId.toString();
         }
 
-        return transaction.transactionId?.toString() || "Transaction sent";
+        return "Transaction sent successfully";
       } catch (error: any) {
         console.error("Transaction error:", error);
         throw new Error(
@@ -398,44 +409,28 @@ export default function useHashPackWallet(): LegacyHashPackState {
         );
       }
     },
-    [state, topic, makeBytes]
+    [state.accountId, state.connected]
   );
 
-  // 🔥 CRITICAL FIX: Create stable dAppSigner with encryption key
+  // Create stable dAppSigner using getSigner
   const dAppSigner = useMemo(() => {
-    if (
-      !state.connected ||
-      !state.accountId ||
-      !state.pairingData ||
-      !hashconnectRef.current
-    ) {
+    if (!state.connected || !state.accountId || !hashconnectRef.current) {
       return null;
     }
 
     try {
-      const provider = hashconnectRef.current.getProvider(
-        NETWORK,
-        state.pairingData.topic,
-        state.accountId
-      );
+      // V3: getSigner(accountId) - returns a signer that works with SDK
+      const accountIdObj = AccountId.fromString(state.accountId);
+      const signer = hashconnectRef.current.getSigner(accountIdObj);
 
-      const signer = hashconnectRef.current.getSigner(provider);
-
-      // 🔥 NEW: Log encryption key availability
-      console.log("✅ dAppSigner created successfully");
-      console.log("🔑 Encryption key available:", state.encryptionKey);
+      console.log("✅ dAppSigner created successfully (v3)");
 
       return signer;
     } catch (error) {
       console.error("Failed to create dAppSigner:", error);
       return null;
     }
-  }, [
-    state.connected,
-    state.accountId,
-    state.pairingData,
-    state.encryptionKey,
-  ]);
+  }, [state.connected, state.accountId]);
 
   const sendHBAR = useCallback(
     async (to: string, amount: number) => {
@@ -557,9 +552,9 @@ export default function useHashPackWallet(): LegacyHashPackState {
     hasExtension: state.hasExtension,
     isInitializing: state.isInitializing,
     dAppSigner,
-    topic,
+    topic, // V3 doesn't expose topic directly, but keeping for compatibility
     hashconnect: hashconnectRef.current as HashConnect | null,
-    encryptionKey: state.encryptionKey, // 🔥 NEW: Expose encryption key
+    encryptionKey: null, // V3 manages this internally
     connect,
     disconnect,
     sendTransaction,

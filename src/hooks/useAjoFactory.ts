@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { BigNumber, Contract, ethers } from "ethers";
+import { Transaction, AccountId } from "@hashgraph/sdk";
 
 type BigNumberType = BigNumber;
 type TransactionResponse = ethers.providers.TransactionResponse;
@@ -11,7 +12,6 @@ type LogType = ethers.providers.Log;
 import AjoFactory from "@/abi/ajoFactory.json";
 import { useAjoStore } from "@/store/ajoStore";
 import { useAjoDetailsStore } from "@/store/ajoDetailsStore";
-import { createEthersCompatibleSigner } from "@/utils/HashConnectSignerAdapter";
 import { useWallet } from "@/auth/WalletContext";
 import { toast } from "sonner";
 
@@ -28,15 +28,8 @@ export interface AjoOperationalStatus {
 const bnToString = (value: BigNumberType): string => value.toString();
 
 export const useAjoFactory = () => {
-  const {
-    connected,
-    dAppSigner,
-    accountId,
-    evmAddress,
-    hashconnect,
-    topic,
-    encryptionKey, // 🔥 NEW: Get encryption key
-  } = useWallet();
+  const { connected, dAppSigner, accountId, evmAddress, hashconnect } =
+    useWallet();
 
   const { setAjoInfos } = useAjoStore();
   const { setAjoDetails } = useAjoDetailsStore();
@@ -44,15 +37,14 @@ export const useAjoFactory = () => {
   const [contractWrite, setContractWrite] = useState<Contract | null>(null);
   const ajoFactoryAddress = import.meta.env.VITE_AJO_FACTORY_CONTRACT_ADDRESS;
 
-  console.log("🔍 useAjoFactory state:", {
+  console.log("🔍 useAjoFactory state (v3):", {
     connected,
     accountId,
     evmAddress,
     hasDAppSigner: !!dAppSigner,
+    hasHashConnect: !!hashconnect,
     hasContractWrite: !!contractWrite,
     ajoFactoryAddress,
-    hasEncryptionKey: !!encryptionKey, // 🔥 NEW: Log encryption key status
-    encryptionKey, // 🔥 NEW: Log actual key
   });
 
   // Read Provider
@@ -70,9 +62,10 @@ export const useAjoFactory = () => {
     return new Contract(ajoFactoryAddress, AjoFactory.abi, provider);
   }, [ajoFactoryAddress, provider]);
 
-  // Create writable contract
+  // For HashConnect v3, we'll use the read-only contract for queries
+  // and send transactions directly via the HashConnect SDK signer
   useEffect(() => {
-    console.log("🔄 contractWrite effect triggered");
+    console.log("🔄 contractWrite effect triggered (v3)");
 
     if (!connected || !evmAddress || !dAppSigner || !ajoFactoryAddress) {
       console.log("⚠️ Resetting contractWrite", {
@@ -85,70 +78,20 @@ export const useAjoFactory = () => {
       return;
     }
 
-    // 🔥 NEW: Validate encryption key
-    if (!encryptionKey) {
-      console.error("❌ Encryption key missing!");
-      console.log("Please reconnect your wallet to initialize encryption key");
-      toast.error("Encryption key missing. Please reconnect your wallet.");
-      return;
-    }
-
     try {
-      console.log("🏗️ Creating writable contract...");
-      console.log("dAppSigner type:", dAppSigner.constructor?.name);
+      console.log("🏗️ Setting up contract interaction (v3)...");
 
-      // 🔥 Ensure evmAddress is in proper format
-      if (!evmAddress.startsWith("0x")) {
-        console.error(
-          "❌ evmAddress must be in EVM (0x) format. Received:",
-          evmAddress
-        );
-        throw new Error(
-          "Wallet address must be in EVM format. Please reconnect your wallet."
-        );
-      }
-
-      // 🔥 CRITICAL: Pass encryption key to the adapter
-      console.log("Creating Ethers-compatible signer adapter...");
-      console.log("🔑 Using encryption key:", encryptionKey);
-
-      const compatibleSigner = createEthersCompatibleSigner(
-        dAppSigner,
-        provider || undefined,
-        evmAddress,
-        encryptionKey // 🔥 NEW: Pass encryption key
-      );
-
-      if (!compatibleSigner) {
-        throw new Error("Failed to create compatible signer");
-      }
-
-      console.log("✅ Compatible signer created");
-      console.log("Signer type:", compatibleSigner.constructor?.name);
-      console.log("Has _isSigner:", (compatibleSigner as any)?._isSigner);
-
-      const writable = new Contract(
-        ajoFactoryAddress,
-        AjoFactory.abi,
-        compatibleSigner as any
-      );
-
-      setContractWrite(writable);
-      console.log("✅ contractWrite created successfully");
-      console.log("Contract address:", writable.address);
+      // For read operations, we can use the provider-based contract
+      // For write operations, we'll use the Hedera SDK signer directly
+      // Store a marker that we're ready to write
+      setContractWrite(contractRead);
+      console.log("✅ Contract ready for operations (v3)");
     } catch (err: any) {
-      console.error("❌ Failed to create write contract:", err);
+      console.error("❌ Failed to setup contract:", err);
       toast.error(`Failed to initialize contract: ${err.message}`);
       setContractWrite(null);
     }
-  }, [
-    connected,
-    // evmAddress,
-    // dAppSigner,
-    // ajoFactoryAddress,
-    // provider,
-    // encryptionKey,
-  ]); // 🔥 NEW: Add encryptionKey to dependencies
+  }, [connected, evmAddress, dAppSigner, ajoFactoryAddress, contractRead]);
 
   // READ FUNCTIONS
   const getFactoryStats = useCallback(async () => {
@@ -228,151 +171,246 @@ export const useAjoFactory = () => {
     [contractRead, setAjoDetails]
   );
 
-  // WRITE FUNCTIONS
+  // WRITE FUNCTIONS - Using Hedera SDK approach with HashConnect v3
   const createAjo = useCallback(
     async (
       ajoName: string,
       useHtsTokens: boolean = true,
       useScheduledPayments: boolean = true
     ) => {
-      if (!contractWrite) {
+      if (!contractWrite || !contractRead) {
         toast.error("Contract not ready - please reconnect wallet");
         throw new Error("Contract not ready - please reconnect wallet");
       }
 
-      // 🔥 NEW: Verify encryption key exists before transaction
-      if (!encryptionKey) {
-        toast.error("Encryption key missing - please reconnect wallet");
-        throw new Error(
-          "Encryption key not available. Please reconnect your wallet."
-        );
+      if (!accountId || !hashconnect) {
+        toast.error("Wallet not connected");
+        throw new Error("Wallet not connected");
       }
 
-      console.log("✅ Creating Ajo:", {
+      console.log("✅ Creating Ajo (v3):", {
         ajoName,
         useHtsTokens,
         useScheduledPayments,
-        signerAddress: evmAddress,
-        hasEncryptionKey: !!encryptionKey,
-        encryptionKey, // 🔥 NEW: Log encryption key
+        accountId,
+        evmAddress,
       });
 
       try {
-        const tx: TransactionResponse = await contractWrite.createAjo(
+        // Build the contract call data using ethers
+        const contractInterface = new ethers.utils.Interface(AjoFactory.abi);
+        const data = contractInterface.encodeFunctionData("createAjo", [
           ajoName,
           useHtsTokens,
           useScheduledPayments,
-          { gasLimit: 1500000 }
-        );
+        ]);
 
-        console.log("📤 Transaction sent:", tx.hash);
+        console.log("📝 Encoded contract call data");
+
+        // Create a Hedera ContractExecuteTransaction
+        const { ContractExecuteTransaction } = await import("@hashgraph/sdk");
+
+        const tx = new ContractExecuteTransaction()
+          .setContractId(ajoFactoryAddress)
+          .setGas(1500000)
+          .setFunctionParameters(Buffer.from(data.slice(2), "hex"));
+
+        console.log("📤 Sending transaction via HashConnect v3...");
         toast.info("Transaction sent to HashPack, awaiting confirmation...");
 
-        const receipt: TransactionReceipt = await tx.wait();
-        console.log("✅ Transaction confirmed");
-
-        const eventTopic = contractWrite.interface.getEventTopic("AjoCreated");
-        if (!eventTopic) throw new Error("AjoCreated event not found");
-
-        const rawLog = receipt.logs.find(
-          (log: LogType) => log.topics[0] === eventTopic
+        // Use HashConnect v3 sendTransaction - requires AccountId object
+        const accountIdObj = AccountId.fromString(accountId);
+        const receipt: any = await hashconnect.sendTransaction(
+          accountIdObj,
+          tx
         );
-        if (!rawLog) throw new Error("AjoCreated log not found");
 
-        const parsedEvent = contractWrite.interface.parseLog(rawLog);
-        const ajoId =
-          parsedEvent.args.ajoId?.toNumber() || parsedEvent.args[0]?.toNumber();
+        console.log("✅ Transaction confirmed");
+        console.log("Receipt:", receipt);
 
-        if (typeof ajoId !== "number") throw new Error("Invalid ajoId");
+        // V3: Extract transaction ID from receipt
+        const transactionId = receipt?.transactionId?.toString() || null;
 
-        console.log("🎉 Ajo created with ID:", ajoId);
-        toast.success(`Ajo created successfully with ID: ${ajoId}`);
-        return { ajoId, receipt };
+        console.log("🎉 Ajo created successfully");
+        toast.success("Ajo created successfully!");
+
+        return {
+          success: true,
+          receipt: receipt,
+          transactionId: transactionId,
+        };
       } catch (error: any) {
         console.error("❌ createAjo failed:", error);
-
-        // 🔥 NEW: Better error handling for encryption issues
-        if (
-          error.message?.includes("SimpleCrypto") ||
-          error.message?.includes("SECRET KEY")
-        ) {
-          toast.error("Encryption error. Please reconnect your wallet.");
-          throw new Error(
-            "Encryption key issue. Please disconnect and reconnect your wallet."
-          );
-        }
-
         toast.error(
           `Failed to create Ajo: ${error.message || "Unknown error"}`
         );
         throw error;
       }
     },
-    [contractWrite, evmAddress, encryptionKey] // 🔥 NEW: Add encryptionKey to dependencies
+    [
+      contractWrite,
+      contractRead,
+      accountId,
+      evmAddress,
+      hashconnect,
+      ajoFactoryAddress,
+    ]
   );
 
   const initializePhase2 = useCallback(
     async (ajoId: number) => {
-      if (!contractWrite) throw new Error("Contract not ready");
-      const tx = await contractWrite.initializeAjoPhase2(ajoId, {
-        gasLimit: 1200000,
-      });
-      return await tx.wait();
+      if (!contractRead || !accountId || !hashconnect) {
+        throw new Error("Contract not ready or wallet not connected");
+      }
+
+      const contractInterface = new ethers.utils.Interface(AjoFactory.abi);
+      const data = contractInterface.encodeFunctionData("initializeAjoPhase2", [
+        ajoId,
+      ]);
+
+      const { ContractExecuteTransaction } = await import("@hashgraph/sdk");
+
+      const tx = new ContractExecuteTransaction()
+        .setContractId(ajoFactoryAddress)
+        .setGas(1200000)
+        .setFunctionParameters(Buffer.from(data.slice(2), "hex"));
+
+      const accountIdObj = AccountId.fromString(accountId);
+      const receipt: any = await hashconnect.sendTransaction(accountIdObj, tx);
+
+      return receipt;
     },
-    [contractWrite]
+    [contractRead, accountId, hashconnect, ajoFactoryAddress]
   );
 
   const initializePhase3 = useCallback(
     async (ajoId: number) => {
-      if (!contractWrite) throw new Error("Contract not ready");
-      const tx = await contractWrite.initializeAjoPhase3(ajoId, {
-        gasLimit: 1500000,
-      });
-      return await tx.wait();
+      if (!contractRead || !accountId || !hashconnect) {
+        throw new Error("Contract not ready or wallet not connected");
+      }
+
+      const contractInterface = new ethers.utils.Interface(AjoFactory.abi);
+      const data = contractInterface.encodeFunctionData("initializeAjoPhase3", [
+        ajoId,
+      ]);
+
+      const { ContractExecuteTransaction } = await import("@hashgraph/sdk");
+
+      const tx = new ContractExecuteTransaction()
+        .setContractId(ajoFactoryAddress)
+        .setGas(1500000)
+        .setFunctionParameters(Buffer.from(data.slice(2), "hex"));
+
+      const accountIdObj = AccountId.fromString(accountId);
+      const receipt: any = await hashconnect.sendTransaction(accountIdObj, tx);
+
+      return receipt;
     },
-    [contractWrite]
+    [contractRead, accountId, hashconnect, ajoFactoryAddress]
   );
 
   const initializePhase4 = useCallback(
     async (ajoId: number) => {
-      if (!contractWrite) throw new Error("Contract not ready");
-      const tx = await contractWrite.initializeAjoPhase4(ajoId, {
-        gasLimit: 1800000,
-      });
-      return await tx.wait();
+      if (!contractRead || !accountId || !hashconnect) {
+        throw new Error("Contract not ready or wallet not connected");
+      }
+
+      const contractInterface = new ethers.utils.Interface(AjoFactory.abi);
+      const data = contractInterface.encodeFunctionData("initializeAjoPhase4", [
+        ajoId,
+      ]);
+
+      const { ContractExecuteTransaction } = await import("@hashgraph/sdk");
+
+      const tx = new ContractExecuteTransaction()
+        .setContractId(ajoFactoryAddress)
+        .setGas(1800000)
+        .setFunctionParameters(Buffer.from(data.slice(2), "hex"));
+
+      const accountIdObj = AccountId.fromString(accountId);
+      const receipt: any = await hashconnect.sendTransaction(accountIdObj, tx);
+
+      return receipt;
     },
-    [contractWrite]
+    [contractRead, accountId, hashconnect, ajoFactoryAddress]
   );
 
   const initializePhase5 = useCallback(
     async (ajoId: number) => {
-      if (!contractWrite) throw new Error("Contract not ready");
-      const tx = await contractWrite.initializeAjoPhase5(ajoId, {
-        gasLimit: 1500000,
-      });
-      return await tx.wait();
+      if (!contractRead || !accountId || !hashconnect) {
+        throw new Error("Contract not ready or wallet not connected");
+      }
+
+      const contractInterface = new ethers.utils.Interface(AjoFactory.abi);
+      const data = contractInterface.encodeFunctionData("initializeAjoPhase5", [
+        ajoId,
+      ]);
+
+      const { ContractExecuteTransaction } = await import("@hashgraph/sdk");
+
+      const tx = new ContractExecuteTransaction()
+        .setContractId(ajoFactoryAddress)
+        .setGas(1500000)
+        .setFunctionParameters(Buffer.from(data.slice(2), "hex"));
+
+      const accountIdObj = AccountId.fromString(accountId);
+      const receipt: any = await hashconnect.sendTransaction(accountIdObj, tx);
+
+      return receipt;
     },
-    [contractWrite]
+    [contractRead, accountId, hashconnect, ajoFactoryAddress]
   );
 
   const finalizeSetup = useCallback(
     async (ajoId: number) => {
-      if (!contractWrite) throw new Error("Contract not ready");
-      const tx = await contractWrite.finalizeAjoSetup(ajoId, {
-        gasLimit: 1000000,
-      });
-      return await tx.wait();
+      if (!contractRead || !accountId || !hashconnect) {
+        throw new Error("Contract not ready or wallet not connected");
+      }
+
+      const contractInterface = new ethers.utils.Interface(AjoFactory.abi);
+      const data = contractInterface.encodeFunctionData("finalizeAjoSetup", [
+        ajoId,
+      ]);
+
+      const { ContractExecuteTransaction } = await import("@hashgraph/sdk");
+
+      const tx = new ContractExecuteTransaction()
+        .setContractId(ajoFactoryAddress)
+        .setGas(1000000)
+        .setFunctionParameters(Buffer.from(data.slice(2), "hex"));
+
+      const accountIdObj = AccountId.fromString(accountId);
+      const receipt: any = await hashconnect.sendTransaction(accountIdObj, tx);
+
+      return receipt;
     },
-    [contractWrite]
+    [contractRead, accountId, hashconnect, ajoFactoryAddress]
   );
 
   const deactivateAjo = useCallback(
     async (ajoId: number) => {
-      if (!contractWrite) throw new Error("Contract not ready");
-      const tx = await contractWrite.deactivateAjo(ajoId, { gasLimit: 500000 });
-      return await tx.wait();
+      if (!contractRead || !accountId || !hashconnect) {
+        throw new Error("Contract not ready or wallet not connected");
+      }
+
+      const contractInterface = new ethers.utils.Interface(AjoFactory.abi);
+      const data = contractInterface.encodeFunctionData("deactivateAjo", [
+        ajoId,
+      ]);
+
+      const { ContractExecuteTransaction } = await import("@hashgraph/sdk");
+
+      const tx = new ContractExecuteTransaction()
+        .setContractId(ajoFactoryAddress)
+        .setGas(500000)
+        .setFunctionParameters(Buffer.from(data.slice(2), "hex"));
+
+      const accountIdObj = AccountId.fromString(accountId);
+      const receipt: any = await hashconnect.sendTransaction(accountIdObj, tx);
+
+      return receipt;
     },
-    [contractWrite]
+    [contractRead, accountId, hashconnect, ajoFactoryAddress]
   );
 
   return {

@@ -1,8 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /**
- * HashConnectSignerAdapter - FIXED VERSION
+ * HashConnectSignerAdapter - HashConnect v3.0.13 Compatible
+ * Works with ethers 5.7.2
  *
- * Critical fix: Pass encryption key from pairing data to enable transaction encryption
+ * Note: HashConnect v3 uses Hedera SDK signers, not ethers signers.
+ * This adapter is kept for backwards compatibility but has limited functionality.
+ * For full functionality, use Hedera SDK transactions directly with hashconnect.sendTransaction()
  */
 
 import { ethers, Signer } from "ethers";
@@ -14,42 +17,24 @@ import type {
 import type { Deferrable } from "@ethersproject/properties";
 
 export class HashConnectSignerAdapter extends Signer {
-  private hashConnectSigner: any;
+  private hederaSigner: any; // Hedera SDK Signer from getSigner()
   private evmAddress: string | undefined;
-  private hashconnect: any;
-  private topicId: string;
-  private accountToSign: string;
-  private encryptionKey: string | undefined; // 🔥 NEW: Store encryption key
 
-  constructor(
-    hashConnectSigner: any,
-    provider?: Provider,
-    evmAddress?: string,
-    encryptionKey?: string // 🔥 NEW: Accept encryption key
-  ) {
+  constructor(hederaSigner: any, provider?: Provider, evmAddress?: string) {
     super();
 
-    this.hashConnectSigner = hashConnectSigner;
+    this.hederaSigner = hederaSigner;
     this.evmAddress = evmAddress;
-    this.hashconnect = hashConnectSigner.hashconnect;
-    this.topicId = hashConnectSigner.topicId;
-    this.accountToSign = hashConnectSigner.accountToSign;
-    this.encryptionKey = encryptionKey; // 🔥 NEW: Store encryption key
 
     ethers.utils.defineReadOnly(this, "_isSigner", true);
 
-    if (hashConnectSigner?.provider) {
-      ethers.utils.defineReadOnly(this, "provider", hashConnectSigner.provider);
-    } else if (provider) {
+    if (provider) {
       ethers.utils.defineReadOnly(this, "provider", provider);
     }
 
-    console.log("✅ HashConnectSignerAdapter initialized", {
-      topicId: this.topicId,
-      accountToSign: this.accountToSign,
+    console.log("✅ HashConnectSignerAdapter initialized (v3)", {
       evmAddress: this.evmAddress,
-      hasEncryptionKey: !!this.encryptionKey, // 🔥 NEW: Log encryption key status
-      encryptionKey: this.encryptionKey, // 🔥 NEW: Log actual key for debugging
+      hasProvider: !!this.provider,
     });
   }
 
@@ -57,6 +42,18 @@ export class HashConnectSignerAdapter extends Signer {
     if (this.evmAddress && this.evmAddress.startsWith("0x")) {
       return this.evmAddress;
     }
+
+    // Try to get from Hedera signer
+    try {
+      if (this.hederaSigner.getAccountId) {
+        const accountId = this.hederaSigner.getAccountId();
+        const evmAddr = `0x${accountId.toSolidityAddress()}`;
+        return evmAddr;
+      }
+    } catch (err) {
+      console.warn("Could not get address from signer:", err);
+    }
+
     throw new Error("EVM address not available");
   }
 
@@ -64,220 +61,58 @@ export class HashConnectSignerAdapter extends Signer {
     transaction: Deferrable<TransactionRequest>
   ): Promise<string> {
     throw new Error(
-      "Direct transaction signing not supported. Use sendTransaction instead."
+      "Direct transaction signing not supported. Use Hedera SDK transactions with hashconnect.sendTransaction() instead."
     );
   }
 
   async signMessage(message: string | ethers.utils.Bytes): Promise<string> {
-    throw new Error("Message signing not yet implemented for HashConnect");
+    console.log("🔄 HashConnectSignerAdapter.signMessage called");
+
+    try {
+      const messageStr =
+        typeof message === "string"
+          ? message
+          : ethers.utils.toUtf8String(message);
+
+      if (this.hederaSigner.sign) {
+        const signatures = await this.hederaSigner.sign([messageStr]);
+        if (signatures && signatures.length > 0) {
+          return signatures[0].signature;
+        }
+      }
+
+      throw new Error("Signer does not support message signing");
+    } catch (error: any) {
+      console.error("❌ Message signing failed:", error);
+      throw new Error(
+        `Message signing failed: ${error.message || "Unknown error"}`
+      );
+    }
   }
 
-  // 🔥 CRITICAL FIX: Proper encryption key handling
   async sendTransaction(
     transaction: Deferrable<TransactionRequest>
   ): Promise<TransactionResponse> {
-    console.log("🔄 HashConnectSignerAdapter.sendTransaction called");
+    console.error("❌ sendTransaction not supported in HashConnect v3 adapter");
+    console.log("Use Hedera SDK transactions instead:");
+    console.log("1. Create ContractExecuteTransaction");
+    console.log("2. Call hashconnect.sendTransaction(accountId, tx)");
 
-    // 🔥 NEW: Verify encryption key exists
-    if (!this.encryptionKey) {
-      console.error("❌ Encryption key missing!");
-      console.log(
-        "Available pairing data:",
-        this.hashconnect?.hcData?.pairingData
-      );
-      throw new Error(
-        "Encryption key not available. Please reconnect your wallet."
-      );
-    }
-
-    console.log("🔑 Using encryption key:", this.encryptionKey);
-
-    const resolvedTx = await ethers.utils.resolveProperties(transaction);
-    console.log("✅ Resolved transaction:", resolvedTx);
-
-    if (!resolvedTx.from) {
-      resolvedTx.from = await this.getAddress();
-    }
-
-    try {
-      console.log("📤 Converting transaction to bytes...");
-
-      // Build raw transaction for serialization
-      const rawTx: any = {
-        to: resolvedTx.to,
-        data: resolvedTx.data || "0x",
-        value: resolvedTx.value
-          ? ethers.BigNumber.from(resolvedTx.value)
-          : ethers.BigNumber.from(0),
-        gasLimit: resolvedTx.gasLimit
-          ? ethers.BigNumber.from(resolvedTx.gasLimit)
-          : ethers.BigNumber.from(1500000),
-        gasPrice: resolvedTx.gasPrice
-          ? ethers.BigNumber.from(resolvedTx.gasPrice)
-          : undefined,
-        nonce:
-          resolvedTx.nonce !== undefined ? Number(resolvedTx.nonce) : undefined,
-        chainId: 296,
-        type: 0,
-      };
-
-      // Remove undefined fields
-      if (rawTx.gasPrice === undefined) delete rawTx.gasPrice;
-      if (rawTx.nonce === undefined) delete rawTx.nonce;
-
-      // Serialize to bytes
-      const serializedTx = ethers.utils.serializeTransaction(rawTx);
-      const txBytes = ethers.utils.arrayify(serializedTx);
-
-      console.log("✅ Transaction serialized to bytes");
-
-      // Build HashConnect message with encryption key
-      const transactionMessage: any = {
-        topic: this.topicId, // 🔥 IMPORTANT: Include topic
-        byteArray: txBytes,
-        metadata: {
-          accountToSign: this.accountToSign,
-          returnTransaction: false,
-          hideNft: false,
-        },
-      };
-
-      console.log("📤 Sending transaction to HashPack...");
-      console.log("Transaction message:", {
-        topic: this.topicId,
-        accountToSign: this.accountToSign,
-        bytesLength: txBytes.length,
-      });
-
-      // 🔥 CRITICAL FIX: Set up event listener BEFORE sending transaction
-      const responsePromise = new Promise<any>((resolve, reject) => {
-        const timeout = setTimeout(() => {
-          this.hashconnect.transactionEvent.off(transactionListener);
-          reject(
-            new Error(
-              "Transaction timed out (60s). Please check HashPack wallet."
-            )
-          );
-        }, 60000);
-
-        const transactionListener = (response: any) => {
-          console.log("📥 Transaction event received:", response);
-
-          if (
-            response &&
-            (response.success !== undefined || response.receipt !== undefined)
-          ) {
-            clearTimeout(timeout);
-            this.hashconnect.transactionEvent.off(transactionListener);
-            resolve(response);
-          }
-        };
-
-        // Register listener
-        this.hashconnect.transactionEvent.on(transactionListener);
-
-        console.log("✅ Event listener registered, sending transaction...");
-      });
-
-      // 🔥 CRITICAL: Send transaction with proper method signature
-      // According to HashConnect 0.2.9 docs, sendTransaction takes (topic, transaction)
-      await this.hashconnect.sendTransaction(this.topicId, transactionMessage);
-
-      console.log("⏳ Waiting for user approval and transaction response...");
-
-      // Wait for response from event
-      const response = await responsePromise;
-
-      console.log("✅ Transaction response received:", response);
-
-      // Check success
-      if (response.success === false) {
-        throw new Error(
-          `Transaction failed: ${response.error || "Unknown error"}`
-        );
-      }
-
-      // Extract transaction hash
-      let txHash: string;
-
-      if (response.receipt) {
-        // Convert receipt bytes to hash
-        const receiptBytes =
-          typeof response.receipt === "string"
-            ? ethers.utils.arrayify(response.receipt)
-            : response.receipt;
-
-        txHash = ethers.utils.keccak256(receiptBytes);
-        console.log("✅ Transaction hash from receipt:", txHash);
-      } else if (response.response) {
-        txHash = response.response;
-        console.log("✅ Transaction hash from response:", txHash);
-      } else {
-        // Fallback: generate hash from serialized transaction
-        txHash = ethers.utils.keccak256(serializedTx);
-        console.log("⚠️ Using fallback transaction hash:", txHash);
-      }
-
-      // Return Ethers TransactionResponse
-      const txResponse: any = {
-        hash: txHash,
-        to: resolvedTx.to,
-        from: resolvedTx.from,
-        nonce: resolvedTx.nonce || 0,
-        gasLimit: resolvedTx.gasLimit || ethers.BigNumber.from(0),
-        value: resolvedTx.value || ethers.BigNumber.from(0),
-        data: resolvedTx.data || "0x",
-        chainId: 296,
-        confirmations: 0,
-        wait: async (confirmations?: number) => {
-          console.log(`⏳ Waiting for confirmation...`);
-
-          // Wait a bit for Hedera consensus
-          await new Promise((resolve) => setTimeout(resolve, 3000));
-
-          console.log("✅ Transaction assumed confirmed");
-
-          return {
-            transactionHash: txHash,
-            status: 1,
-            blockNumber: 0,
-            blockHash: "",
-            from: resolvedTx.from!,
-            to: resolvedTx.to!,
-            gasUsed: ethers.BigNumber.from(0),
-            cumulativeGasUsed: ethers.BigNumber.from(0),
-            logs: [],
-            logsBloom: "",
-            confirmations: 1,
-            type: 0,
-            byzantium: true,
-          };
-        },
-      };
-
-      return txResponse as TransactionResponse;
-    } catch (error: any) {
-      console.error("❌ Transaction failed:", error);
-
-      if (
-        error.code === 4001 ||
-        error.message?.includes("reject") ||
-        error.message?.includes("denied") ||
-        error.message?.includes("timed out")
-      ) {
-        throw new Error("Transaction rejected or timed out");
-      }
-
-      throw error;
-    }
+    throw new Error(
+      "EVM-style transactions are not supported in HashConnect v3. " +
+        "Please use Hedera SDK transactions:\n\n" +
+        "import { ContractExecuteTransaction, AccountId } from '@hashgraph/sdk';\n" +
+        "const tx = new ContractExecuteTransaction()...;\n" +
+        "const accountId = AccountId.fromString(accountIdString);\n" +
+        "await hashconnect.sendTransaction(accountId, tx);"
+    );
   }
 
   connect(provider: Provider): Signer {
     return new HashConnectSignerAdapter(
-      this.hashConnectSigner,
+      this.hederaSigner,
       provider,
-      this.evmAddress,
-      this.encryptionKey // 🔥 NEW: Pass encryption key
+      this.evmAddress
     );
   }
 
@@ -301,7 +136,7 @@ export class HashConnectSignerAdapter extends Signer {
       const address = await this.getAddress();
       return await this.provider.getBalance(address, blockTag);
     }
-    throw new Error("Cannot get balance");
+    throw new Error("Cannot get balance without provider");
   }
 
   async getNetwork(): Promise<ethers.providers.Network> {
@@ -332,7 +167,7 @@ export class HashConnectSignerAdapter extends Signer {
     if (this.provider) {
       return await this.provider.call(transaction, blockTag);
     }
-    throw new Error("Cannot call transaction");
+    throw new Error("Cannot call transaction without provider");
   }
 
   async estimateGas(
@@ -346,23 +181,17 @@ export class HashConnectSignerAdapter extends Signer {
 }
 
 /**
- * Factory function to create an Ethers-compatible signer from HashConnect
- * 🔥 UPDATED: Now accepts encryption key
+ * Creates an ethers-compatible signer adapter
+ * Note: Limited functionality - prefer using Hedera SDK transactions directly
  */
 export function createEthersCompatibleSigner(
-  hashConnectSigner: any,
+  hederaSigner: any,
   provider?: Provider,
-  evmAddress?: string,
-  encryptionKey?: string // 🔥 NEW: Accept encryption key
+  evmAddress?: string
 ): Signer {
-  if (hashConnectSigner instanceof Signer) {
-    return hashConnectSigner;
+  if (hederaSigner instanceof Signer) {
+    return hederaSigner;
   }
 
-  return new HashConnectSignerAdapter(
-    hashConnectSigner,
-    provider,
-    evmAddress,
-    encryptionKey // 🔥 NEW: Pass encryption key
-  );
+  return new HashConnectSignerAdapter(hederaSigner, provider, evmAddress);
 }
