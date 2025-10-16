@@ -2,15 +2,20 @@
 import React, { createContext, useContext } from "react";
 import useHashPackWallet from "@/hooks/useHashPackWallet";
 import type { HashConnectSigner } from "hashconnect/dist/esm/provider/signer";
+import type { HashConnect } from "hashconnect";
 
 interface WalletContextType {
   // Connection state
   connected: boolean;
   accountId: string | null;
+  evmAddress: string | null;
   network: string;
   hasExtension: boolean;
   isInitializing: boolean;
   dAppSigner: HashConnectSigner | null;
+  topic: string;
+  hashconnect: HashConnect | null;
+  encryptionKey: string | null; // 🔥 NEW: Expose encryption key
 
   // Connection methods
   connect: () => Promise<void>;
@@ -49,9 +54,19 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [hashpack.connected, hashpack.accountId]);
 
+  // 🔥 NEW: Log encryption key on mount and when it changes
+  React.useEffect(() => {
+    console.log("🔑 WalletContext - Encryption Key Status:", {
+      hasKey: !!hashpack.encryptionKey,
+      key: hashpack.encryptionKey,
+      connected: hashpack.connected,
+    });
+  }, [hashpack.encryptionKey, hashpack.connected]);
+
   const contextValue: WalletContextType = {
     connected: hashpack.connected,
     accountId: hashpack.accountId,
+    evmAddress: hashpack.evmAddress,
     network: hashpack.network,
     hasExtension: hashpack.hasExtension,
     isInitializing: hashpack.isInitializing,
@@ -62,9 +77,12 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({
     associateToken: hashpack.associateToken,
     getBalance: hashpack.getBalance,
     getTokenBalance: hashpack.getTokenBalance,
-    address: hashpack.accountId, // alias
+    address: hashpack.evmAddress,
     balance, // cached balance
     dAppSigner: hashpack.dAppSigner,
+    topic: hashpack.topic,
+    hashconnect: hashpack.hashconnect,
+    encryptionKey: hashpack.encryptionKey, // 🔥 NEW: Expose encryption key
   };
 
   return (

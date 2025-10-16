@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /**
- * FINAL FIX: HashPack integration with proper session restoration
+ * FIXED: HashPack integration with encryption key exposure
  * Compatible with hashconnect@0.2.9 and ethers@5.7.2
  */
 
@@ -45,6 +45,19 @@ const normalizeTokenIdForMirrorNode = (tokenId: string): string => {
   return tokenId;
 };
 
+// 🔥 Convert Hedera Account ID to EVM Address
+const hederaAccountToEvmAddress = (hederaAccountId: string): string => {
+  try {
+    const accountId = AccountId.fromString(hederaAccountId);
+    const evmAddress = `0x${accountId.toSolidityAddress()}`;
+    console.log(`Converted ${hederaAccountId} to EVM address: ${evmAddress}`);
+    return evmAddress;
+  } catch (error) {
+    console.error("Failed to convert Hedera account to EVM address:", error);
+    throw new Error(`Invalid Hedera account ID: ${hederaAccountId}`);
+  }
+};
+
 // --- CONFIGURATION ---
 const MIRROR_NODE_DEFAULT = "https://testnet.mirrornode.hedera.com";
 const NETWORK = (import.meta.env.VITE_NETWORK as string) || "testnet";
@@ -62,11 +75,15 @@ const LS_KEY = "hashconnect_session_v023";
 export interface LegacyHashPackState {
   connected: boolean;
   accountId: string | null;
+  evmAddress: string | null;
   network: string;
   pairingData: any | null;
   hasExtension: boolean;
   isInitializing: boolean;
   dAppSigner: any;
+  topic: string;
+  hashconnect: HashConnect | null;
+  encryptionKey: string | null; // 🔥 NEW: Expose encryption key
 
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
@@ -86,9 +103,11 @@ export default function useHashPackWallet(): LegacyHashPackState {
   const [state, setState] = useState({
     connected: false,
     accountId: null as string | null,
+    evmAddress: null as string | null,
     pairingData: null as any,
     hasExtension: false,
     isInitializing: true,
+    encryptionKey: null as string | null, // 🔥 NEW: Store encryption key
   });
 
   const [topic, setTopic] = useState("");
@@ -132,18 +151,24 @@ export default function useHashPackWallet(): LegacyHashPackState {
 
     hashconnect.pairingEvent.on((data) => {
       console.log("🔗 Pairing event received:", data);
+      // CRITICAL FIX: Explicitly check for encryptionKey existence
+      const encryptionKey = (data as any).encryptionKey;
+      console.log("🔑 Encryption key from pairing:", encryptionKey); // 🔥 NEW: Log encryption key
 
       if (data.accountIds && data.accountIds.length > 0) {
         const account = data.accountIds[0];
+        const evmAddr = hederaAccountToEvmAddress(account);
 
         setState((prev) => ({
           ...prev,
           connected: true,
           accountId: account,
+          evmAddress: evmAddr,
           pairingData: data,
+          encryptionKey: encryptionKey || null, // 🔥 NEW: Store encryption key
         }));
 
-        // Save session
+        // Save session with encryption key
         try {
           localStorage.setItem(
             LS_KEY,
@@ -151,9 +176,10 @@ export default function useHashPackWallet(): LegacyHashPackState {
               topic: data.topic,
               accountIds: data.accountIds,
               network: data.network,
+              encryptionKey: encryptionKey, // 🔥 NEW: Save encryption key
             })
           );
-          console.log("✅ Session saved to localStorage");
+          console.log("✅ Session saved to localStorage with encryption key");
         } catch (err) {
           console.error("Failed to save session:", err);
         }
@@ -173,7 +199,9 @@ export default function useHashPackWallet(): LegacyHashPackState {
           ...prev,
           connected: false,
           accountId: null,
+          evmAddress: null,
           pairingData: null,
+          encryptionKey: null, // 🔥 NEW: Clear encryption key
         }));
         localStorage.removeItem(LS_KEY);
         toast.info("Wallet disconnected.");
@@ -205,28 +233,43 @@ export default function useHashPackWallet(): LegacyHashPackState {
 
         console.log("✅ HashConnect initialized");
         console.log("Topic:", initData.topic);
+        console.log("Encryption key:", initData.encryptionKey); // 🔥 NEW: Log encryption key
         console.log("Saved pairings:", initData.savedPairings);
 
         setTopic(initData.topic);
 
-        // 🔥 CRITICAL FIX: Restore session from savedPairings
+        // 🔥 CRITICAL FIX: Restore session with encryption key
         const savedPairing = initData.savedPairings.find(
           (p: any) => p.network === NETWORK
         );
 
         if (savedPairing?.accountIds?.[0]) {
           console.log("♻️ Restoring session:", savedPairing.accountIds[0]);
+          console.log(
+            "🔑 Restored encryption key:",
+            savedPairing.encryptionKey
+          ); // 🔥 NEW: Log restored key
+
+          const account = savedPairing.accountIds[0];
+          const evmAddr = hederaAccountToEvmAddress(account);
 
           setState((prev) => ({
             ...prev,
             connected: true,
-            accountId: savedPairing.accountIds[0],
+            accountId: account,
+            evmAddress: evmAddr,
             pairingData: savedPairing,
+            encryptionKey: savedPairing.encryptionKey || initData.encryptionKey, // 🔥 NEW: Use saved or init key
           }));
 
-          console.log("✅ Session restored successfully");
+          console.log("✅ Session restored successfully with encryption key");
         } else {
           console.log("ℹ️ No saved session found");
+          // 🔥 NEW: Store init encryption key even without pairing
+          setState((prev) => ({
+            ...prev,
+            encryptionKey: initData.encryptionKey,
+          }));
         }
 
         setIsInitialized(true);
@@ -288,9 +331,11 @@ export default function useHashPackWallet(): LegacyHashPackState {
     setState({
       connected: false,
       accountId: null,
+      evmAddress: null,
       pairingData: null,
       hasExtension: state.hasExtension,
       isInitializing: false,
+      encryptionKey: null, // 🔥 NEW: Clear encryption key
     });
     localStorage.removeItem(LS_KEY);
     toast.success("Disconnected from HashPack");
@@ -356,8 +401,7 @@ export default function useHashPackWallet(): LegacyHashPackState {
     [state, topic, makeBytes]
   );
 
-  // 🔥 CRITICAL FIX: Use useMemo to create stable dAppSigner reference
-  // This prevents infinite re-renders and properly creates Ethers-compatible signer
+  // 🔥 CRITICAL FIX: Create stable dAppSigner with encryption key
   const dAppSigner = useMemo(() => {
     if (
       !state.connected ||
@@ -376,13 +420,22 @@ export default function useHashPackWallet(): LegacyHashPackState {
       );
 
       const signer = hashconnectRef.current.getSigner(provider);
+
+      // 🔥 NEW: Log encryption key availability
       console.log("✅ dAppSigner created successfully");
+      console.log("🔑 Encryption key available:", state.encryptionKey);
+
       return signer;
     } catch (error) {
       console.error("Failed to create dAppSigner:", error);
       return null;
     }
-  }, [state.connected, state.accountId, state.pairingData]);
+  }, [
+    state.connected,
+    state.accountId,
+    state.pairingData,
+    state.encryptionKey,
+  ]);
 
   const sendHBAR = useCallback(
     async (to: string, amount: number) => {
@@ -498,11 +551,15 @@ export default function useHashPackWallet(): LegacyHashPackState {
   return {
     connected: state.connected,
     accountId: state.accountId,
+    evmAddress: state.evmAddress,
     network: NETWORK,
     pairingData: state.pairingData,
     hasExtension: state.hasExtension,
     isInitializing: state.isInitializing,
     dAppSigner,
+    topic,
+    hashconnect: hashconnectRef.current as HashConnect | null,
+    encryptionKey: state.encryptionKey, // 🔥 NEW: Expose encryption key
     connect,
     disconnect,
     sendTransaction,

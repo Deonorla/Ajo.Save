@@ -9,9 +9,11 @@ type TransactionReceipt = ethers.providers.TransactionReceipt;
 type LogType = ethers.providers.Log;
 
 import AjoFactory from "@/abi/ajoFactory.json";
-import useHashPackWallet from "@/hooks/useHashPackWallet";
 import { useAjoStore } from "@/store/ajoStore";
 import { useAjoDetailsStore } from "@/store/ajoDetailsStore";
+import { createEthersCompatibleSigner } from "@/utils/HashConnectSignerAdapter";
+import { useWallet } from "@/auth/WalletContext";
+import { toast } from "sonner";
 
 const RPC_URL = import.meta.env.VITE_HEDERA_JSON_RPC_RELAY_URL;
 
@@ -26,7 +28,15 @@ export interface AjoOperationalStatus {
 const bnToString = (value: BigNumberType): string => value.toString();
 
 export const useAjoFactory = () => {
-  const { connected, dAppSigner, accountId } = useHashPackWallet();
+  const {
+    connected,
+    dAppSigner,
+    accountId,
+    evmAddress,
+    hashconnect,
+    topic,
+    encryptionKey, // 🔥 NEW: Get encryption key
+  } = useWallet();
 
   const { setAjoInfos } = useAjoStore();
   const { setAjoDetails } = useAjoDetailsStore();
@@ -37,9 +47,12 @@ export const useAjoFactory = () => {
   console.log("🔍 useAjoFactory state:", {
     connected,
     accountId,
+    evmAddress,
     hasDAppSigner: !!dAppSigner,
     hasContractWrite: !!contractWrite,
     ajoFactoryAddress,
+    hasEncryptionKey: !!encryptionKey, // 🔥 NEW: Log encryption key status
+    encryptionKey, // 🔥 NEW: Log actual key
   });
 
   // Read Provider
@@ -57,68 +70,67 @@ export const useAjoFactory = () => {
     return new Contract(ajoFactoryAddress, AjoFactory.abi, provider);
   }, [ajoFactoryAddress, provider]);
 
-  // 🔥 QUICK FIX: Create a minimal Ethers-compatible wrapper
-  const createCompatibleSigner = useCallback(
-    (hashConnectSigner: any) => {
-      if (!hashConnectSigner) return null;
-
-      // Create a wrapper that satisfies Ethers' requirements
-      const compatibleSigner = {
-        ...hashConnectSigner,
-        _isSigner: true, // Ethers checks for this flag
-
-        // Ensure getAddress returns a Promise
-        getAddress: async () => {
-          if (typeof hashConnectSigner.getAddress === "function") {
-            return await hashConnectSigner.getAddress();
-          }
-          if (hashConnectSigner._address) {
-            return hashConnectSigner._address;
-          }
-          return accountId || "0x0";
-        },
-
-        // Ensure sendTransaction exists
-        sendTransaction: async (tx: any) => {
-          if (typeof hashConnectSigner.sendTransaction === "function") {
-            return await hashConnectSigner.sendTransaction(tx);
-          }
-          throw new Error("sendTransaction not available");
-        },
-
-        // Attach provider if available
-        provider: hashConnectSigner.provider || provider,
-      };
-
-      return compatibleSigner;
-    },
-    [accountId, provider]
-  );
-
   // Create writable contract
   useEffect(() => {
     console.log("🔄 contractWrite effect triggered");
 
-    if (!connected || !accountId || !dAppSigner || !ajoFactoryAddress) {
-      console.log("⚠️ Resetting contractWrite");
+    if (!connected || !evmAddress || !dAppSigner || !ajoFactoryAddress) {
+      console.log("⚠️ Resetting contractWrite", {
+        connected,
+        evmAddress,
+        hasDAppSigner: !!dAppSigner,
+        ajoFactoryAddress,
+      });
       if (contractWrite) setContractWrite(null);
+      return;
+    }
+
+    // 🔥 NEW: Validate encryption key
+    if (!encryptionKey) {
+      console.error("❌ Encryption key missing!");
+      console.log("Please reconnect your wallet to initialize encryption key");
+      toast.error("Encryption key missing. Please reconnect your wallet.");
       return;
     }
 
     try {
       console.log("🏗️ Creating writable contract...");
+      console.log("dAppSigner type:", dAppSigner.constructor?.name);
 
-      // Create compatible signer
-      const compatibleSigner = createCompatibleSigner(dAppSigner);
+      // 🔥 Ensure evmAddress is in proper format
+      if (!evmAddress.startsWith("0x")) {
+        console.error(
+          "❌ evmAddress must be in EVM (0x) format. Received:",
+          evmAddress
+        );
+        throw new Error(
+          "Wallet address must be in EVM format. Please reconnect your wallet."
+        );
+      }
+
+      // 🔥 CRITICAL: Pass encryption key to the adapter
+      console.log("Creating Ethers-compatible signer adapter...");
+      console.log("🔑 Using encryption key:", encryptionKey);
+
+      const compatibleSigner = createEthersCompatibleSigner(
+        dAppSigner,
+        provider || undefined,
+        evmAddress,
+        encryptionKey // 🔥 NEW: Pass encryption key
+      );
 
       if (!compatibleSigner) {
         throw new Error("Failed to create compatible signer");
       }
 
+      console.log("✅ Compatible signer created");
+      console.log("Signer type:", compatibleSigner.constructor?.name);
+      console.log("Has _isSigner:", (compatibleSigner as any)?._isSigner);
+
       const writable = new Contract(
         ajoFactoryAddress,
         AjoFactory.abi,
-        compatibleSigner as any // Type assertion needed for our wrapper
+        compatibleSigner as any
       );
 
       setContractWrite(writable);
@@ -126,9 +138,17 @@ export const useAjoFactory = () => {
       console.log("Contract address:", writable.address);
     } catch (err: any) {
       console.error("❌ Failed to create write contract:", err);
+      toast.error(`Failed to initialize contract: ${err.message}`);
       setContractWrite(null);
     }
-  }, [connected]);
+  }, [
+    connected,
+    // evmAddress,
+    // dAppSigner,
+    // ajoFactoryAddress,
+    // provider,
+    // encryptionKey,
+  ]); // 🔥 NEW: Add encryptionKey to dependencies
 
   // READ FUNCTIONS
   const getFactoryStats = useCallback(async () => {
@@ -216,44 +236,79 @@ export const useAjoFactory = () => {
       useScheduledPayments: boolean = true
     ) => {
       if (!contractWrite) {
+        toast.error("Contract not ready - please reconnect wallet");
         throw new Error("Contract not ready - please reconnect wallet");
+      }
+
+      // 🔥 NEW: Verify encryption key exists before transaction
+      if (!encryptionKey) {
+        toast.error("Encryption key missing - please reconnect wallet");
+        throw new Error(
+          "Encryption key not available. Please reconnect your wallet."
+        );
       }
 
       console.log("✅ Creating Ajo:", {
         ajoName,
         useHtsTokens,
         useScheduledPayments,
+        signerAddress: evmAddress,
+        hasEncryptionKey: !!encryptionKey,
+        encryptionKey, // 🔥 NEW: Log encryption key
       });
 
-      const tx: TransactionResponse = await contractWrite.createAjo(
-        ajoName,
-        useHtsTokens,
-        useScheduledPayments,
-        { gasLimit: 1500000 }
-      );
+      try {
+        const tx: TransactionResponse = await contractWrite.createAjo(
+          ajoName,
+          useHtsTokens,
+          useScheduledPayments,
+          { gasLimit: 1500000 }
+        );
 
-      console.log("📤 Transaction sent:", tx.hash);
-      const receipt: TransactionReceipt = await tx.wait();
-      console.log("✅ Transaction confirmed");
+        console.log("📤 Transaction sent:", tx.hash);
+        toast.info("Transaction sent to HashPack, awaiting confirmation...");
 
-      const eventTopic = contractWrite.interface.getEventTopic("AjoCreated");
-      if (!eventTopic) throw new Error("AjoCreated event not found");
+        const receipt: TransactionReceipt = await tx.wait();
+        console.log("✅ Transaction confirmed");
 
-      const rawLog = receipt.logs.find(
-        (log: LogType) => log.topics[0] === eventTopic
-      );
-      if (!rawLog) throw new Error("AjoCreated log not found");
+        const eventTopic = contractWrite.interface.getEventTopic("AjoCreated");
+        if (!eventTopic) throw new Error("AjoCreated event not found");
 
-      const parsedEvent = contractWrite.interface.parseLog(rawLog);
-      const ajoId =
-        parsedEvent.args.ajoId?.toNumber() || parsedEvent.args[0]?.toNumber();
+        const rawLog = receipt.logs.find(
+          (log: LogType) => log.topics[0] === eventTopic
+        );
+        if (!rawLog) throw new Error("AjoCreated log not found");
 
-      if (typeof ajoId !== "number") throw new Error("Invalid ajoId");
+        const parsedEvent = contractWrite.interface.parseLog(rawLog);
+        const ajoId =
+          parsedEvent.args.ajoId?.toNumber() || parsedEvent.args[0]?.toNumber();
 
-      console.log("🎉 Ajo created with ID:", ajoId);
-      return { ajoId, receipt };
+        if (typeof ajoId !== "number") throw new Error("Invalid ajoId");
+
+        console.log("🎉 Ajo created with ID:", ajoId);
+        toast.success(`Ajo created successfully with ID: ${ajoId}`);
+        return { ajoId, receipt };
+      } catch (error: any) {
+        console.error("❌ createAjo failed:", error);
+
+        // 🔥 NEW: Better error handling for encryption issues
+        if (
+          error.message?.includes("SimpleCrypto") ||
+          error.message?.includes("SECRET KEY")
+        ) {
+          toast.error("Encryption error. Please reconnect your wallet.");
+          throw new Error(
+            "Encryption key issue. Please disconnect and reconnect your wallet."
+          );
+        }
+
+        toast.error(
+          `Failed to create Ajo: ${error.message || "Unknown error"}`
+        );
+        throw error;
+      }
     },
-    [contractWrite]
+    [contractWrite, evmAddress, encryptionKey] // 🔥 NEW: Add encryptionKey to dependencies
   );
 
   const initializePhase2 = useCallback(
