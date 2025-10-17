@@ -9,11 +9,9 @@ import {
   LedgerId,
   TokenAssociateTransaction,
   TokenId,
-  Transaction,
   TransactionId,
   TransferTransaction,
   Client,
-  TransactionReceiptQuery,
 } from "@hashgraph/sdk";
 import { ContractFunctionParameterBuilder } from "../contractFunctionParameterBuilder";
 import { appConfig } from "../../../config";
@@ -37,6 +35,8 @@ const walletConnectProjectId =
 
 const currentNetworkConfig = appConfig.networks.testnet;
 const hederaNetwork = currentNetworkConfig.network;
+
+// Create a client for freezing transactions (no operator needed for this)
 const hederaClient = Client.forName(hederaNetwork);
 
 // Metadata for your dApp
@@ -93,50 +93,22 @@ class WalletConnectWallet implements WalletInterface {
     return AccountId.fromString(signer.getAccountId().toString());
   }
 
-  private async signAndExecute(tx: Transaction) {
-    const signer = this.getSigner();
-    if (!signer) {
-      throw new Error("No signer available");
-    }
-
-    const accountId = this.accountId();
-    const transactionId = TransactionId.generate(accountId);
-    tx.setTransactionId(transactionId);
-    tx.setNodeAccountIds([AccountId.fromString("0.0.3")]);
-    tx.freeze();
-
-    // Sign with wallet
-    const signedTx = await signer.signTransaction(tx);
-
-    // Execute locally
-    const txResponse = await signedTx.execute(hederaClient);
-
-    // Verify receipt
-    const receiptQuery = new TransactionReceiptQuery().setTransactionId(
-      txResponse.transactionId
-    );
-    const receipt = await receiptQuery.execute(hederaClient);
-
-    if (receipt.status.toString() !== "SUCCESS") {
-      throw new Error(
-        `Transaction failed with status: ${receipt.status.toString()}`
-      );
-    }
-
-    return txResponse.transactionId.toString();
-  }
-
   async transferHBAR(toAddress: AccountId, amount: number) {
     const signer = this.getSigner();
     if (!signer) {
       throw new Error("No signer available");
     }
 
+    const accountId = this.accountId();
+
     const transferTransaction = new TransferTransaction()
-      .addHbarTransfer(this.accountId(), -amount)
-      .addHbarTransfer(toAddress, amount);
+      .addHbarTransfer(accountId, -amount)
+      .addHbarTransfer(toAddress, amount)
+      .setTransactionId(TransactionId.generate(accountId))
+      .setNodeAccountIds([AccountId.fromString("0.0.3")]);
 
     try {
+      await transferTransaction.freezeWith(hederaClient);
       const txResponse = await transferTransaction.executeWithSigner(signer);
       return txResponse.transactionId.toString();
     } catch (error) {
@@ -155,11 +127,16 @@ class WalletConnectWallet implements WalletInterface {
       throw new Error("No signer available");
     }
 
+    const accountId = this.accountId();
+
     const transferTransaction = new TransferTransaction()
-      .addTokenTransfer(tokenId, this.accountId(), -amount)
-      .addTokenTransfer(tokenId, toAddress, amount);
+      .addTokenTransfer(tokenId, accountId, -amount)
+      .addTokenTransfer(tokenId, toAddress, amount)
+      .setTransactionId(TransactionId.generate(accountId))
+      .setNodeAccountIds([AccountId.fromString("0.0.3")]);
 
     try {
+      await transferTransaction.freezeWith(hederaClient);
       const txResponse = await transferTransaction.executeWithSigner(signer);
       return txResponse.transactionId.toString();
     } catch (error) {
@@ -178,14 +155,15 @@ class WalletConnectWallet implements WalletInterface {
       throw new Error("No signer available");
     }
 
-    const transferTransaction = new TransferTransaction().addNftTransfer(
-      tokenId,
-      serialNumber,
-      this.accountId(),
-      toAddress
-    );
+    const accountId = this.accountId();
+
+    const transferTransaction = new TransferTransaction()
+      .addNftTransfer(tokenId, serialNumber, accountId, toAddress)
+      .setTransactionId(TransactionId.generate(accountId))
+      .setNodeAccountIds([AccountId.fromString("0.0.3")]);
 
     try {
+      await transferTransaction.freezeWith(hederaClient);
       const txResponse = await transferTransaction.executeWithSigner(signer);
       return txResponse.transactionId.toString();
     } catch (error) {
@@ -200,11 +178,16 @@ class WalletConnectWallet implements WalletInterface {
       throw new Error("No signer available");
     }
 
+    const accountId = this.accountId();
+
     const associateTransaction = new TokenAssociateTransaction()
-      .setAccountId(this.accountId())
-      .setTokenIds([tokenId]);
+      .setAccountId(accountId)
+      .setTokenIds([tokenId])
+      .setTransactionId(TransactionId.generate(accountId))
+      .setNodeAccountIds([AccountId.fromString("0.0.3")]);
 
     try {
+      await associateTransaction.freezeWith(hederaClient);
       const txResponse = await associateTransaction.executeWithSigner(signer);
       return txResponse.transactionId.toString();
     } catch (error) {
@@ -219,15 +202,28 @@ class WalletConnectWallet implements WalletInterface {
     functionParameters: ContractFunctionParameterBuilder,
     gasLimit: number
   ) {
+    const signer = this.getSigner();
+    if (!signer) {
+      throw new Error("No signer available");
+    }
+
     const params = functionParameters.buildHAPIParams();
+    const accountId = this.accountId();
 
     const tx = new ContractExecuteTransaction()
       .setContractId(contractId)
       .setGas(gasLimit)
-      .setFunction(functionName, params);
+      .setFunction(functionName, params)
+      .setTransactionId(TransactionId.generate(accountId))
+      .setNodeAccountIds([AccountId.fromString("0.0.3")]);
 
     try {
-      return await this.signAndExecute(tx);
+      // Freeze the transaction with the client (no operator required)
+      await tx.freezeWith(hederaClient);
+
+      // Now execute with signer
+      const txResponse = await tx.executeWithSigner(signer);
+      return txResponse.transactionId.toString();
     } catch (error) {
       console.error("Contract execution failed:", error);
       return null;

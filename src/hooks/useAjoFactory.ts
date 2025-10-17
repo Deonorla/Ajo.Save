@@ -464,19 +464,43 @@ export const useAjoFactory = (ajoFactoryAddress?: string) => {
             throw new Error("Transaction execution failed");
           }
 
+          console.log("Transaction ID:", txIdStr);
+
+          // Wait a bit for transaction to be processed
+          await new Promise((resolve) => setTimeout(resolve, 3000));
+
           // Fetch transaction record to get ajoId
           const transactionId = TransactionId.fromString(txIdStr);
           const recordQuery = new TransactionRecordQuery()
             .setTransactionId(transactionId)
             .setIncludeChildren(true);
-          const record = await recordQuery.execute(hederaClient);
 
-          if (!record.contractFunctionResult) {
-            throw new Error("No contract function result in record");
+          try {
+            const record = await recordQuery.execute(hederaClient);
+
+            if (!record.contractFunctionResult) {
+              throw new Error("No contract function result in record");
+            }
+
+            const ajoId = record.contractFunctionResult
+              .getUint256(0)
+              .toNumber();
+            console.log("Extracted ajoId:", ajoId);
+            return { ajoId, receipt: txIdStr };
+          } catch (recordError: any) {
+            console.error("Failed to fetch transaction record:", recordError);
+            // If we can't get the record, try to get total Ajos and use that as ID
+            try {
+              const total = await totalAjos();
+              const ajoId = total; // Assuming the latest Ajo
+              console.log("Fallback ajoId (from totalAjos):", ajoId);
+              return { ajoId, receipt: txIdStr };
+            } catch (fallbackError) {
+              throw new Error(
+                "Transaction succeeded but could not retrieve Ajo ID. Please check the transaction on HashScan."
+              );
+            }
           }
-
-          const ajoId = record.contractFunctionResult.getUint256(0).toNumber();
-          return { ajoId, receipt: txIdStr };
         }
       } catch (error: any) {
         console.error("Create Ajo failed:", error);
@@ -691,6 +715,7 @@ export const useAjoFactory = (ajoFactoryAddress?: string) => {
             params,
             3_000_000
           );
+          console.log("initializeAjoPhase2 tx:", txId?.toString());
           return txId?.toString() || null;
         }
       } catch (error: any) {
@@ -744,6 +769,7 @@ export const useAjoFactory = (ajoFactoryAddress?: string) => {
             params,
             3_000_000
           );
+          console.log("initializeAjoPhase3 tx:", txId?.toString());
           return txId?.toString() || null;
         }
       } catch (error: any) {
@@ -797,6 +823,7 @@ export const useAjoFactory = (ajoFactoryAddress?: string) => {
             params,
             3_000_000
           );
+          console.log("initializeAjoPhase4 tx:", txId?.toString());
           return txId?.toString() || null;
         }
       } catch (error: any) {
@@ -850,6 +877,7 @@ export const useAjoFactory = (ajoFactoryAddress?: string) => {
             params,
             3_000_000
           );
+          console.log("initializeAjoPhase5 tx:", txId?.toString());
           return txId?.toString() || null;
         }
       } catch (error: any) {

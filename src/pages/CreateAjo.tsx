@@ -6,13 +6,10 @@ import { useState, useEffect } from "react";
 import {
   ArrowLeft,
   Coins,
-  Shield,
-  DollarSign,
   Info,
   CheckCircle,
   AlertCircle,
   Plus,
-  Calculator,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAjoFactory } from "@/hooks/useAjoFactory";
@@ -24,6 +21,7 @@ const CreateAjo = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [currentPhase, setCurrentPhase] = useState(0);
   const {
     createAjo,
     initializeAjoPhase2,
@@ -86,35 +84,42 @@ const CreateAjo = () => {
       if (!accountId) throw new Error("Wallet not connected");
 
       // ✅ Phase 1 - Create with required parameters
+      setCurrentPhase(1);
       const { ajoId, receipt } = await createAjo(
         formData.name,
         true, // useHtsTokens (required as per backend script)
         true // useScheduledPayments (recommended)
       );
       console.log("✅ Phase 1 complete. Ajo ID:", ajoId);
-      toast.info("Phase 1 complete");
+      toast.success("Phase 1: Ajo core created!");
 
       // Phase 2 - Initialize Members + Governance + HCS
+      setCurrentPhase(2);
       await initializeAjoPhase2(ajoId);
       console.log("✅ Phase 2 complete");
-      toast.info("Phase 2 complete");
+      toast.success("Phase 2: Members & Governance initialized!");
 
       // Phase 3 - Initialize Collateral + Payments
+      setCurrentPhase(3);
       await initializeAjoPhase3(ajoId);
       console.log("✅ Phase 3 complete");
-      toast.info("Phase 3 complete");
+      toast.success("Phase 3: Collateral & Payments initialized!");
 
       // Phase 4 - Initialize Core + Cross-link
+      setCurrentPhase(4);
       await initializeAjoPhase4(ajoId);
       console.log("✅ Phase 4 complete");
-      toast.info("Phase 4 complete");
+      toast.success("Phase 4: Cross-linking complete!");
 
       // Phase 5 - Finalize (if using scheduled payments)
+      setCurrentPhase(5);
       await initializeAjoPhase5(ajoId);
       console.log("✅ Phase 5 complete - Ajo active");
+      toast.success("Phase 5: Ajo fully initialized!");
 
       setIsSubmitting(false);
-      toast.success("Ajo created successfully!");
+      setCurrentPhase(0);
+      toast.success("🎉 Ajo created successfully!");
       setShowSuccess(true);
 
       // Reset form after success
@@ -126,6 +131,7 @@ const CreateAjo = () => {
     } catch (err: any) {
       console.error("Failed to create Ajo:", err);
       toast.error(err?.message || "Failed to create Ajo.");
+      setCurrentPhase(0);
     } finally {
       setIsSubmitting(false);
     }
@@ -162,8 +168,8 @@ const CreateAjo = () => {
             Digital Ajo Platform
           </h1>
           <p className="text-sm text-muted-foreground max-w-3xl mx-auto">
-            Create a transparent, blockchain-powered savings groups. Build
-            wealth with your community.
+            Create a transparent, blockchain-powered savings group. Build wealth
+            with your community.
           </p>
         </div>
 
@@ -200,6 +206,29 @@ const CreateAjo = () => {
                   </div>
                 )}
 
+                {/* Phase Progress Indicator */}
+                {isSubmitting && currentPhase > 0 && (
+                  <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                        Initialization Progress
+                      </span>
+                      <span className="text-sm font-bold text-blue-900 dark:text-blue-100">
+                        Phase {currentPhase}/5
+                      </span>
+                    </div>
+                    <div className="w-full bg-blue-200 dark:bg-blue-900 rounded-full h-2">
+                      <div
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-500"
+                        style={{ width: `${(currentPhase / 5) * 100}%` }}
+                      ></div>
+                    </div>
+                    <p className="text-xs text-blue-800 dark:text-blue-200 mt-2">
+                      Please approve each transaction in your wallet
+                    </p>
+                  </div>
+                )}
+
                 <form onSubmit={handleSubmit} className="space-y-6">
                   {/* Basic Information */}
                   <div className="space-y-4">
@@ -223,6 +252,7 @@ const CreateAjo = () => {
                             ? "border-destructive"
                             : "border-border"
                         }`}
+                        disabled={isSubmitting}
                       />
                       {formErrors.name && (
                         <p className="mt-1 text-sm text-destructive flex items-center space-x-1">
@@ -238,12 +268,16 @@ const CreateAjo = () => {
                     <button
                       type="submit"
                       disabled={isSubmitting}
-                      className="w-full bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-8 py-4 rounded-lg font-semibold text-lg transition-all hover:scale-105 hover:shadow-lg flex items-center justify-center space-x-2 cursor-pointer"
+                      className="w-full bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground px-8 py-4 rounded-lg font-semibold text-lg transition-all hover:scale-105 hover:shadow-lg flex items-center justify-center space-x-2 cursor-pointer disabled:cursor-not-allowed"
                     >
                       {isSubmitting ? (
                         <>
                           <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></div>
-                          <span>Creating Ajo...</span>
+                          <span>
+                            {currentPhase > 0
+                              ? `Processing Phase ${currentPhase}/5...`
+                              : "Creating Ajo..."}
+                          </span>
                         </>
                       ) : (
                         <>

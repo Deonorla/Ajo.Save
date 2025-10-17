@@ -1,7 +1,7 @@
 import { useWallet } from "@/auth/WalletContext";
 import { useAjoCore } from "@/hooks/useAjoCore";
 // import { useAjoFactory } from "@/hooks/useAjoFactory";
-import useAjoPayment from "@/hooks/useAjoPayment";
+// import useAjoPayment from "@/hooks/useAjoPayment";
 import { useWalletInterface } from "@/services/wallets/useWalletInterface";
 import { useAjoDetailsStore } from "@/store/ajoDetailsStore";
 import { usePaymentStore } from "@/store/ajoPaymentStore";
@@ -57,9 +57,9 @@ const AjoDetailsCard = ({
     distributePayout,
     // makePayment,
   } = useAjoCore(ajoCore ? ajoCore : "");
-  const { getPayOut, getCurrentCycle } = useAjoPayment(
-    ajo ? ajo?.ajoPayments : ""
-  );
+  // const { getPayOut, getCurrentCycle } = useAjoPayment(
+  //   ajo ? ajo?.ajoPayments : ""
+  // );
   const { address } = useWallet();
   const { accountId } = useWalletInterface();
   const [paidAddress, setPaidAddress] = useState("");
@@ -68,21 +68,22 @@ const AjoDetailsCard = ({
 
   const getFunctions = useCallback(async () => {
     try {
+      console.log("Ajo Core Address:", ajoCore);
       const collateralRequired = await getRequiredCollateral(0);
       console.log("collateral---", collateralRequired);
       setCollateralRequired(Number(collateralRequired?.toString()));
       const memberInfo = await getMemberInfo(accountId ? accountId : "");
       console.log("🙋 Member details:", memberInfo);
       const queueNumber = Number(cycle);
-      const PayCycle = await getPayOut(queueNumber);
-      setPaidAddress(PayCycle?.recipient);
-      const count = await getCurrentCycle();
-      if (!count) return null;
-      setCycleCount(count);
+      // const PayCycle = await getPayOut(queueNumber);
+      // setPaidAddress(PayCycle?.recipient);
+      // const count = await getCurrentCycle();
+      // if (!count) return null;
+      // setCycleCount(count);
     } catch (err) {
       console.log("error getting collateral", err);
     }
-  }, [getPayOut]);
+  }, []);
 
   useEffect(() => {
     getFunctions();
