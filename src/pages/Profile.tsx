@@ -9,7 +9,7 @@ import ProfileAjoGroups from "@/components/profile/ProfileAjoGroups";
 import UserProfileCard from "@/components/profile/UserProfileCard";
 import ProfileNftPage from "@/components/profile/ProfileNftPage";
 import ProfileRecentActivity from "@/components/profile/ProfileRecentActivity";
-import useAjoCore from "@/hooks/useAjoCore";
+// import useAjoCore from "@/hooks/useAjoCore";
 import { useAjoStore } from "@/store/ajoStore";
 import { useParams } from "react-router-dom";
 

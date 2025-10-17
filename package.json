@@ -10,7 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@hashgraph/sdk": "^2.24.1",
+    "@hashgraph/hedera-wallet-connect": "^1.0.6",
+    "@hashgraph/sdk": "^2.44.0",
     "@radix-ui/react-slot": "^1.2.3",
     "buffer": "^6.0.3",
     "class-variance-authority": "^0.7.1",

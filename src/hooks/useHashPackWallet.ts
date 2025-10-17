@@ -384,10 +384,12 @@ export default function useHashPackWallet(): LegacyHashPackState {
 
       try {
         // V3: sendTransaction(accountId, transaction) - accountId must be AccountId object
-        const accountIdObj = AccountId.fromString(state.accountId);
-        const receipt: any = await hashconnect.sendTransaction(
+        const accountIdObj: any = AccountId.fromString(state.accountId);
+
+        // Cast to any to avoid type mismatch between different @hashgraph/sdk instances
+        const receipt: any = await (hashconnect as any).sendTransaction(
           accountIdObj,
-          transaction
+          transaction as any
         );
 
         console.log("✅ Transaction sent, receipt:", receipt);
@@ -420,7 +422,7 @@ export default function useHashPackWallet(): LegacyHashPackState {
 
     try {
       // V3: getSigner(accountId) - returns a signer that works with SDK
-      const accountIdObj = AccountId.fromString(state.accountId);
+      const accountIdObj: any = AccountId.fromString(state.accountId);
       const signer = hashconnectRef.current.getSigner(accountIdObj);
 
       console.log("✅ dAppSigner created successfully (v3)");

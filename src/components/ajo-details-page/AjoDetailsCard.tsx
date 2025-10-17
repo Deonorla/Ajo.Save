@@ -1,6 +1,6 @@
 import { useWallet } from "@/auth/WalletContext";
-import useAjoCore from "@/hooks/useAjoCore";
-import { useAjoFactory } from "@/hooks/useAjoFactory";
+import { useAjoCore } from "@/hooks/useAjoCore";
+// import { useAjoFactory } from "@/hooks/useAjoFactory";
 import useAjoPayment from "@/hooks/useAjoPayment";
 import { useAjoDetailsStore } from "@/store/ajoDetailsStore";
 import { usePaymentStore } from "@/store/ajoPaymentStore";
@@ -52,10 +52,9 @@ const AjoDetailsCard = ({
     joinAjo,
     getContractStats,
     getMemberInfo,
-    getRequiredCollateralForJoin,
+    getRequiredCollateral,
     distributePayout,
-    needsToPayThisCycle,
-    makePayment,
+    // makePayment,
   } = useAjoCore(ajoCore ? ajoCore : "");
   const { getPayOut, getCurrentCycle } = useAjoPayment(
     ajo ? ajo?.ajoPayments : ""
@@ -67,7 +66,7 @@ const AjoDetailsCard = ({
 
   const getFunctions = useCallback(async () => {
     try {
-      const collateralRequired = await getRequiredCollateralForJoin();
+      const collateralRequired = await getRequiredCollateral(0);
       console.log("collateral---", collateralRequired);
       setCollateralRequired(Number(collateralRequired?.toString()) / 1000000);
       const queueNumber = Number(cycle);
@@ -79,7 +78,7 @@ const AjoDetailsCard = ({
     } catch (err) {
       console.log("error getting collateral", err);
     }
-  }, [getRequiredCollateralForJoin, getPayOut]);
+  }, [getPayOut]);
 
   useEffect(() => {
     getFunctions();
@@ -103,17 +102,17 @@ const AjoDetailsCard = ({
       console.log("ajoCollateral", ajo.ajoCollateral);
       console.log("ajoPayments", ajo.ajoPayments);
 
-      const join = await joinAjo(
-        0,
-        import.meta.env.VITE_MOCK_USDC_ADDRESS,
-        ajo?.ajoCollateral,
-        ajo?.ajoPayments
-      );
+      // const join = await joinAjo(
+      //   0,
+      //   import.meta.env.VITE_MOCK_USDC_ADDRESS,
+      //   ajo?.ajoCollateral,
+      //   ajo?.ajoPayments
+      // );
 
       // join is a receipt (ethers v5 transaction receipt)
-      console.log("✅ Joined Ajo, tx hash:", join.transactionHash);
+      // console.log("✅ Joined Ajo, tx hash:", join.transactionHash);
       // Check logs
-      console.log("📜 Logs:", join.logs);
+      // console.log("📜 Logs:", join.logs);
       toast.success("Collateral Locked and Ajo joined Successfully");
       // Step 2: refresh global stats
       const stats = await getContractStats();
@@ -138,8 +137,8 @@ const AjoDetailsCard = ({
     try {
       setMakingPayment(true);
       toast.info("Processing monthly fee");
-      const receipt = await makePayment(ajo ? ajo?.ajoPayments : "");
-      console.log("receipt:", receipt);
+      // const receipt = await makePayment(ajo ? ajo?.ajoPayments : "");
+      // console.log("receipt:", receipt);
       // window.location.reload();
     } catch (err) {
       console.log("Error making monthly payment:", err);

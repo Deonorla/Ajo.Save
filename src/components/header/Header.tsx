@@ -12,12 +12,18 @@ import {
   Check,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useWallet } from "../../auth/WalletContext";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTokenStore } from "@/store/tokenStore";
 import FormattedBalance from "@/utils/FormatedBalance";
 import { toast } from "sonner";
-import { ethers, Contract } from "ethers";
+import { ethers } from "ethers";
+import { useWalletInterface } from "../../services/wallets/useWalletInterface";
+import { openWalletConnectModal } from "../../services/wallets/walletconnect/walletConnectClient";
+import { connectToMetamask } from "../../services/wallets/metamask/metamaskClient";
+import { MirrorNodeClient } from "../../services/wallets/mirrorNodeClient";
+import { appConfig } from "../../config";
+import { AccountId, TokenId } from "@hashgraph/sdk";
+import WalletModal from "../ui/WalletModal";
 
 // --- Mock ERC20/HTS Facade ABI ---
 const TOKEN_ABI = ["function mint(uint256 amount) external"];
@@ -62,52 +68,94 @@ const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const { usdc, loading, setUsdc } = useTokenStore();
+  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
 
-  const {
-    connected,
-    address,
-    balance,
-    network,
-    connect,
-    disconnect,
-    getBalance,
-    associateToken,
-    getTokenBalance,
-    dAppSigner,
-  } = useWallet();
-
+  // Use the unified wallet interface
+  const { accountId, walletInterface } = useWalletInterface();
+  const connected = !!accountId;
+  console.log("accountId", accountId);
+  const [balance, setBalance] = useState<string | null>(null);
   const [minting, setMinting] = useState(false);
   const [isAssociated, setIsAssociated] = useState(false);
+  const [walletType, setWalletType] = useState<
+    "metamask" | "walletconnect" | null
+  >(null);
 
   const MINT_AMOUNT = ethers.utils.parseUnits("100", 6);
+  const mirrorNodeClient = new MirrorNodeClient(appConfig.networks.testnet);
 
   const handleCopy = async () => {
-    if (address) {
-      await navigator.clipboard.writeText(address);
+    if (accountId) {
+      await navigator.clipboard.writeText(accountId);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     }
   };
 
+  // Determine which wallet is connected
+  useEffect(() => {
+    if (accountId) {
+      if (accountId.startsWith("0x")) {
+        setWalletType("metamask");
+      } else {
+        setWalletType("walletconnect");
+      }
+    } else {
+      setWalletType(null);
+    }
+  }, [accountId]);
+
+  // Get HBAR balance
   const getHbarBalance = async () => {
-    const balance = await getBalance();
-    console.log("My Hbar Balance:", balance);
+    if (!accountId) return;
+
+    try {
+      const hederaAccountId = accountId.startsWith("0x")
+        ? convertEvmToHederaAddress(accountId)
+        : accountId;
+
+      const accountInfo = await mirrorNodeClient.getAccountInfo(
+        AccountId.fromString(hederaAccountId)
+      );
+      const hbarBalance = (accountInfo.balance.balance / 100000000).toFixed(2);
+      setBalance(hbarBalance);
+      console.log("My Hbar Balance:", hbarBalance);
+    } catch (error) {
+      console.error("Failed to fetch HBAR balance:", error);
+    }
   };
 
   // Check token association on mount and when wallet connects
   useEffect(() => {
     const checkAssociation = async () => {
-      if (!connected || !address || !usdcContractId) return;
+      if (!connected || !accountId || !usdcContractId) return;
 
       try {
         const hederaTokenId = convertEvmToHederaAddress(usdcContractId);
+        const hederaAccountId = accountId.startsWith("0x")
+          ? convertEvmToHederaAddress(accountId)
+          : accountId;
+
         console.log("Checking association for token:", hederaTokenId);
 
-        const balance = await getTokenBalance(hederaTokenId);
-        setIsAssociated(true);
-        console.log("Token already associated. Balance:", balance);
-        if (balance) {
+        const tokenBalances =
+          await mirrorNodeClient.getAccountTokenBalancesWithTokenInfo(
+            AccountId.fromString(hederaAccountId)
+          );
+
+        const tokenBalance = tokenBalances.find(
+          (t) => t.token_id === hederaTokenId
+        );
+        if (tokenBalance) {
+          setIsAssociated(true);
+          const decimals = parseInt(tokenBalance.info.decimals);
+          const balance = (
+            tokenBalance.balance / Math.pow(10, decimals)
+          ).toFixed(decimals);
+          console.log("Token already associated. Balance:", balance);
           setUsdc(balance);
+        } else {
+          setIsAssociated(false);
         }
       } catch (error) {
         console.log("Token not yet associated or error checking:", error);
@@ -116,15 +164,74 @@ const Header = () => {
     };
 
     checkAssociation();
-  }, [connected, address, usdcContractId, getTokenBalance, setUsdc]);
+  }, [connected, accountId, usdcContractId, setUsdc]);
+
+  // Fetch balances when connected
+  useEffect(() => {
+    if (connected) {
+      getHbarBalance();
+    }
+  }, [connected, accountId]);
 
   /**
-   * Mints HTS USDC tokens using the JSON-RPC relay directly
-   * Bypasses Ethers Contract to avoid signer compatibility issues
+   * Connect wallet - shows modal to choose between WalletConnect and MetaMask
+   */
+  const handleConnect = () => {
+    setIsWalletModalOpen(true);
+  };
+  /**
+   * Handles WalletConnect selection
+   */
+  const handleConnectWalletConnect = async () => {
+    setIsWalletModalOpen(false); // Close the modal first
+    try {
+      await openWalletConnectModal();
+      toast.success("Connected via WalletConnect!");
+    } catch (error: any) {
+      toast.error(`Connection failed: ${error.message || "Unknown error"}`);
+    }
+  };
+
+  /**
+   * Handles MetaMask selection
+   */
+  const handleConnectMetamask = async () => {
+    setIsWalletModalOpen(false); // Close the modal first
+    try {
+      const accounts = await connectToMetamask();
+      if (accounts.length > 0) {
+        toast.success("Connected via MetaMask!");
+      }
+    } catch (error: any) {
+      toast.error(`Connection failed: ${error.message || "Unknown error"}`);
+    }
+  };
+
+  /**
+   * Disconnect wallet
+   */
+  const handleDisconnect = () => {
+    if (walletInterface) {
+      walletInterface.disconnect();
+      setBalance(null);
+      setUsdc("");
+      setIsAssociated(false);
+      toast.success("Wallet disconnected");
+    }
+  };
+
+  /**
+   * Mints HTS USDC tokens
+   * Works with both MetaMask and WalletConnect
    */
   const handleMint = () => {
-    if (!connected || !address) {
+    if (!connected || !accountId) {
       toast.error("Wallet not connected.");
+      return;
+    }
+
+    if (!walletInterface) {
+      toast.error("Wallet interface not available.");
       return;
     }
 
@@ -139,57 +246,51 @@ const Header = () => {
     }
 
     setMinting(true);
-    const mintPromise = new Promise<string>((resolve, reject) => {
-      const mintLogic = async () => {
-        try {
-          console.log("=== MINT TRANSACTION START ===");
+    // eslint-disable-next-line no-async-promise-executor
+    const mintPromise = new Promise<string>(async (resolve, reject) => {
+      try {
+        console.log("=== MINT TRANSACTION START ===");
+        console.log("Wallet Type:", walletType);
 
-          // --- PHASE 1: TOKEN ASSOCIATION ---
-          if (!isAssociated) {
-            toast.info("Associating token with your account...");
-            try {
-              await associateToken(usdcContractId);
-              setIsAssociated(true);
-              toast.success("Token associated successfully!");
-              await new Promise((resolve) => setTimeout(resolve, 2000));
-            } catch (assocError: any) {
-              if (
-                assocError.message?.includes(
-                  "TOKEN_ALREADY_ASSOCIATED_TO_ACCOUNT"
-                )
-              ) {
-                setIsAssociated(true);
-                toast.info("Token already associated");
-              } else {
-                throw new Error(
-                  `Token association failed: ${assocError.message}`
-                );
-              }
-            }
-          } else {
-            console.log("✅ Token already associated, skipping association");
-          }
-
-          // --- PHASE 2: PREPARE TRANSACTION DATA ---
-          toast.info("Preparing mint transaction...");
-
-          if (!dAppSigner) {
-            throw new Error(
-              "dAppSigner not available. Please reconnect your wallet."
+        // --- PHASE 1: TOKEN ASSOCIATION ---
+        if (!isAssociated) {
+          toast.info("Associating token with your account...");
+          try {
+            const hederaTokenId = convertEvmToHederaAddress(usdcContractId);
+            await walletInterface.associateToken(
+              TokenId.fromString(hederaTokenId)
             );
+            setIsAssociated(true);
+            toast.success("Token associated successfully!");
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+          } catch (assocError: any) {
+            if (
+              assocError.message?.includes(
+                "TOKEN_ALREADY_ASSOCIATED_TO_ACCOUNT"
+              )
+            ) {
+              setIsAssociated(true);
+              toast.info("Token already associated");
+            } else {
+              throw new Error(
+                `Token association failed: ${assocError.message}`
+              );
+            }
           }
+        } else {
+          console.log("✅ Token already associated, skipping association");
+        }
 
-          // The dAppSigner is the object responsible for sending and signing
-          const dAppSignerEthers = dAppSigner as unknown as ethers.Signer;
-          const providerForReceipt = dAppSignerEthers.provider; // Ethers Signers have a provider property
+        // --- PHASE 2: MINT TRANSACTION ---
+        toast.info("Preparing mint transaction...");
 
-          if (!providerForReceipt) {
-            throw new Error("Provider not available from dAppSigner");
-          }
+        // For MetaMask, use ethers directly
+        if (walletType === "metamask") {
+          const provider = new ethers.providers.Web3Provider(
+            (window as any).ethereum
+          );
+          const signer = provider.getSigner();
 
-          console.log("✅ Signer and Provider obtained");
-
-          // Create contract interface to encode the function call
           const contractInterface = new ethers.utils.Interface(TOKEN_ABI);
           const mintData = contractInterface.encodeFunctionData("mint", [
             MINT_AMOUNT,
@@ -203,34 +304,21 @@ const Header = () => {
             "USDC"
           );
 
-          // --- PHASE 3: SEND TRANSACTION USING SIGNER ---
           toast.info("Sending mint transaction...");
 
           const txRequest = {
             to: usdcContractId,
             data: mintData,
-            // 3,000,000 gas limit is standard for Hedera HTS/Precompiles
             gasLimit: ethers.utils.hexlify(3_000_000),
           };
 
-          console.log("Transaction request (via Signer):", txRequest);
-
-          // 💡 CRITICAL FIX: Use dAppSigner.sendTransaction (Ethers Signer method)
-          const txResponse = await dAppSignerEthers.sendTransaction(txRequest);
-
-          const txHash = txResponse.hash; // Get the transaction hash
+          const txResponse = await signer.sendTransaction(txRequest);
+          const txHash = txResponse.hash;
 
           console.log("✅ Transaction sent. Hash:", txHash);
           toast.info("Waiting for confirmation...");
 
-          // --- PHASE 4: WAIT FOR RECEIPT ---
-
-          // Ethers v5 utility to wait for a transaction to be confirmed
-          const receipt = await providerForReceipt.waitForTransaction(
-            txHash,
-            1,
-            30000
-          ); // 1 confirmation, 30s timeout
+          const receipt = await provider.waitForTransaction(txHash, 1, 30000);
 
           if (!receipt) {
             throw new Error("Transaction receipt not found after 30 seconds");
@@ -243,53 +331,99 @@ const Header = () => {
           }
 
           console.log("✅ Transaction confirmed!");
-          console.log("Receipt:", receipt);
+          resolve(txHash);
+        }
+        // For WalletConnect, use the wallet interface
+        else if (walletType === "walletconnect") {
+          const { ContractFunctionParameterBuilder } = await import(
+            "../../services/wallets/contractFunctionParameterBuilder"
+          );
+          const { ContractId } = await import("@hashgraph/sdk");
 
-          // --- PHASE 5: UPDATE BALANCE ---
-          toast.info("Updating balance...");
+          const functionParams =
+            new ContractFunctionParameterBuilder().addParam({
+              type: "uint256",
+              name: "amount",
+              value: MINT_AMOUNT.toString(),
+            });
+
+          toast.info("Sending mint transaction...");
+
+          const txId = await walletInterface.executeContractFunction(
+            ContractId.fromString(convertEvmToHederaAddress(usdcContractId)),
+            "mint",
+            functionParams,
+            3_000_000
+          );
+
+          if (!txId) {
+            throw new Error("Transaction failed");
+          }
+
+          console.log("✅ Transaction sent. ID:", txId);
+          toast.info("Waiting for confirmation...");
 
           // Wait for mirror node to update
-          await new Promise((resolve) => setTimeout(resolve, 3000));
+          await new Promise((resolve) => setTimeout(resolve, 5000));
 
-          try {
-            const hederaTokenId = convertEvmToHederaAddress(usdcContractId);
-            const newBalance = await getTokenBalance(hederaTokenId);
-            if (newBalance) {
-              setUsdc(newBalance);
-              console.log("✅ New balance:", newBalance);
-            }
-          } catch (balError) {
-            console.warn("Could not fetch updated balance:", balError);
-          }
-
-          console.log("=== MINT TRANSACTION SUCCESS ===");
-          resolve(txHash);
-        } catch (error: any) {
-          console.error("=== MINT TRANSACTION FAILED ===");
-          console.error("Full error:", error);
-
-          // ... (Error handling logic remains the same) ...
-
-          let errorMessage = "Minting transaction failed";
-
-          if (error.reason) {
-            errorMessage = error.reason;
-          } else if (error.error?.message) {
-            errorMessage = error.error.message;
-          } else if (error.message) {
-            const message = error.message.split("\n")[0];
-            if (message.length < 200) {
-              errorMessage = message;
-            }
-          }
-
-          reject(new Error(errorMessage));
-        } finally {
-          setMinting(false);
+          console.log("✅ Transaction confirmed!");
+          resolve(txId.toString());
+        } else {
+          throw new Error("Unknown wallet type");
         }
-      };
 
-      mintLogic();
+        // --- PHASE 3: UPDATE BALANCE ---
+        toast.info("Updating balance...");
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+
+        try {
+          const hederaTokenId = convertEvmToHederaAddress(usdcContractId);
+          const hederaAccountId = accountId.startsWith("0x")
+            ? convertEvmToHederaAddress(accountId)
+            : accountId;
+
+          const tokenBalances =
+            await mirrorNodeClient.getAccountTokenBalancesWithTokenInfo(
+              AccountId.fromString(hederaAccountId)
+            );
+
+          const tokenBalance = tokenBalances.find(
+            (t) => t.token_id === hederaTokenId
+          );
+          if (tokenBalance) {
+            const decimals = parseInt(tokenBalance.info.decimals);
+            const newBalance = (
+              tokenBalance.balance / Math.pow(10, decimals)
+            ).toFixed(decimals);
+            setUsdc(newBalance);
+            console.log("✅ New balance:", newBalance);
+          }
+        } catch (balError) {
+          console.warn("Could not fetch updated balance:", balError);
+        }
+
+        console.log("=== MINT TRANSACTION SUCCESS ===");
+      } catch (error: any) {
+        console.error("=== MINT TRANSACTION FAILED ===");
+        console.error("Full error:", error);
+
+        let errorMessage = "Minting transaction failed";
+
+        if (error.reason) {
+          errorMessage = error.reason;
+        } else if (error.error?.message) {
+          errorMessage = error.error.message;
+        } else if (error.message) {
+          const message = error.message.split("\n")[0];
+          if (message.length < 200) {
+            errorMessage = message;
+          }
+        }
+
+        reject(new Error(errorMessage));
+      } finally {
+        setMinting(false);
+      }
     });
 
     const mintAmountDisplay = ethers.utils.formatUnits(MINT_AMOUNT, 6);
@@ -308,10 +442,7 @@ const Header = () => {
   useEffect(() => {
     const currentPath = location.pathname.replace("/", "") || "dashboard";
     setActiveTab(currentPath || "dashboard");
-    if (connected) {
-      getHbarBalance();
-    }
-  }, [location, connected]);
+  }, [location]);
 
   const navigateTo = (tabId: string) => {
     setActiveTab(tabId);
@@ -353,7 +484,7 @@ const Header = () => {
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
-              {connected ? (
+              {accountId ? (
                 <div className="flex flex-wrap md:flex-nowrap items-center gap-2 bg-primary/15 px-3 py-2 rounded-lg text-sm font-medium">
                   <Wallet className="h-4 w-4 text-primary" />
                   <FormattedBalance
@@ -383,10 +514,10 @@ const Header = () => {
                     )}
                   </button>
                   <span className="hidden xl:block ml-2 text-xs text-white ">
-                    {network}
+                    {walletType === "metamask" ? "MetaMask" : "WalletConnect"}
                   </span>
                   <button
-                    onClick={disconnect}
+                    onClick={handleDisconnect}
                     className="ml-2 flex items-center gap-1 text-red-600 hover:text-red-700 cursor-pointer"
                   >
                     <LogOut className="h-4 w-4" />
@@ -395,7 +526,7 @@ const Header = () => {
                 </div>
               ) : (
                 <button
-                  onClick={connect}
+                  onClick={handleConnect}
                   className="flex items-center gap-2 bg-primary text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-primary/90"
                 >
                   <Wallet className="h-4 w-4" />
@@ -407,6 +538,7 @@ const Header = () => {
         </div>
       </nav>
 
+      {/* Mobile Navigation */}
       <nav className="lg:hidden bg-background border-b border-primary/25 fixed w-full top-0 z-40">
         <div className="px-4 py-3 flex items-center justify-between">
           <div className="flex items-center space-x-2">
@@ -449,7 +581,7 @@ const Header = () => {
             ))}
 
             <div className="pt-4 border-t border-primary/25">
-              {connected ? (
+              {accountId ? (
                 <div className="bg-primary/15 border border-primary/25 rounded-xl p-4 shadow-sm flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <span className="text-white text-sm">Balance</span>
@@ -465,12 +597,14 @@ const Header = () => {
                   <div className="flex items-center justify-between">
                     <span className="text-white text-sm">Wallet</span>
                     <span className="text-white font-medium text-xs">
-                      {address?.slice(0, 6)}...{address?.slice(-4)}
+                      {accountId?.slice(0, 6)}...{accountId?.slice(-4)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-white text-sm">Network</span>
-                    <span className="text-white text-sm">{network}</span>
+                    <span className="text-white text-sm">Type</span>
+                    <span className="text-white text-sm">
+                      {walletType === "metamask" ? "MetaMask" : "WalletConnect"}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between gap-3 pt-2">
                     <button
@@ -500,7 +634,7 @@ const Header = () => {
                       )}
                     </button>
                     <button
-                      onClick={disconnect}
+                      onClick={handleDisconnect}
                       className="flex items-center gap-1 px-3 py-2 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700"
                     >
                       <LogOut className="h-4 w-4" />
@@ -510,11 +644,11 @@ const Header = () => {
                 </div>
               ) : (
                 <button
-                  onClick={connect}
+                  onClick={handleConnect}
                   className="w-full flex items-center justify-center gap-2 bg-primary text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-primary/90"
                 >
                   <Wallet className="h-4 w-4" />
-                  Connect Hashpack
+                  Connect Wallet
                 </button>
               )}
             </div>
@@ -530,6 +664,12 @@ const Header = () => {
           <Coins className="h-6 w-6" />
         </button>
       </div>
+      <WalletModal
+        isOpen={isWalletModalOpen}
+        onClose={() => setIsWalletModalOpen(false)}
+        onSelectWalletConnect={handleConnectWalletConnect}
+        onSelectMetamask={handleConnectMetamask}
+      />
     </div>
   );
 };

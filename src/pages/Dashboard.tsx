@@ -1,8 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useWallet } from "@/auth/WalletContext";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import Header from "@/components/header/Header";
 import AjoCard from "@/components/shared/AjoCard";
-import { useAjoFactory } from "@/hooks/useAjoFactory";
+// import { useAjoFactory } from "@/hooks/useAjoFactory";
 import { useTokenHook } from "@/hooks/useTokenHook";
 import { useAjoStore } from "@/store/ajoStore";
 import { Shield, Users, Star, RefreshCw } from "lucide-react";
@@ -12,13 +13,17 @@ import { useTokenStore } from "@/store/tokenStore";
 import { useNavigate } from "react-router-dom";
 import formatCurrency from "@/utils/formatCurrency";
 import { toast } from "sonner";
-import WalletDiagnostics from "@/components/dashboard/WalletDiagnotics";
+import { useAjoCore } from "@/hooks/useAjoCore";
+import { useWalletInterface } from "@/services/wallets/useWalletInterface";
 
 const Dashboard = () => {
-  const { connected: isConnected, getBalance } = useWallet();
-  const { getAllAjos } = useAjoFactory();
+  const ajoCore = useAjoCore();
+  const { accountId } = useWalletInterface();
+  const { getBalance } = useWallet();
+  const [contractStats, setContractStats] = useState(null);
+
   const navigate = useNavigate();
-  // const { getWhbarBalance, getUsdcBalance } = useTokenHook();
+
   const { setNaira } = useTokenStore();
   const [isVisible, setIsVisible] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -30,6 +35,16 @@ const Dashboard = () => {
     console.log("My Hbar Balance:", balance);
   };
 
+  const loadContractStats = async () => {
+    try {
+      const stats: any = await ajoCore.getContractStats();
+      setContractStats(stats);
+      console.log("Contract stats:", stats);
+    } catch (error) {
+      console.error("Failed to load contract stats:", error);
+    }
+  };
+
   // Fetch Ajos function
   const fetchAjos = useCallback(
     async (showToast = false) => {
@@ -37,22 +52,9 @@ const Dashboard = () => {
         setIsRefreshing(true);
         console.log("🔄 Fetching Ajos...");
 
-        // NOTE: getAllAjos() updates the store asynchronously.
-        // It returns { ajoInfos: AjoStruct[], hasMore: boolean }
-        const result = await getAllAjos();
-
         const naira = await getNaira();
         setNaira(naira);
         setLastUpdate(new Date());
-
-        // 💡 FIX: Use the length from the function result (if available) or the current state
-        const fetchedLength = result?.ajoInfos?.length ?? ajoInfos.length;
-
-        // if (showToast) {
-        //   toast.success(`Loaded ${fetchedLength} Ajos`);
-        // }
-
-        console.log("✅ Ajos fetched:", fetchedLength);
       } catch (err) {
         console.error("❌ Failed to fetch ajos:", err);
         if (showToast) {
@@ -62,7 +64,7 @@ const Dashboard = () => {
         setIsRefreshing(false);
       }
     },
-    [getAllAjos, setNaira]
+    [setNaira]
   );
 
   // Initial load animation
@@ -73,22 +75,10 @@ const Dashboard = () => {
 
   // Initial fetch + wallet balances
   useEffect(() => {
-    // setIsVisible(true);
-    // getWhbarBalance();
-    // getUsdcBalance();
+    loadContractStats();
     fetchAjos();
     getHbarBalance();
-  }, []);
-
-  // ✅ AUTO-REFRESH: Poll every 15 seconds
-  // useEffect(() => {
-  //   const interval = setInterval(() => {
-  //     console.log("⏰ Auto-refreshing Ajos...");
-  //     fetchAjos(false); // Silent refresh
-  //   }, 15000); // 15 seconds
-
-  //   return () => clearInterval(interval);
-  // }, [fetchAjos]);
+  }, [accountId]);
 
   const handleRoute = () => {
     navigate("/ajo/create-ajo");
@@ -107,7 +97,7 @@ const Dashboard = () => {
             isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
           }`}
         >
-          <WalletDiagnostics />
+          {/* <WalletDiagnostics /> */}
           {/* Welcome Banner with Refresh Button */}
           <div className="bg-gradient-to-br from-primary to-accent text-primary-foreground p-6 rounded-xl shadow-lg border border-border">
             <div className="flex justify-between items-start">
