@@ -1,351 +1,1253 @@
-// /* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useState, useCallback } from "react";
+import {
+  Client,
+  ContractId,
+  TransactionId,
+  TransactionRecordQuery,
+} from "@hashgraph/sdk";
+import { ethers } from "ethers";
+import { useWalletInterface } from "@/services/wallets/useWalletInterface";
+import { ContractFunctionParameterBuilder } from "@/services/wallets/contractFunctionParameterBuilder";
+import AjoFactoryABI from "@/abi/AjoFactory.json";
+import { toast } from "sonner";
+import { useAjoStore } from "@/store/ajoStore";
+import { appConfig } from "@/config";
 
-// import { useState, useEffect, useCallback, useMemo } from "react";
-// import { BigNumber, Contract, ethers } from "ethers";
+const AJO_FACTORY_ADDRESS_HEDERA = import.meta.env
+  .VITE_AJO_FACTORY_CONTRACT_ADDRESS_HEDERA;
+const AJO_FACTORY_ADDRESS_EVM = import.meta.env
+  .VITE_AJO_FACTORY_CONTRACT_ADDRESS_EVM;
 
-// type BigNumberType = BigNumber;
-// type TransactionResponse = ethers.providers.TransactionResponse;
-// type TransactionReceipt = ethers.providers.TransactionReceipt;
-// type LogType = ethers.providers.Log;
+const currentNetworkConfig = appConfig.networks.testnet;
+const hederaNetwork = currentNetworkConfig.network;
+const hederaClient = Client.forName(hederaNetwork);
 
-// import AjoFactory from "@/abi/ajoFactory.json";
-// import useHashPackWallet from "@/hooks/useHashPackWallet";
-// import { useAjoStore } from "@/store/ajoStore";
-// import { useAjoDetailsStore } from "@/store/ajoDetailsStore";
-// import { createEthersCompatibleSigner } from "@/utils/HashConnectSignerAdapter";
-// import { useWallet } from "@/auth/WalletContext";
-// import { toast } from "sonner";
+export const useAjoFactory = (ajoFactoryAddress?: string) => {
+  const { accountId, walletInterface } = useWalletInterface();
+  const [loading, setLoading] = useState(false);
+  const { setAjoInfos } = useAjoStore();
+  const isMetaMask = accountId?.startsWith("0x");
+  const contractAddress =
+    ajoFactoryAddress ||
+    (isMetaMask ? AJO_FACTORY_ADDRESS_EVM : AJO_FACTORY_ADDRESS_HEDERA);
+  const readAddress = AJO_FACTORY_ADDRESS_EVM;
 
-// const RPC_URL = import.meta.env.VITE_HEDERA_JSON_RPC_RELAY_URL;
+  // Helper to validate Hedera address format
+  const isValidHederaAddress = (address: string): boolean => {
+    const hederaRegex = /^\d+\.\d+\.\d+$/;
+    return hederaRegex.test(address);
+  };
 
-// export interface AjoOperationalStatus {
-//   totalMembers: BigNumberType;
-//   currentCycle: BigNumberType;
-//   canAcceptMembers: boolean;
-//   hasActiveGovernance: boolean;
-//   hasActiveScheduling: boolean;
-// }
+  // Helper to validate EVM address format
+  const isValidEvmAddress = (address: string): boolean => {
+    return /^0x[a-fA-F0-9]{40}$/.test(address);
+  };
 
-// const bnToString = (value: BigNumberType): string => value.toString();
+  // Helper to convert Hedera address to EVM
+  const convertToEvmAddress = (address: string): string => {
+    console.log("Converting to EVM address:", address);
+    if (isValidEvmAddress(address)) return address.toLowerCase();
+    if (isValidHederaAddress(address)) {
+      const parts = address.split(".");
+      if (parts[0] !== "0" || parts[1] !== "0") {
+        throw new Error(
+          "Only shard 0 and realm 0 are supported for conversion"
+        );
+      }
+      const accountNum = BigInt(parts[2]);
+      return "0x" + accountNum.toString(16).padStart(40, "0").toLowerCase();
+    }
+    throw new Error(`Invalid address format: ${address}`);
+  };
 
-// export const useAjoFactory = () => {
-//   const { connected, dAppSigner, accountId, evmAddress, hashconnect, topic } =
-//     useWallet(); // 🔥 Get evmAddress
+  // Helper to convert EVM address to Hedera
+  const convertToHederaAddress = (address: string): string => {
+    console.log("Converting to Hedera address:", address);
+    if (isValidHederaAddress(address)) return address;
+    if (isValidEvmAddress(address)) {
+      try {
+        const accountNum = BigInt(address);
+        return `0.0.${accountNum.toString()}`;
+      } catch (error) {
+        throw new Error(`Failed to convert EVM address: ${address}`);
+      }
+    }
+    throw new Error(`Invalid address format: ${address}`);
+  };
 
-//   const { setAjoInfos } = useAjoStore();
-//   const { setAjoDetails } = useAjoDetailsStore();
+  // Helper to get ContractId for Hedera SDK calls
+  const getContractId = (address: string): ContractId => {
+    if (isValidHederaAddress(address)) {
+      return ContractId.fromString(address);
+    } else if (isValidEvmAddress(address)) {
+      return ContractId.fromEvmAddress(0, 0, address);
+    }
+    throw new Error(`Invalid contract address format: ${address}`);
+  };
 
-//   const [contractWrite, setContractWrite] = useState<Contract | null>(null);
-//   const ajoFactoryAddress = import.meta.env.VITE_AJO_FACTORY_CONTRACT_ADDRESS;
+  console.log("Using contract address:", contractAddress);
+  /**
+   * Associate user with HTS tokens
+   */
+  const associateUserWithHtsTokens = useCallback(
+    async (user: string) => {
+      if (!walletInterface || !accountId) {
+        toast.error("Wallet not connected");
+        throw new Error("Wallet not connected");
+      }
 
-//   console.log("🔍 useAjoFactory state:", {
-//     connected,
-//     accountId,
-//     evmAddress, // 🔥 Log EVM address
-//     hasDAppSigner: !!dAppSigner,
-//     hasContractWrite: !!contractWrite,
-//     ajoFactoryAddress,
-//   });
+      setLoading(true);
+      try {
+        const userAddress = isMetaMask
+          ? convertToEvmAddress(user)
+          : convertToHederaAddress(user);
 
-//   // Read Provider
-//   const provider = useMemo(() => {
-//     if (!RPC_URL) {
-//       console.error("VITE_HEDERA_JSON_RPC_RELAY_URL is not set.");
-//       return null;
-//     }
-//     return new ethers.providers.JsonRpcProvider(RPC_URL);
-//   }, []);
+        if (isMetaMask) {
+          const provider = new ethers.providers.Web3Provider(
+            (window as any).ethereum
+          );
+          const signer = provider.getSigner();
+          const contract = new ethers.Contract(
+            convertToEvmAddress(contractAddress),
+            AjoFactoryABI.abi,
+            signer
+          );
 
-//   // contractRead
-//   const contractRead = useMemo(() => {
-//     if (!provider || !ajoFactoryAddress) return null;
-//     return new Contract(ajoFactoryAddress, AjoFactory.abi, provider);
-//   }, [ajoFactoryAddress, provider]);
+          const tx = await contract.associateUserWithHtsTokens(userAddress, {
+            gasLimit: ethers.utils.hexlify(3_000_000),
+          });
+          const receipt = await tx.wait();
+          return receipt.transactionHash;
+        } else {
+          const params = new ContractFunctionParameterBuilder().addParam({
+            type: "address",
+            name: "user",
+            value: userAddress,
+          });
 
-//   // Create writable contract
-//   useEffect(() => {
-//     console.log("🔄 contractWrite effect triggered");
+          const txId = await walletInterface.executeContractFunction(
+            getContractId(contractAddress),
+            "associateUserWithHtsTokens",
+            params,
+            3_000_000
+          );
+          return txId?.toString() || null;
+        }
+      } catch (error: any) {
+        console.error("Associate user failed:", error);
+        throw new Error(
+          error.message || "Failed to associate user with HTS tokens"
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [walletInterface, accountId, contractAddress, isMetaMask]
+  );
 
-//     if (!connected || !evmAddress || !dAppSigner || !ajoFactoryAddress) {
-//       console.log("⚠️ Resetting contractWrite", {
-//         connected,
-//         evmAddress,
-//         hasDAppSigner: !!dAppSigner,
-//         ajoFactoryAddress,
-//       });
-//       if (contractWrite) setContractWrite(null);
-//       return;
-//     }
+  /**
+   * Batch associate users with HTS tokens
+   */
+  const batchAssociateUsers = useCallback(
+    async (users: string[]) => {
+      if (!walletInterface || !accountId) {
+        toast.error("Wallet not connected");
+        throw new Error("Wallet not connected");
+      }
 
-//     try {
-//       console.log("🏗️ Creating writable contract...");
-//       console.log("dAppSigner type:", dAppSigner.constructor?.name);
+      setLoading(true);
+      try {
+        const convertedUsers = isMetaMask
+          ? users.map(convertToEvmAddress)
+          : users.map(convertToHederaAddress);
 
-//       // 🔥 FIX: Ensure evmAddress is in proper format
-//       if (!evmAddress.startsWith("0x")) {
-//         console.error(
-//           "❌ evmAddress must be in EVM (0x) format. Received:",
-//           evmAddress
-//         );
-//         throw new Error(
-//           "Wallet address must be in EVM format. Please reconnect your wallet."
-//         );
-//       }
+        if (isMetaMask) {
+          const provider = new ethers.providers.Web3Provider(
+            (window as any).ethereum
+          );
+          const signer = provider.getSigner();
+          const contract = new ethers.Contract(
+            convertToEvmAddress(contractAddress),
+            AjoFactoryABI.abi,
+            signer
+          );
 
-//       // 🔥 CRITICAL: HashConnectSigner is NOT Ethers-compatible
-//       // We must use the adapter to wrap it properly
-//       console.log("Creating Ethers-compatible signer adapter...");
+          const tx = await contract.batchAssociateUsers(convertedUsers, {
+            gasLimit: ethers.utils.hexlify(5_000_000),
+          });
+          const receipt = await tx.wait();
+          return receipt.transactionHash;
+        } else {
+          const params = new ContractFunctionParameterBuilder().addParam({
+            type: "address[]",
+            name: "users",
+            value: convertedUsers,
+          });
 
-//       const compatibleSigner = createEthersCompatibleSigner(
-//         dAppSigner,
-//         provider || undefined,
-//         evmAddress
-//         // hashconnect,
-//         // topic
-//       );
+          const txId = await walletInterface.executeContractFunction(
+            getContractId(contractAddress),
+            "batchAssociateUsers",
+            params,
+            5_000_000
+          );
+          return txId?.toString() || null;
+        }
+      } catch (error: any) {
+        console.error("Batch associate failed:", error);
+        throw new Error(error.message || "Failed to batch associate users");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [walletInterface, accountId, contractAddress, isMetaMask]
+  );
 
-//       if (!compatibleSigner) {
-//         throw new Error("Failed to create compatible signer");
-//       }
+  /**
+   * Batch fund users with HTS tokens
+   */
+  const batchFundUsers = useCallback(
+    async (users: string[], usdcAmount: number, hbarAmount: number) => {
+      if (!walletInterface || !accountId) {
+        toast.error("Wallet not connected");
+        throw new Error("Wallet not connected");
+      }
 
-//       console.log("✅ Compatible signer created");
-//       console.log("Signer type:", compatibleSigner.constructor?.name);
-//       console.log("Has _isSigner:", (compatibleSigner as any)?._isSigner);
+      setLoading(true);
+      try {
+        const convertedUsers = isMetaMask
+          ? users.map(convertToEvmAddress)
+          : users.map(convertToHederaAddress);
 
-//       const writable = new Contract(
-//         ajoFactoryAddress,
-//         AjoFactory.abi,
-//         compatibleSigner as any
-//       );
+        if (isMetaMask) {
+          const provider = new ethers.providers.Web3Provider(
+            (window as any).ethereum
+          );
+          const signer = provider.getSigner();
+          const contract = new ethers.Contract(
+            convertToEvmAddress(contractAddress),
+            AjoFactoryABI.abi,
+            signer
+          );
 
-//       setContractWrite(writable);
-//       console.log("✅ contractWrite created successfully");
-//       console.log("Contract address:", writable.address);
-//     } catch (err: any) {
-//       console.error("❌ Failed to create write contract:", err);
-//       setContractWrite(null);
-//     }
-//   }, [connected, evmAddress, dAppSigner, ajoFactoryAddress, provider]); // 🔥 Use evmAddress in dependencies
+          const tx = await contract.batchFundUsers(
+            convertedUsers,
+            usdcAmount,
+            hbarAmount,
+            {
+              gasLimit: ethers.utils.hexlify(5_000_000),
+            }
+          );
+          const receipt = await tx.wait();
+          return receipt.transactionHash;
+        } else {
+          const params = new ContractFunctionParameterBuilder()
+            .addParam({
+              type: "address[]",
+              name: "users",
+              value: convertedUsers,
+            })
+            .addParam({ type: "int64", name: "usdcAmount", value: usdcAmount })
+            .addParam({ type: "int64", name: "hbarAmount", value: hbarAmount });
 
-//   // READ FUNCTIONS
-//   const getFactoryStats = useCallback(async () => {
-//     if (!contractRead) return null;
-//     return await contractRead.getFactoryStats();
-//   }, [contractRead]);
+          const txId = await walletInterface.executeContractFunction(
+            getContractId(contractAddress),
+            "batchFundUsers",
+            params,
+            5_000_000
+          );
+          return txId?.toString() || null;
+        }
+      } catch (error: any) {
+        console.error("Batch fund failed:", error);
+        throw new Error(error.message || "Failed to batch fund users");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [walletInterface, accountId, contractAddress, isMetaMask]
+  );
 
-//   const getAllAjos = useCallback(
-//     async (offset = 0, limit = 20) => {
-//       if (!contractRead) return { ajoInfos: [], hasMore: false };
+  /**
+   * Check factory balances
+   */
+  const checkFactoryBalances = useCallback(async () => {
+    if (!walletInterface || !accountId) {
+      toast.error("Wallet not connected");
+      throw new Error("Wallet not connected");
+    }
 
-//       const [ajoStructs, hasMore] = await contractRead.getAllAjos(
-//         offset,
-//         limit
-//       );
-//       console.log("All Ajos:", ajoStructs);
-//       setAjoInfos(ajoStructs);
+    setLoading(true);
+    try {
+      if (isMetaMask) {
+        const provider = new ethers.providers.Web3Provider(
+          (window as any).ethereum
+        );
+        const signer = provider.getSigner();
+        const contract = new ethers.Contract(
+          convertToEvmAddress(contractAddress),
+          AjoFactoryABI.abi,
+          signer
+        );
 
-//       return { ajoInfos: ajoStructs, hasMore };
-//     },
-//     [contractRead, setAjoInfos]
-//   );
+        const tx = await contract.checkFactoryBalances({
+          gasLimit: ethers.utils.hexlify(3_000_000),
+        });
+        const receipt = await tx.wait();
+        return receipt.transactionHash;
+      } else {
+        const params = new ContractFunctionParameterBuilder();
 
-//   const getAjosByCreator = useCallback(
-//     async (creator: string) => {
-//       if (!contractRead) return [];
-//       return await contractRead.getAjosByCreator(creator);
-//     },
-//     [contractRead]
-//   );
+        const txId = await walletInterface.executeContractFunction(
+          getContractId(contractAddress),
+          "checkFactoryBalances",
+          params,
+          3_000_000
+        );
+        return txId?.toString() || null;
+      }
+    } catch (error: any) {
+      console.error("Check factory balances failed:", error);
+      throw new Error(error.message || "Failed to check factory balances");
+    } finally {
+      setLoading(false);
+    }
+  }, [walletInterface, accountId, contractAddress, isMetaMask]);
 
-//   const getAjoInfo = useCallback(
-//     async (ajoId: number) => {
-//       if (!contractRead) return null;
-//       const data = await contractRead.getAjo(ajoId);
-//       console.log("Ajo Info:", data);
-//       return data;
-//     },
-//     [contractRead]
-//   );
+  /**
+   * Complete Ajo initialization
+   */
+  const completeAjoInitialization = useCallback(
+    async (ajoId: number) => {
+      if (!walletInterface || !accountId) {
+        toast.error("Wallet not connected");
+        throw new Error("Wallet not connected");
+      }
 
-//   const getAjoStatus = useCallback(
-//     async (ajoId: number) => {
-//       if (!contractRead) return null;
-//       return await contractRead.ajoStatus(ajoId);
-//     },
-//     [contractRead]
-//   );
+      setLoading(true);
+      try {
+        if (isMetaMask) {
+          const provider = new ethers.providers.Web3Provider(
+            (window as any).ethereum
+          );
+          const signer = provider.getSigner();
+          const contract = new ethers.Contract(
+            convertToEvmAddress(contractAddress),
+            AjoFactoryABI.abi,
+            signer
+          );
 
-//   const getAjoInitializationStatus = useCallback(
-//     async (ajoId: number) => {
-//       if (!contractRead) return null;
-//       return await contractRead.getAjoInitializationStatus(ajoId);
-//     },
-//     [contractRead]
-//   );
+          const tx = await contract.completeAjoInitialization(ajoId, {
+            gasLimit: ethers.utils.hexlify(3_000_000),
+          });
+          const receipt = await tx.wait();
+          return receipt.transactionHash;
+        } else {
+          const params = new ContractFunctionParameterBuilder().addParam({
+            type: "uint256",
+            name: "ajoId",
+            value: ajoId,
+          });
 
-//   const getAjoOperationalStatus = useCallback(
-//     async (ajoId: number, ajo: any): Promise<AjoOperationalStatus | null> => {
-//       if (!contractRead) return null;
+          const txId = await walletInterface.executeContractFunction(
+            getContractId(contractAddress),
+            "completeAjoInitialization",
+            params,
+            3_000_000
+          );
+          return txId?.toString() || null;
+        }
+      } catch (error: any) {
+        console.error("Complete Ajo initialization failed:", error);
+        throw new Error(
+          error.message || "Failed to complete Ajo initialization"
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [walletInterface, accountId, contractAddress, isMetaMask]
+  );
 
-//       const status: AjoOperationalStatus =
-//         await contractRead.getAjoOperationalStatus(ajoId);
+  /**
+   * Create a new Ajo
+   */
+  const createAjo = useCallback(
+    async (
+      name: string,
+      usesHtsTokens: boolean,
+      usesScheduledPayments: boolean
+    ) => {
+      if (!walletInterface || !accountId) {
+        toast.error("Wallet not connected");
+        throw new Error("Wallet not connected");
+      }
 
-//       setAjoDetails({
-//         ajoId: ajoId,
-//         ajoCore: ajo?.ajoCore,
-//         totalMembers: bnToString(status.totalMembers),
-//         currentCycle: bnToString(status.currentCycle),
-//         canAcceptMembers: status.canAcceptMembers,
-//         hasActiveGovernance: status.hasActiveGovernance,
-//         hasActiveScheduling: status.hasActiveScheduling,
-//       });
+      if (!contractAddress) {
+        toast.error("Contract address not configured");
+        throw new Error("Contract address not configured");
+      }
 
-//       return status;
-//     },
-//     [contractRead, setAjoDetails]
-//   );
+      // Validate contract address before proceeding
+      try {
+        if (isMetaMask) {
+          if (!isValidEvmAddress(contractAddress)) {
+            throw new Error(`Invalid EVM contract address: ${contractAddress}`);
+          }
+        } else {
+          const hederaAddress = convertToHederaAddress(contractAddress);
+          if (!isValidHederaAddress(hederaAddress)) {
+            throw new Error(
+              `Invalid Hedera contract address: ${hederaAddress}`
+            );
+          }
+        }
+      } catch (error: any) {
+        console.error("Contract address validation failed:", error);
+        toast.error(error.message || "Invalid contract address");
+        throw error;
+      }
 
-//   // WRITE FUNCTIONS
-//   const createAjo = useCallback(
-//     async (
-//       ajoName: string,
-//       useHtsTokens: boolean = true,
-//       useScheduledPayments: boolean = true
-//     ) => {
-//       if (!contractWrite) {
-//         toast.error("Contract not ready - please reconnect wallet");
-//         throw new Error("Contract not ready - please reconnect wallet");
-//       }
+      setLoading(true);
+      try {
+        if (isMetaMask) {
+          const provider = new ethers.providers.Web3Provider(
+            (window as any).ethereum
+          );
+          const signer = provider.getSigner();
+          const contract = new ethers.Contract(
+            convertToEvmAddress(contractAddress),
+            AjoFactoryABI.abi,
+            signer
+          );
 
-//       console.log("✅ Creating Ajo:", {
-//         ajoName,
-//         useHtsTokens,
-//         useScheduledPayments,
-//         signerAddress: evmAddress,
-//       });
+          const tx = await contract.createAjo(
+            name,
+            usesHtsTokens,
+            usesScheduledPayments,
+            {
+              gasLimit: ethers.utils.hexlify(5_000_000),
+            }
+          );
+          const receipt = await tx.wait();
+          const event = receipt.events?.find(
+            (e: any) => e.event === "AjoCreated"
+          );
+          const ajoId = event?.args?.ajoId?.toNumber();
+          return { ajoId, receipt };
+        } else {
+          const params = new ContractFunctionParameterBuilder()
+            .addParam({ type: "string", name: "name", value: name })
+            .addParam({
+              type: "bool",
+              name: "usesHtsTokens",
+              value: usesHtsTokens,
+            })
+            .addParam({
+              type: "bool",
+              name: "usesScheduledPayments",
+              value: usesScheduledPayments,
+            });
 
-//       try {
-//         const tx: TransactionResponse = await contractWrite.createAjo(
-//           ajoName,
-//           useHtsTokens,
-//           useScheduledPayments,
-//           { gasLimit: 1500000 }
-//         );
+          console.log("Params before build:", params);
+          const hapiParams = params.buildHAPIParams();
+          console.log("HAPI Params:", hapiParams);
 
-//         console.log("📤 Transaction sent:", tx.hash);
-//         toast.info("Transaction sent to HashPack, awaiting confirmation...");
+          const txIdStr = await walletInterface.executeContractFunction(
+            getContractId(contractAddress),
+            "createAjo",
+            params,
+            5_000_000
+          );
 
-//         const receipt: TransactionReceipt = await tx.wait();
-//         console.log("✅ Transaction confirmed");
+          if (!txIdStr) {
+            throw new Error("Transaction execution failed");
+          }
 
-//         const eventTopic = contractWrite.interface.getEventTopic("AjoCreated");
-//         if (!eventTopic) throw new Error("AjoCreated event not found");
+          // Fetch transaction record to get ajoId
+          const transactionId = TransactionId.fromString(txIdStr);
+          const recordQuery = new TransactionRecordQuery()
+            .setTransactionId(transactionId)
+            .setIncludeChildren(true);
+          const record = await recordQuery.execute(hederaClient);
 
-//         const rawLog = receipt.logs.find(
-//           (log: LogType) => log.topics[0] === eventTopic
-//         );
-//         if (!rawLog) throw new Error("AjoCreated log not found");
+          if (!record.contractFunctionResult) {
+            throw new Error("No contract function result in record");
+          }
 
-//         const parsedEvent = contractWrite.interface.parseLog(rawLog);
-//         const ajoId =
-//           parsedEvent.args.ajoId?.toNumber() || parsedEvent.args[0]?.toNumber();
+          const ajoId = record.contractFunctionResult.getUint256(0).toNumber();
+          return { ajoId, receipt: txIdStr };
+        }
+      } catch (error: any) {
+        console.error("Create Ajo failed:", error);
+        throw new Error(error.message || "Failed to create Ajo");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [walletInterface, accountId, contractAddress, isMetaMask]
+  );
 
-//         if (typeof ajoId !== "number") throw new Error("Invalid ajoId");
+  /**
+   * Create HTS tokens for factory
+   */
+  const createHtsTokensForFactory = useCallback(async () => {
+    if (!walletInterface || !accountId) {
+      toast.error("Wallet not connected");
+      throw new Error("Wallet not connected");
+    }
 
-//         console.log("🎉 Ajo created with ID:", ajoId);
-//         toast.success(`Ajo created successfully with ID: ${ajoId}`);
-//         return { ajoId, receipt };
-//       } catch (error: any) {
-//         console.error("❌ createAjo failed:", error);
-//         toast.error(
-//           `Failed to create Ajo: ${error.message || "Unknown error"}`
-//         );
-//         throw error;
-//       }
-//     },
-//     [contractWrite, evmAddress]
-//   );
-//   const initializePhase2 = useCallback(
-//     async (ajoId: number) => {
-//       if (!contractWrite) throw new Error("Contract not ready");
-//       const tx = await contractWrite.initializeAjoPhase2(ajoId, {
-//         gasLimit: 1200000,
-//       });
-//       return await tx.wait();
-//     },
-//     [contractWrite]
-//   );
+    setLoading(true);
+    try {
+      if (isMetaMask) {
+        const provider = new ethers.providers.Web3Provider(
+          (window as any).ethereum
+        );
+        const signer = provider.getSigner();
+        const contract = new ethers.Contract(
+          convertToEvmAddress(contractAddress),
+          AjoFactoryABI.abi,
+          signer
+        );
 
-//   const initializePhase3 = useCallback(
-//     async (ajoId: number) => {
-//       if (!contractWrite) throw new Error("Contract not ready");
-//       const tx = await contractWrite.initializeAjoPhase3(ajoId, {
-//         gasLimit: 1500000,
-//       });
-//       return await tx.wait();
-//     },
-//     [contractWrite]
-//   );
+        const tx = await contract.createHtsTokensForFactory({
+          gasLimit: ethers.utils.hexlify(5_000_000),
+        });
+        const receipt = await tx.wait();
+        return receipt.transactionHash;
+      } else {
+        const params = new ContractFunctionParameterBuilder();
 
-//   const initializePhase4 = useCallback(
-//     async (ajoId: number) => {
-//       if (!contractWrite) throw new Error("Contract not ready");
-//       const tx = await contractWrite.initializeAjoPhase4(ajoId, {
-//         gasLimit: 1800000,
-//       });
-//       return await tx.wait();
-//     },
-//     [contractWrite]
-//   );
+        const txId = await walletInterface.executeContractFunction(
+          getContractId(contractAddress),
+          "createHtsTokensForFactory",
+          params,
+          5_000_000
+        );
+        return txId?.toString() || null;
+      }
+    } catch (error: any) {
+      console.error("Create HTS tokens failed:", error);
+      throw new Error(
+        error.message || "Failed to create HTS tokens for factory"
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [walletInterface, accountId, contractAddress, isMetaMask]);
 
-//   const initializePhase5 = useCallback(
-//     async (ajoId: number) => {
-//       if (!contractWrite) throw new Error("Contract not ready");
-//       const tx = await contractWrite.initializeAjoPhase5(ajoId, {
-//         gasLimit: 1500000,
-//       });
-//       return await tx.wait();
-//     },
-//     [contractWrite]
-//   );
+  /**
+   * Force complete Ajo
+   */
+  const forceCompleteAjo = useCallback(
+    async (ajoId: number) => {
+      if (!walletInterface || !accountId) {
+        toast.error("Wallet not connected");
+        throw new Error("Wallet not connected");
+      }
 
-//   const finalizeSetup = useCallback(
-//     async (ajoId: number) => {
-//       if (!contractWrite) throw new Error("Contract not ready");
-//       const tx = await contractWrite.finalizeAjoSetup(ajoId, {
-//         gasLimit: 1000000,
-//       });
-//       return await tx.wait();
-//     },
-//     [contractWrite]
-//   );
+      setLoading(true);
+      try {
+        if (isMetaMask) {
+          const provider = new ethers.providers.Web3Provider(
+            (window as any).ethereum
+          );
+          const signer = provider.getSigner();
+          const contract = new ethers.Contract(
+            convertToEvmAddress(contractAddress),
+            AjoFactoryABI.abi,
+            signer
+          );
 
-//   const deactivateAjo = useCallback(
-//     async (ajoId: number) => {
-//       if (!contractWrite) throw new Error("Contract not ready");
-//       const tx = await contractWrite.deactivateAjo(ajoId, { gasLimit: 500000 });
-//       return await tx.wait();
-//     },
-//     [contractWrite]
-//   );
+          const tx = await contract.forceCompleteAjo(ajoId, {
+            gasLimit: ethers.utils.hexlify(3_000_000),
+          });
+          const receipt = await tx.wait();
+          return receipt.transactionHash;
+        } else {
+          const params = new ContractFunctionParameterBuilder().addParam({
+            type: "uint256",
+            name: "ajoId",
+            value: ajoId,
+          });
 
-//   return {
-//     contractWrite,
-//     contractRead,
-//     connected,
-//     getFactoryStats,
-//     getAllAjos,
-//     getAjosByCreator,
-//     getAjoInfo,
-//     getAjoStatus,
-//     getAjoInitializationStatus,
-//     getAjoOperationalStatus,
-//     createAjo,
-//     initializePhase2,
-//     initializePhase3,
-//     initializePhase4,
-//     initializePhase5,
-//     finalizeSetup,
-//     deactivateAjo,
-//   };
-// };
+          const txId = await walletInterface.executeContractFunction(
+            getContractId(contractAddress),
+            "forceCompleteAjo",
+            params,
+            3_000_000
+          );
+          return txId?.toString() || null;
+        }
+      } catch (error: any) {
+        console.error("Force complete Ajo failed:", error);
+        throw new Error(error.message || "Failed to force complete Ajo");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [walletInterface, accountId, contractAddress, isMetaMask]
+  );
+
+  /**
+   * Fund user with HTS tokens
+   */
+  const fundUserWithHtsTokens = useCallback(
+    async (user: string, usdcAmount: number, hbarAmount: number) => {
+      if (!walletInterface || !accountId) {
+        toast.error("Wallet not connected");
+        throw new Error("Wallet not connected");
+      }
+
+      setLoading(true);
+      try {
+        const userAddress = isMetaMask
+          ? convertToEvmAddress(user)
+          : convertToHederaAddress(user);
+
+        if (isMetaMask) {
+          const provider = new ethers.providers.Web3Provider(
+            (window as any).ethereum
+          );
+          const signer = provider.getSigner();
+          const contract = new ethers.Contract(
+            convertToEvmAddress(contractAddress),
+            AjoFactoryABI.abi,
+            signer
+          );
+
+          const tx = await contract.fundUserWithHtsTokens(
+            userAddress,
+            usdcAmount,
+            hbarAmount,
+            {
+              gasLimit: ethers.utils.hexlify(3_000_000),
+            }
+          );
+          const receipt = await tx.wait();
+          return receipt.transactionHash;
+        } else {
+          const params = new ContractFunctionParameterBuilder()
+            .addParam({ type: "address", name: "user", value: userAddress })
+            .addParam({ type: "int64", name: "usdcAmount", value: usdcAmount })
+            .addParam({ type: "int64", name: "hbarAmount", value: hbarAmount });
+
+          const txId = await walletInterface.executeContractFunction(
+            getContractId(contractAddress),
+            "fundUserWithHtsTokens",
+            params,
+            3_000_000
+          );
+          return txId?.toString() || null;
+        }
+      } catch (error: any) {
+        console.error("Fund user failed:", error);
+        throw new Error(error.message || "Failed to fund user with HTS tokens");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [walletInterface, accountId, contractAddress, isMetaMask]
+  );
+
+  /**
+   * Initialize Ajo Phase 2
+   */
+  const initializeAjoPhase2 = useCallback(
+    async (ajoId: number) => {
+      if (!walletInterface || !accountId) {
+        toast.error("Wallet not connected");
+        throw new Error("Wallet not connected");
+      }
+
+      setLoading(true);
+      try {
+        if (isMetaMask) {
+          const provider = new ethers.providers.Web3Provider(
+            (window as any).ethereum
+          );
+          const signer = provider.getSigner();
+          const contract = new ethers.Contract(
+            convertToEvmAddress(contractAddress),
+            AjoFactoryABI.abi,
+            signer
+          );
+
+          const tx = await contract.initializeAjoPhase2(ajoId, {
+            gasLimit: ethers.utils.hexlify(3_000_000),
+          });
+          const receipt = await tx.wait();
+          return receipt.transactionHash;
+        } else {
+          const params = new ContractFunctionParameterBuilder().addParam({
+            type: "uint256",
+            name: "ajoId",
+            value: ajoId,
+          });
+
+          const txId = await walletInterface.executeContractFunction(
+            getContractId(contractAddress),
+            "initializeAjoPhase2",
+            params,
+            3_000_000
+          );
+          return txId?.toString() || null;
+        }
+      } catch (error: any) {
+        console.error("Initialize Phase 2 failed:", error);
+        throw new Error(error.message || "Failed to initialize Ajo Phase 2");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [walletInterface, accountId, contractAddress, isMetaMask]
+  );
+
+  /**
+   * Initialize Ajo Phase 3
+   */
+  const initializeAjoPhase3 = useCallback(
+    async (ajoId: number) => {
+      if (!walletInterface || !accountId) {
+        toast.error("Wallet not connected");
+        throw new Error("Wallet not connected");
+      }
+
+      setLoading(true);
+      try {
+        if (isMetaMask) {
+          const provider = new ethers.providers.Web3Provider(
+            (window as any).ethereum
+          );
+          const signer = provider.getSigner();
+          const contract = new ethers.Contract(
+            convertToEvmAddress(contractAddress),
+            AjoFactoryABI.abi,
+            signer
+          );
+
+          const tx = await contract.initializeAjoPhase3(ajoId, {
+            gasLimit: ethers.utils.hexlify(3_000_000),
+          });
+          const receipt = await tx.wait();
+          return receipt.transactionHash;
+        } else {
+          const params = new ContractFunctionParameterBuilder().addParam({
+            type: "uint256",
+            name: "ajoId",
+            value: ajoId,
+          });
+
+          const txId = await walletInterface.executeContractFunction(
+            getContractId(contractAddress),
+            "initializeAjoPhase3",
+            params,
+            3_000_000
+          );
+          return txId?.toString() || null;
+        }
+      } catch (error: any) {
+        console.error("Initialize Phase 3 failed:", error);
+        throw new Error(error.message || "Failed to initialize Ajo Phase 3");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [walletInterface, accountId, contractAddress, isMetaMask]
+  );
+
+  /**
+   * Initialize Ajo Phase 4
+   */
+  const initializeAjoPhase4 = useCallback(
+    async (ajoId: number) => {
+      if (!walletInterface || !accountId) {
+        toast.error("Wallet not connected");
+        throw new Error("Wallet not connected");
+      }
+
+      setLoading(true);
+      try {
+        if (isMetaMask) {
+          const provider = new ethers.providers.Web3Provider(
+            (window as any).ethereum
+          );
+          const signer = provider.getSigner();
+          const contract = new ethers.Contract(
+            convertToEvmAddress(contractAddress),
+            AjoFactoryABI.abi,
+            signer
+          );
+
+          const tx = await contract.initializeAjoPhase4(ajoId, {
+            gasLimit: ethers.utils.hexlify(3_000_000),
+          });
+          const receipt = await tx.wait();
+          return receipt.transactionHash;
+        } else {
+          const params = new ContractFunctionParameterBuilder().addParam({
+            type: "uint256",
+            name: "ajoId",
+            value: ajoId,
+          });
+
+          const txId = await walletInterface.executeContractFunction(
+            getContractId(contractAddress),
+            "initializeAjoPhase4",
+            params,
+            3_000_000
+          );
+          return txId?.toString() || null;
+        }
+      } catch (error: any) {
+        console.error("Initialize Phase 4 failed:", error);
+        throw new Error(error.message || "Failed to initialize Ajo Phase 4");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [walletInterface, accountId, contractAddress, isMetaMask]
+  );
+
+  /**
+   * Initialize Ajo Phase 5
+   */
+  const initializeAjoPhase5 = useCallback(
+    async (ajoId: number) => {
+      if (!walletInterface || !accountId) {
+        toast.error("Wallet not connected");
+        throw new Error("Wallet not connected");
+      }
+
+      setLoading(true);
+      try {
+        if (isMetaMask) {
+          const provider = new ethers.providers.Web3Provider(
+            (window as any).ethereum
+          );
+          const signer = provider.getSigner();
+          const contract = new ethers.Contract(
+            convertToEvmAddress(contractAddress),
+            AjoFactoryABI.abi,
+            signer
+          );
+
+          const tx = await contract.initializeAjoPhase5(ajoId, {
+            gasLimit: ethers.utils.hexlify(3_000_000),
+          });
+          const receipt = await tx.wait();
+          return receipt.transactionHash;
+        } else {
+          const params = new ContractFunctionParameterBuilder().addParam({
+            type: "uint256",
+            name: "ajoId",
+            value: ajoId,
+          });
+
+          const txId = await walletInterface.executeContractFunction(
+            getContractId(contractAddress),
+            "initializeAjoPhase5",
+            params,
+            3_000_000
+          );
+          return txId?.toString() || null;
+        }
+      } catch (error: any) {
+        console.error("Initialize Phase 5 failed:", error);
+        throw new Error(error.message || "Failed to initialize Ajo Phase 5");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [walletInterface, accountId, contractAddress, isMetaMask]
+  );
+
+  /**
+   * Set HTS tokens for factory
+   */
+  const setHtsTokensForFactory = useCallback(
+    async (usdcHts: string, hbarHts: string) => {
+      if (!walletInterface || !accountId) {
+        toast.error("Wallet not connected");
+        throw new Error("Wallet not connected");
+      }
+
+      setLoading(true);
+      try {
+        const convertedUsdc = isMetaMask
+          ? convertToEvmAddress(usdcHts)
+          : convertToHederaAddress(usdcHts);
+        const convertedHbar = isMetaMask
+          ? convertToEvmAddress(hbarHts)
+          : convertToHederaAddress(hbarHts);
+
+        if (isMetaMask) {
+          const provider = new ethers.providers.Web3Provider(
+            (window as any).ethereum
+          );
+          const signer = provider.getSigner();
+          const contract = new ethers.Contract(
+            convertToEvmAddress(contractAddress),
+            AjoFactoryABI.abi,
+            signer
+          );
+
+          const tx = await contract.setHtsTokensForFactory(
+            convertedUsdc,
+            convertedHbar,
+            {
+              gasLimit: ethers.utils.hexlify(3_000_000),
+            }
+          );
+          const receipt = await tx.wait();
+          return receipt.transactionHash;
+        } else {
+          const params = new ContractFunctionParameterBuilder()
+            .addParam({
+              type: "address",
+              name: "_usdcHts",
+              value: convertedUsdc,
+            })
+            .addParam({
+              type: "address",
+              name: "_hbarHts",
+              value: convertedHbar,
+            });
+
+          const txId = await walletInterface.executeContractFunction(
+            getContractId(contractAddress),
+            "setHtsTokensForFactory",
+            params,
+            3_000_000
+          );
+          return txId?.toString() || null;
+        }
+      } catch (error: any) {
+        console.error("Set HTS tokens failed:", error);
+        throw new Error(
+          error.message || "Failed to set HTS tokens for factory"
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [walletInterface, accountId, contractAddress, isMetaMask]
+  );
+
+  /**
+   * Set schedule service address
+   */
+  const setScheduleServiceAddress = useCallback(
+    async (scheduleService: string) => {
+      if (!walletInterface || !accountId) {
+        toast.error("Wallet not connected");
+        throw new Error("Wallet not connected");
+      }
+
+      setLoading(true);
+      try {
+        const convertedAddress = isMetaMask
+          ? convertToEvmAddress(scheduleService)
+          : convertToHederaAddress(scheduleService);
+
+        if (isMetaMask) {
+          const provider = new ethers.providers.Web3Provider(
+            (window as any).ethereum
+          );
+          const signer = provider.getSigner();
+          const contract = new ethers.Contract(
+            convertToEvmAddress(contractAddress),
+            AjoFactoryABI.abi,
+            signer
+          );
+
+          const tx = await contract.setScheduleServiceAddress(
+            convertedAddress,
+            {
+              gasLimit: ethers.utils.hexlify(3_000_000),
+            }
+          );
+          const receipt = await tx.wait();
+          return receipt.transactionHash;
+        } else {
+          const params = new ContractFunctionParameterBuilder().addParam({
+            type: "address",
+            name: "_scheduleService",
+            value: convertedAddress,
+          });
+
+          const txId = await walletInterface.executeContractFunction(
+            getContractId(contractAddress),
+            "setScheduleServiceAddress",
+            params,
+            3_000_000
+          );
+          return txId?.toString() || null;
+        }
+      } catch (error: any) {
+        console.error("Set schedule service failed:", error);
+        throw new Error(
+          error.message || "Failed to set schedule service address"
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [walletInterface, accountId, contractAddress, isMetaMask]
+  );
+
+  /**
+   * Get Ajo info
+   */
+  const getAjo = useCallback(
+    async (ajoId: number) => {
+      try {
+        const provider = new ethers.providers.JsonRpcProvider(
+          import.meta.env.VITE_HEDERA_JSON_RPC_RELAY_URL ||
+            "https://testnet.hashio.io/api"
+        );
+        const contract = new ethers.Contract(
+          readAddress,
+          AjoFactoryABI.abi,
+          provider
+        );
+
+        const info = await contract.getAjo(ajoId);
+        return {
+          ajoCore: info.ajoCore,
+          ajoMembers: info.ajoMembers,
+          ajoCollateral: info.ajoCollateral,
+          ajoPayments: info.ajoPayments,
+          ajoGovernance: info.ajoGovernance,
+          ajoSchedule: info.ajoSchedule,
+          creator: info.creator,
+          createdAt: info.createdAt.toNumber(),
+          name: info.name,
+          isActive: info.isActive,
+          usesHtsTokens: info.usesHtsTokens,
+          usdcToken: info.usdcToken,
+          hbarToken: info.hbarToken,
+          hcsTopicId: info.hcsTopicId,
+          usesScheduledPayments: info.usesScheduledPayments,
+          scheduledPaymentsCount: info.scheduledPaymentsCount.toNumber(),
+        };
+      } catch (error: any) {
+        console.error("Get Ajo failed:", error);
+        throw new Error(error.message || "Failed to get Ajo info");
+      }
+    },
+    [readAddress]
+  );
+
+  /**
+   * Get Ajo schedule contract
+   */
+  const getAjoScheduleContract = useCallback(
+    async (ajoId: number) => {
+      try {
+        const provider = new ethers.providers.JsonRpcProvider(
+          import.meta.env.VITE_HEDERA_JSON_RPC_RELAY_URL ||
+            "https://testnet.hashio.io/api"
+        );
+        const contract = new ethers.Contract(
+          readAddress,
+          AjoFactoryABI.abi,
+          provider
+        );
+
+        return await contract.getAjoScheduleContract(ajoId);
+      } catch (error: any) {
+        console.error("Get Ajo schedule contract failed:", error);
+        throw new Error(error.message || "Failed to get Ajo schedule contract");
+      }
+    },
+    [readAddress]
+  );
+
+  /**
+   * Get Ajo scheduling status
+   */
+  const getAjoSchedulingStatus = useCallback(
+    async (ajoId: number) => {
+      try {
+        const provider = new ethers.providers.JsonRpcProvider(
+          import.meta.env.VITE_HEDERA_JSON_RPC_RELAY_URL ||
+            "https://testnet.hashio.io/api"
+        );
+        const contract = new ethers.Contract(
+          readAddress,
+          AjoFactoryABI.abi,
+          provider
+        );
+
+        const [isEnabled, scheduledPaymentsCountResult, executedCount] =
+          await contract.getAjoSchedulingStatus(ajoId);
+        return {
+          isEnabled,
+          scheduledPaymentsCountResult: scheduledPaymentsCountResult.toNumber(),
+          executedCount: executedCount.toNumber(),
+        };
+      } catch (error: any) {
+        console.error("Get Ajo scheduling status failed:", error);
+        throw new Error(error.message || "Failed to get Ajo scheduling status");
+      }
+    },
+    [readAddress]
+  );
+
+  /**
+   * Get all Ajos
+   */
+  const getAllAjos = useCallback(
+    async (offset: number, limit: number) => {
+      try {
+        const provider = new ethers.providers.JsonRpcProvider(
+          import.meta.env.VITE_HEDERA_JSON_RPC_RELAY_URL ||
+            "https://testnet.hashio.io/api"
+        );
+        const contract = new ethers.Contract(
+          readAddress,
+          AjoFactoryABI.abi,
+          provider
+        );
+
+        const [ajoInfos, hasMore] = await contract.getAllAjos(offset, limit);
+        setAjoInfos(ajoInfos);
+        return {
+          ajoInfos: ajoInfos.map((info: any) => ({
+            ajoCore: info.ajoCore,
+            ajoMembers: info.ajoMembers,
+            ajoCollateral: info.ajoCollateral,
+            ajoPayments: info.ajoPayments,
+            ajoGovernance: info.ajoGovernance,
+            ajoSchedule: info.ajoSchedule,
+            creator: info.creator,
+            createdAt: info.createdAt.toNumber(),
+            name: info.name,
+            isActive: info.isActive,
+            usesHtsTokens: info.usesHtsTokens,
+            usdcToken: info.usdcToken,
+            hbarToken: info.hbarToken,
+            hcsTopicId: info.hcsTopicId,
+            usesScheduledPayments: info.usesScheduledPayments,
+            scheduledPaymentsCount: info.scheduledPaymentsCount.toNumber(),
+          })),
+          hasMore,
+        };
+      } catch (error: any) {
+        console.error("Get all Ajos failed:", error);
+        throw new Error(error.message || "Failed to get all Ajos");
+      }
+    },
+    [readAddress, setAjoInfos]
+  );
+
+  /**
+   * Get HTS allowance
+   */
+  const getHtsAllowance = useCallback(
+    async (token: string, owner: string, spender: string) => {
+      try {
+        const provider = new ethers.providers.JsonRpcProvider(
+          import.meta.env.VITE_HEDERA_JSON_RPC_RELAY_URL ||
+            "https://testnet.hashio.io/api"
+        );
+        const contract = new ethers.Contract(
+          readAddress,
+          AjoFactoryABI.abi,
+          provider
+        );
+
+        const convertedToken = convertToEvmAddress(token);
+        const convertedOwner = convertToEvmAddress(owner);
+        const convertedSpender = convertToEvmAddress(spender);
+
+        const allowance = await contract.getHtsAllowance(
+          convertedToken,
+          convertedOwner,
+          convertedSpender
+        );
+        return allowance.toNumber();
+      } catch (error: any) {
+        console.error("Get HTS allowance failed:", error);
+        throw new Error(error.message || "Failed to get HTS allowance");
+      }
+    },
+    [readAddress]
+  );
+
+  /**
+   * Get HTS token addresses
+   */
+  const getHtsTokenAddresses = useCallback(async () => {
+    try {
+      const provider = new ethers.providers.JsonRpcProvider(
+        import.meta.env.VITE_HEDERA_JSON_RPC_RELAY_URL ||
+          "https://testnet.hashio.io/api"
+      );
+      const contract = new ethers.Contract(
+        readAddress,
+        AjoFactoryABI.abi,
+        provider
+      );
+
+      return await contract.getHtsTokenAddresses();
+    } catch (error: any) {
+      console.error("Get HTS token addresses failed:", error);
+      throw new Error(error.message || "Failed to get HTS token addresses");
+    }
+  }, [readAddress]);
+
+  /**
+   * Get total Ajos
+   */
+  const totalAjos = useCallback(async () => {
+    try {
+      const provider = new ethers.providers.JsonRpcProvider(
+        import.meta.env.VITE_HEDERA_JSON_RPC_RELAY_URL ||
+          "https://testnet.hashio.io/api"
+      );
+      const contract = new ethers.Contract(
+        readAddress,
+        AjoFactoryABI.abi,
+        provider
+      );
+
+      const total = await contract.totalAjos();
+      return total.toNumber();
+    } catch (error: any) {
+      console.error("Get total Ajos failed:", error);
+      throw new Error(error.message || "Failed to get total Ajos");
+    }
+  }, [readAddress]);
+
+  // Add other view functions like hbarHtsToken, hederaScheduleService, hssEnabled, htsEnabled, isHtsEnabled, owner, userHbarAssociated, etc., as needed in similar fashion.
+
+  return {
+    loading,
+    associateUserWithHtsTokens,
+    batchAssociateUsers,
+    batchFundUsers,
+    checkFactoryBalances,
+    completeAjoInitialization,
+    createAjo,
+    createHtsTokensForFactory,
+    forceCompleteAjo,
+    fundUserWithHtsTokens,
+    initializeAjoPhase2,
+    initializeAjoPhase3,
+    initializeAjoPhase4,
+    initializeAjoPhase5,
+    setHtsTokensForFactory,
+    setScheduleServiceAddress,
+    getAjo,
+    getAjoScheduleContract,
+    getAjoSchedulingStatus,
+    getAllAjos,
+    getHtsAllowance,
+    getHtsTokenAddresses,
+    totalAjos,
+    isConnected: !!accountId,
+    accountId,
+  };
+};

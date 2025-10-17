@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { WalletConnectContext } from "../../../contexts/WalletConnectContext";
 import { useCallback, useContext, useEffect } from "react";
 import type { WalletInterface } from "../walletInterface";
@@ -12,6 +13,7 @@ import {
   TransactionId,
   TransferTransaction,
   Client,
+  TransactionReceiptQuery,
 } from "@hashgraph/sdk";
 import { ContractFunctionParameterBuilder } from "../contractFunctionParameterBuilder";
 import { appConfig } from "../../../config";
@@ -21,7 +23,6 @@ import {
   HederaJsonRpcMethod,
   HederaSessionEvent,
   HederaChainId,
-  transactionToBase64String,
   DAppSigner,
 } from "@hashgraph/hedera-wallet-connect";
 import EventEmitter from "events";
@@ -90,6 +91,39 @@ class WalletConnectWallet implements WalletInterface {
       throw new Error("No signer available");
     }
     return AccountId.fromString(signer.getAccountId().toString());
+  }
+
+  private async signAndExecute(tx: Transaction) {
+    const signer = this.getSigner();
+    if (!signer) {
+      throw new Error("No signer available");
+    }
+
+    const accountId = this.accountId();
+    const transactionId = TransactionId.generate(accountId);
+    tx.setTransactionId(transactionId);
+    tx.setNodeAccountIds([AccountId.fromString("0.0.3")]);
+    tx.freeze();
+
+    // Sign with wallet
+    const signedTx = await signer.signTransaction(tx);
+
+    // Execute locally
+    const txResponse = await signedTx.execute(hederaClient);
+
+    // Verify receipt
+    const receiptQuery = new TransactionReceiptQuery().setTransactionId(
+      txResponse.transactionId
+    );
+    const receipt = await receiptQuery.execute(hederaClient);
+
+    if (receipt.status.toString() !== "SUCCESS") {
+      throw new Error(
+        `Transaction failed with status: ${receipt.status.toString()}`
+      );
+    }
+
+    return txResponse.transactionId.toString();
   }
 
   async transferHBAR(toAddress: AccountId, amount: number) {
@@ -185,19 +219,15 @@ class WalletConnectWallet implements WalletInterface {
     functionParameters: ContractFunctionParameterBuilder,
     gasLimit: number
   ) {
-    const signer = this.getSigner();
-    if (!signer) {
-      throw new Error("No signer available");
-    }
+    const params = functionParameters.buildHAPIParams();
 
     const tx = new ContractExecuteTransaction()
       .setContractId(contractId)
       .setGas(gasLimit)
-      .setFunction(functionName, functionParameters.buildHAPIParams());
+      .setFunction(functionName, params);
 
     try {
-      const txResponse = await tx.executeWithSigner(signer);
-      return txResponse.transactionId.toString();
+      return await this.signAndExecute(tx);
     } catch (error) {
       console.error("Contract execution failed:", error);
       return null;

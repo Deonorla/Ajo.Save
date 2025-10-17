@@ -15,4 +15,18 @@ export default defineConfig({
       "@": path.resolve(path.dirname(new URL(import.meta.url).pathname), "src"),
     },
   },
+  build: {
+    rollupOptions: {
+      external: [
+        "@reown/appkit",
+        "@reown/appkit-common",
+        "@reown/appkit-utils",
+        "@reown/appkit/adapters",
+        "@reown/appkit/networks",
+        "@reown/walletkit",
+        "@walletconnect/jsonrpc-http-connection",
+        "@walletconnect/universal-provider",
+      ],
+    },
+  },
 });

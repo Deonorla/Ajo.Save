@@ -2,6 +2,7 @@ import { useWallet } from "@/auth/WalletContext";
 import { useAjoCore } from "@/hooks/useAjoCore";
 // import { useAjoFactory } from "@/hooks/useAjoFactory";
 import useAjoPayment from "@/hooks/useAjoPayment";
+import { useWalletInterface } from "@/services/wallets/useWalletInterface";
 import { useAjoDetailsStore } from "@/store/ajoDetailsStore";
 import { usePaymentStore } from "@/store/ajoPaymentStore";
 import { useAjoStore, type AjoInfo } from "@/store/ajoStore";
@@ -60,6 +61,7 @@ const AjoDetailsCard = ({
     ajo ? ajo?.ajoPayments : ""
   );
   const { address } = useWallet();
+  const { accountId } = useWalletInterface();
   const [paidAddress, setPaidAddress] = useState("");
   const [cycleCount, setCycleCount] = useState(0);
   const { totalMembers } = useAjoDetailsStore();
@@ -68,7 +70,9 @@ const AjoDetailsCard = ({
     try {
       const collateralRequired = await getRequiredCollateral(0);
       console.log("collateral---", collateralRequired);
-      setCollateralRequired(Number(collateralRequired?.toString()) / 1000000);
+      setCollateralRequired(Number(collateralRequired?.toString()));
+      const memberInfo = await getMemberInfo(accountId ? accountId : "");
+      console.log("🙋 Member details:", memberInfo);
       const queueNumber = Number(cycle);
       const PayCycle = await getPayOut(queueNumber);
       setPaidAddress(PayCycle?.recipient);
@@ -82,6 +86,7 @@ const AjoDetailsCard = ({
 
   useEffect(() => {
     getFunctions();
+
     // console.log("Total members:", totalMembers);
     console.log(
       "locked collateral",
@@ -119,8 +124,8 @@ const AjoDetailsCard = ({
       console.log("📊 Updated stats:", stats);
 
       // Step 3: fetch this user’s details
-      if (address) {
-        const member = await getMemberInfo(address);
+      if (accountId) {
+        const member = await getMemberInfo(accountId);
         console.log("🙋 Member details:", member);
       }
       setLoading(false);

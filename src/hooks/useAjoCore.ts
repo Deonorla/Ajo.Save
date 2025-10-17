@@ -6,7 +6,11 @@ import { useWalletInterface } from "@/services/wallets/useWalletInterface";
 import { ContractFunctionParameterBuilder } from "@/services/wallets/contractFunctionParameterBuilder";
 import AjoCoreABI from "@/abi/AjoCore.json";
 import { toast } from "sonner";
+import { BigNumber } from "ethers";
+import { useMemberStore } from "@/store/memberInfoStore";
 
+// 💡 Define V5 BigNumber constants for common operations
+const ONE_MILLION_BN = BigNumber.from(1000000);
 const AJO_CORE_ADDRESS = import.meta.env.VITE_AJO_CORE_CONTRACT_ADDRESS;
 
 export type PaymentToken = 0 | 1;
@@ -19,6 +23,7 @@ export const PaymentToken = {
 export const useAjoCore = (ajoCoreAddress?: string) => {
   const { accountId, walletInterface } = useWalletInterface();
   const [loading, setLoading] = useState(false);
+  const { setMemberData } = useMemberStore();
   const contractAddress = ajoCoreAddress || AJO_CORE_ADDRESS;
 
   // Helper to determine if using MetaMask
@@ -260,7 +265,40 @@ export const useAjoCore = (ajoCoreAddress?: string) => {
           const result = await contract.getMemberInfo(
             convertToEvmAddress(addressToQuery!)
           );
-          return result;
+          const rawMember = result[0];
+
+          const member: MemberStruct = {
+            queueNumber: rawMember.queueNumber.toString(),
+            joinedCycle: rawMember.joinedCycle.toString(),
+            totalPaid: rawMember.totalPaid.div(ONE_MILLION_BN).toString(),
+            requiredCollateral: rawMember.requiredCollateral
+              .div(ONE_MILLION_BN)
+              .toString(),
+            lockedCollateral: rawMember.lockedCollateral
+              .div(ONE_MILLION_BN)
+              .toString(),
+            lastPaymentCycle: rawMember.lastPaymentCycle.toString(),
+            defaultCount: rawMember.defaultCount.toString(),
+            hasReceivedPayout: rawMember.hasReceivedPayout,
+            isActive: rawMember.isActive,
+            guarantor: rawMember.guarantor,
+            preferredToken: rawMember.preferredToken, // Ensure it's a number
+            reputationScore: rawMember.reputationScore.toString(),
+            pastPayments: Array.isArray(rawMember.pastPayments)
+              ? rawMember.pastPayments.map((x: any) => x.toString())
+              : [],
+            guaranteePosition: rawMember.guaranteePosition.toString(),
+            isHtsAssociated: rawMember.isHtsAssociated,
+            isFrozen: rawMember.isFrozen,
+          };
+
+          const data: MemberInfoResponse = {
+            memberInfo: member,
+            pendingPenalty: result[1].toString(),
+            effectiveVotingPower: result[2].toString(),
+          };
+          setMemberData(data);
+          return data;
         } else {
           // For read operations, you can use JSON-RPC relay
           const provider = new ethers.providers.JsonRpcProvider(
@@ -275,7 +313,41 @@ export const useAjoCore = (ajoCoreAddress?: string) => {
           const result = await contract.getMemberInfo(
             convertToEvmAddress(addressToQuery!)
           );
-          return result;
+
+          const rawMember = result[0];
+
+          const member: MemberStruct = {
+            queueNumber: rawMember.queueNumber.toString(),
+            joinedCycle: rawMember.joinedCycle.toString(),
+            totalPaid: rawMember.totalPaid.div(ONE_MILLION_BN).toString(),
+            requiredCollateral: rawMember.requiredCollateral
+              .div(ONE_MILLION_BN)
+              .toString(),
+            lockedCollateral: rawMember.lockedCollateral
+              .div(ONE_MILLION_BN)
+              .toString(),
+            lastPaymentCycle: rawMember.lastPaymentCycle.toString(),
+            defaultCount: rawMember.defaultCount.toString(),
+            hasReceivedPayout: rawMember.hasReceivedPayout,
+            isActive: rawMember.isActive,
+            guarantor: rawMember.guarantor,
+            preferredToken: rawMember.preferredToken, // Ensure it's a number
+            reputationScore: rawMember.reputationScore.toString(),
+            pastPayments: Array.isArray(rawMember.pastPayments)
+              ? rawMember.pastPayments.map((x: any) => x.toString())
+              : [],
+            guaranteePosition: rawMember.guaranteePosition.toString(),
+            isHtsAssociated: rawMember.isHtsAssociated,
+            isFrozen: rawMember.isFrozen,
+          };
+
+          const data: MemberInfoResponse = {
+            memberInfo: member,
+            pendingPenalty: result[1].toString(),
+            effectiveVotingPower: result[2].toString(),
+          };
+          setMemberData(data);
+          return data;
         }
       } catch (error: any) {
         console.error("Get member info failed:", error);

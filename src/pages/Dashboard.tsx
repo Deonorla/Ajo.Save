@@ -15,9 +15,11 @@ import formatCurrency from "@/utils/formatCurrency";
 import { toast } from "sonner";
 import { useAjoCore } from "@/hooks/useAjoCore";
 import { useWalletInterface } from "@/services/wallets/useWalletInterface";
+import { useAjoFactory } from "@/hooks/useAjoFactory";
 
 const Dashboard = () => {
   const ajoCore = useAjoCore();
+  const ajoFactory = useAjoFactory();
   const { accountId } = useWalletInterface();
   const { getBalance } = useWallet();
   const [contractStats, setContractStats] = useState(null);
@@ -51,7 +53,8 @@ const Dashboard = () => {
       try {
         setIsRefreshing(true);
         console.log("🔄 Fetching Ajos...");
-
+        const ajos = await ajoFactory.getAllAjos(0, 100);
+        console.log("✅ Fetched Ajos:", ajos);
         const naira = await getNaira();
         setNaira(naira);
         setLastUpdate(new Date());
@@ -64,7 +67,7 @@ const Dashboard = () => {
         setIsRefreshing(false);
       }
     },
-    [setNaira]
+    [ajoFactory, setNaira]
   );
 
   // Initial load animation

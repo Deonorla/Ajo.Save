@@ -21,6 +21,8 @@ export interface MemberStruct {
   reputationScore: string;
   pastPayments: string[];
   guaranteePosition: string;
+  isHtsAssociated: boolean;
+  isFrozen: boolean;
 }
 
 export interface MemberInfoResponse {

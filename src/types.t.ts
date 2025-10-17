@@ -17,6 +17,8 @@ declare global {
     reputationScore: string;
     pastPayments: string[];
     guaranteePosition: string;
+    isHtsAssociated: boolean;
+    isFrozen: boolean;
   };
 
   export type MemberInfoResponse = {
