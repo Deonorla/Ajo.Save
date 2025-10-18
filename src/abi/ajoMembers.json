@@ -79,45 +79,6 @@
           "internalType": "address",
           "name": "member",
           "type": "address"
-        }
-      ],
-      "name": "MemberHtsAssociated",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "member",
-          "type": "address"
-        }
-      ],
-      "name": "MemberHtsFrozen",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "member",
-          "type": "address"
-        }
-      ],
-      "name": "MemberHtsUnfrozen",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "member",
-          "type": "address"
         },
         {
           "indexed": false,
@@ -184,6 +145,19 @@
         }
       ],
       "name": "OwnershipTransferred",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        }
+      ],
+      "name": "SetupCompleted",
       "type": "event"
     },
     {
@@ -309,16 +283,6 @@
               "internalType": "uint256",
               "name": "guaranteePosition",
               "type": "uint256"
-            },
-            {
-              "internalType": "bool",
-              "name": "isHtsAssociated",
-              "type": "bool"
-            },
-            {
-              "internalType": "bool",
-              "name": "isFrozen",
-              "type": "bool"
             }
           ],
           "internalType": "struct Member",
@@ -409,6 +373,13 @@
     },
     {
       "inputs": [],
+      "name": "completeSetup",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "getActiveMembersList",
       "outputs": [
         {
@@ -475,16 +446,6 @@
               "internalType": "uint256",
               "name": "reputationScore",
               "type": "uint256"
-            },
-            {
-              "internalType": "bool",
-              "name": "isHtsAssociated",
-              "type": "bool"
-            },
-            {
-              "internalType": "bool",
-              "name": "isFrozen",
-              "type": "bool"
             }
           ],
           "internalType": "struct MemberDetails[]",
@@ -662,16 +623,6 @@
               "internalType": "uint256",
               "name": "guaranteePosition",
               "type": "uint256"
-            },
-            {
-              "internalType": "bool",
-              "name": "isHtsAssociated",
-              "type": "bool"
-            },
-            {
-              "internalType": "bool",
-              "name": "isFrozen",
-              "type": "bool"
             }
           ],
           "internalType": "struct Member",
@@ -770,30 +721,6 @@
           "type": "address"
         }
       ],
-      "name": "getMemberHtsStatus",
-      "outputs": [
-        {
-          "internalType": "bool",
-          "name": "isAssociated",
-          "type": "bool"
-        },
-        {
-          "internalType": "bool",
-          "name": "isFrozen",
-          "type": "bool"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "member",
-          "type": "address"
-        }
-      ],
       "name": "getMemberInfo",
       "outputs": [
         {
@@ -867,16 +794,6 @@
               "internalType": "uint256",
               "name": "guaranteePosition",
               "type": "uint256"
-            },
-            {
-              "internalType": "bool",
-              "name": "isHtsAssociated",
-              "type": "bool"
-            },
-            {
-              "internalType": "bool",
-              "name": "isFrozen",
-              "type": "bool"
             }
           ],
           "internalType": "struct Member",
@@ -982,16 +899,6 @@
               "internalType": "uint256",
               "name": "reputationScore",
               "type": "uint256"
-            },
-            {
-              "internalType": "bool",
-              "name": "isHtsAssociated",
-              "type": "bool"
-            },
-            {
-              "internalType": "bool",
-              "name": "isFrozen",
-              "type": "bool"
             }
           ],
           "internalType": "struct MemberDetails[]",
@@ -1159,7 +1066,7 @@
         },
         {
           "internalType": "address",
-          "name": "_whbar",
+          "name": "_hbar",
           "type": "address"
         }
       ],
@@ -1177,6 +1084,19 @@
         }
       ],
       "name": "isMember",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "isSetupComplete",
       "outputs": [
         {
           "internalType": "bool",
@@ -1303,21 +1223,16 @@
       "type": "function"
     },
     {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "member",
-          "type": "address"
-        },
+      "inputs": [],
+      "name": "setupComplete",
+      "outputs": [
         {
           "internalType": "bool",
-          "name": "isFrozen",
+          "name": "",
           "type": "bool"
         }
       ],
-      "name": "setMemberFrozen",
-      "outputs": [],
-      "stateMutability": "nonpayable",
+      "stateMutability": "view",
       "type": "function"
     },
     {
@@ -1347,24 +1262,6 @@
         }
       ],
       "name": "updateCollateral",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "member",
-          "type": "address"
-        },
-        {
-          "internalType": "bool",
-          "name": "isAssociated",
-          "type": "bool"
-        }
-      ],
-      "name": "updateHtsAssociationStatus",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -1465,16 +1362,6 @@
               "internalType": "uint256",
               "name": "guaranteePosition",
               "type": "uint256"
-            },
-            {
-              "internalType": "bool",
-              "name": "isHtsAssociated",
-              "type": "bool"
-            },
-            {
-              "internalType": "bool",
-              "name": "isFrozen",
-              "type": "bool"
             }
           ],
           "internalType": "struct Member",

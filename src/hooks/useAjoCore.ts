@@ -11,7 +11,9 @@ import { useMemberStore } from "@/store/memberInfoStore";
 
 // 💡 Define V5 BigNumber constants for common operations
 const ONE_MILLION_BN = BigNumber.from(1000000);
-const AJO_CORE_ADDRESS = import.meta.env.VITE_AJO_CORE_CONTRACT_ADDRESS;
+const AJO_CORE_ADDRESS_EVM = import.meta.env.VITE_AJO_CORE_CONTRACT_ADDRESS_EVM;
+const AJO_CORE_ADDRESS_HEDERA = import.meta.env
+  .VITE_AJO_CORE_CONTRACT_ADDRESS_HEDERA;
 
 export type PaymentToken = 0 | 1;
 
@@ -24,10 +26,12 @@ export const useAjoCore = (ajoCoreAddress?: string) => {
   const { accountId, walletInterface } = useWalletInterface();
   const [loading, setLoading] = useState(false);
   const { setMemberData } = useMemberStore();
-  const contractAddress = ajoCoreAddress || AJO_CORE_ADDRESS;
 
   // Helper to determine if using MetaMask
   const isMetaMask = accountId?.startsWith("0x");
+  const contractAddress =
+    ajoCoreAddress ||
+    (isMetaMask ? AJO_CORE_ADDRESS_EVM : AJO_CORE_ADDRESS_HEDERA);
 
   // Helper to convert Hedera address to EVM
   const convertToEvmAddress = (address: string): string => {
@@ -419,6 +423,7 @@ export const useAjoCore = (ajoCoreAddress?: string) => {
         const collateral = await contract.getRequiredCollateralForJoin(
           tokenChoice
         );
+
         return ethers.utils.formatUnits(
           collateral,
           tokenChoice === PaymentToken.USDC ? 6 : 8
@@ -431,6 +436,71 @@ export const useAjoCore = (ajoCoreAddress?: string) => {
     [contractAddress]
   );
 
+  /**
+   * Get required collateral for joining
+   */
+
+  const getTokenConfig = useCallback(
+    async (token: number) => {
+      try {
+        const provider = new ethers.providers.JsonRpcProvider(
+          import.meta.env.VITE_JSON_RPC_URL || "https://testnet.hashio.io/api"
+        );
+        const contract = new ethers.Contract(
+          convertToEvmAddress(contractAddress),
+          AjoCoreABI.abi,
+          provider
+        );
+        const tokenConfig = await contract.getTokenConfig(token);
+        const formattedTokenConfig = {
+          isActive: tokenConfig.isActive,
+          monthlyPayment: tokenConfig.monthlyPayment.toString(),
+        };
+        return formattedTokenConfig;
+      } catch (error: any) {
+        console.error("Get token config failed:", error);
+        throw new Error(error.message || "Failed to get token config");
+      }
+    },
+    [contractAddress]
+  );
+
+  /**
+   * Get required collateral demo
+   */
+
+  const getCollateralDemo = useCallback(
+    async (participants: number, monthlyPayment: string) => {
+      try {
+        const provider = new ethers.providers.JsonRpcProvider(
+          import.meta.env.VITE_JSON_RPC_URL || "https://testnet.hashio.io/api"
+        );
+        const contract = new ethers.Contract(
+          convertToEvmAddress(contractAddress),
+          AjoCoreABI.abi,
+          provider
+        );
+        const collateralDemo = await contract.getCollateralDemo(
+          participants,
+          monthlyPayment
+        );
+        const positions = Array.isArray(collateralDemo[0])
+          ? collateralDemo[0].map((p: any) => p.toString())
+          : [];
+        const collaterals = Array.isArray(collateralDemo[1])
+          ? collateralDemo[1].map((c: any) => c.toString())
+          : [];
+        return { positions, collaterals };
+      } catch (error: any) {
+        console.error("Get required collateral demo failed:", error);
+        throw new Error(
+          error.message || "Failed to get required collateral demo"
+        );
+      }
+    },
+    [contractAddress]
+  );
+
   return {
     loading,
     joinAjo,
@@ -438,7 +508,9 @@ export const useAjoCore = (ajoCoreAddress?: string) => {
     distributePayout,
     exitAjo,
     getMemberInfo,
+    getTokenConfig,
     getContractStats,
+    getCollateralDemo,
     getRequiredCollateral,
     isConnected: !!accountId,
     accountId,

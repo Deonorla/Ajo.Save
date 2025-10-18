@@ -41,7 +41,7 @@ const Dashboard = () => {
     try {
       const stats: any = await ajoCore.getContractStats();
       setContractStats(stats);
-      console.log("Contract stats:", stats);
+      // console.log("Contract stats:", stats);
     } catch (error) {
       console.error("Failed to load contract stats:", error);
     }
@@ -100,7 +100,6 @@ const Dashboard = () => {
             isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
           }`}
         >
-          {/* <WalletDiagnostics /> */}
           {/* Welcome Banner with Refresh Button */}
           <div className="bg-gradient-to-br from-primary to-accent text-primary-foreground p-6 rounded-xl shadow-lg border border-border">
             <div className="flex justify-between items-start">
@@ -113,7 +112,7 @@ const Dashboard = () => {
                 </p>
               </div>
 
-              {/* ✅ Refresh Button */}
+              {/* Refresh Button */}
               <button
                 onClick={handleManualRefresh}
                 disabled={isRefreshing}
@@ -128,7 +127,7 @@ const Dashboard = () => {
               </button>
             </div>
 
-            {/* ✅ Last Update Timestamp */}
+            {/* Last Update Timestamp */}
             {lastUpdate && (
               <p className="text-xs text-primary-foreground/70 mt-3">
                 Last updated: {lastUpdate.toLocaleTimeString()}

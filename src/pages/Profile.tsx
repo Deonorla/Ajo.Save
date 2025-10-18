@@ -20,14 +20,14 @@ const Profile = () => {
   // );
   const [isVisible, setIsVisible] = useState(false);
   const [activeTab, setActiveTab] = useState("ajo");
-  const { address, network } = useWallet();
-  const { whbar, usdc, loading } = useTokenStore();
+  const { hbar, usdc, loading, address } = useTokenStore();
   const [copied, setCopied] = useState(false);
   const [balanceInNGN, setBalanceInNGN] = useState<number | null>(null);
   const [usdcBalanceInNGN, setUsdcBalanceInNGN] = useState<number | null>(null);
 
   useEffect(() => {
     setIsVisible(true);
+    console.log("hbar balance:", hbar);
   }, []);
 
   useEffect(() => {
@@ -54,7 +54,7 @@ const Profile = () => {
         console.log("USDC Price NGN:", usdcPrice);
 
         // if you already have balances
-        if (whbar) setBalanceInNGN(parseFloat(whbar) * hbarPrice);
+        if (hbar) setBalanceInNGN(parseFloat(hbar) * hbarPrice);
         if (usdc)
           setUsdcBalanceInNGN(parseFloat(usdc) * usdcPrice * Number(usdc));
       } catch (error) {
@@ -67,7 +67,7 @@ const Profile = () => {
     // }
 
     fetchPrices();
-  }, [whbar, usdc]);
+  }, [hbar, usdc]);
 
   const handleCopy = async () => {
     if (address) {
@@ -87,9 +87,8 @@ const Profile = () => {
 
         <UserProfileCard
           address={address}
-          network={network}
           isVisible={isVisible}
-          whbar={whbar}
+          hbar={hbar}
           usdc={usdc}
           loading={loading}
           balanceInNGN={balanceInNGN}

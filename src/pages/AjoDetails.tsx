@@ -3,7 +3,7 @@ import ProfileHeader from "@/components/profile/ProfileHeader";
 import AjoDetailsCard from "@/components/ajo-details-page/AjoDetailsCard";
 import AjoDetailsStatsGrid from "@/components/ajo-details-page/AjoDetailsStatsGrid";
 import AjoDetailsNavigationTab from "@/components/ajo-details-page/AjoDetailsNavigationTab";
-// import AjoOverviewTab from "@/components/ajo-details-page/AjoOverviewTab";
+import AjoOverviewTab from "@/components/ajo-details-page/AjoOverviewTab";
 import AjoMembers from "@/components/ajo-details-page/AjoMembers";
 import AjoGovernance from "@/components/ajo-details-page/AjoGovernance";
 // import AjoDetailAnalytics from "@/components/ajo-details-page/AjoDetailAnalytics";
@@ -23,7 +23,7 @@ const AjoDetails = () => {
   const {
     getMemberInfo,
     // getQueueInfo,
-    // getTokenConfig,
+    getTokenConfig,
     // needsToPayThisCycle,
   } = useAjoCore(ajoCore ? ajoCore : "");
   const loadNewAjo = useAjoDetailsStore((state) => state.loadNewAjo);
@@ -73,8 +73,9 @@ const AjoDetails = () => {
         throw "Address not found, connect to hashpack";
       }
       // const queue = await getQueueInfo(address);
-      // const tokenConfig = await getTokenConfig(0);
-      // setMonthlyPayment(tokenConfig?.monthlyPayment);
+      const tokenConfig = await getTokenConfig(0);
+      console.log("Token Config", tokenConfig);
+      setMonthlyPayment(tokenConfig?.monthlyPayment);
       // console.log("monthlyPayment:", monthlyPayment);
     } catch (err) {
       console.log("Error fetching member info:", err);
@@ -122,7 +123,7 @@ const AjoDetails = () => {
             isVisible ? "translate-y-0 opacity-100" : "translate-y-20 opacity-0"
           }`}
         >
-          {/* {activeTab === "overview" && <AjoOverviewTab ajo={ajo} />} */}
+          {activeTab === "overview" && <AjoOverviewTab ajo={ajo} />}
 
           {/* {activeTab === "members" && <AjoMembers ajo={ajo} />} */}
           {/* {activeTab === "payments" && <AjoPaymentHistory />} */}

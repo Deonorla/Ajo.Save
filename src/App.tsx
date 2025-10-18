@@ -13,7 +13,7 @@ const App = () => {
       <Routes>
         <Route path="/" element={<Homepage />} />
         <Route path="/dashboard" element={<Dashboard />} />
-        {/* <Route path="/profile" element={<Profile />} /> */}
+        <Route path="/profile" element={<Profile />} />
         {/* <Route path="/ajo" element={<Ajo />} /> */}
         <Route path="/ajo/create-ajo" element={<CreateAjo />} />
         <Route path="/ajo/:ajoId/:ajoCore" element={<AjoDetails />} />

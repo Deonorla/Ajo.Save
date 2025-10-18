@@ -1,12 +1,13 @@
 import { useWallet } from "@/auth/WalletContext";
 import { userStats } from "@/temp-data";
 import { Check, Copy } from "lucide-react";
+import { useState } from "react";
 
 interface UserProfileCardProps {
   isVisible: boolean;
   address?: string | null;
   network?: string | null;
-  whbar?: string | null;
+  hbar?: string | null;
   usdc?: string | null;
   loading?: boolean;
   copied?: boolean;
@@ -19,7 +20,7 @@ const UserProfileCard = ({
   isVisible,
   address,
   network,
-  whbar,
+  hbar,
   usdc,
   loading,
   copied,
@@ -27,7 +28,8 @@ const UserProfileCard = ({
   usdcBalanceInNGN,
   handleCopy,
 }: UserProfileCardProps) => {
-  const { balance } = useWallet();
+  const isMetaMask = address?.startsWith("0x");
+
   return (
     <div
       className={`bg-white rounded-2xl shadow-xl overflow-hidden mb-8 transform transition-all duration-1000 ${
@@ -50,7 +52,9 @@ const UserProfileCard = ({
             <div className="flex-1 text-white">
               <div className="flex items-center space-x-3 mb-2">
                 <h1 className="text-lg sm:text-3xl font-bold">
-                  {address?.slice(0, 6)}...{address?.slice(-4)}
+                  {isMetaMask
+                    ? `${address?.slice(0, 6)}...${address?.slice(-4)}`
+                    : address}
                 </h1>
                 <button
                   onClick={handleCopy}
@@ -88,7 +92,7 @@ const UserProfileCard = ({
               <div className="flex items-center space-x-2 text-sm text-green-100">
                 <div className="flex items-center text-sm font-semibold  sm:text-xl space-x-1">
                   <img src="/images/profile/hedera.png" className="w-6 h-6" />
-                  {loading ? <span>...</span> : <span>{balance}</span>}
+                  {loading ? <span>...</span> : <span>{hbar}</span>}
                 </div>
                 <div className="flex items-center text-sm font-semibold  sm:text-xl space-x-1">
                   <span>HBAR</span>

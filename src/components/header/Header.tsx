@@ -62,6 +62,9 @@ const Header = () => {
   const rawUsdcAddress = import.meta.env.VITE_MOCK_USDC_ADDRESS;
   const usdcContractId = convertHederaToEvmAddress(rawUsdcAddress);
 
+  //
+  const { setHbar, setAddress } = useTokenStore();
+
   const navigate = useNavigate();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -95,6 +98,7 @@ const Header = () => {
   // Determine which wallet is connected
   useEffect(() => {
     if (accountId) {
+      setAddress(accountId);
       if (accountId.startsWith("0x")) {
         setWalletType("metamask");
       } else {
@@ -119,6 +123,7 @@ const Header = () => {
       );
       const hbarBalance = (accountInfo.balance.balance / 100000000).toFixed(2);
       setBalance(hbarBalance);
+      setHbar(hbarBalance);
       console.log("My Hbar Balance:", hbarBalance);
     } catch (error) {
       console.error("Failed to fetch HBAR balance:", error);

@@ -14,56 +14,6 @@
         {
           "indexed": true,
           "internalType": "address",
-          "name": "account",
-          "type": "address"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "token",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "int64",
-          "name": "responseCode",
-          "type": "int64"
-        }
-      ],
-      "name": "AccountFrozen",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "account",
-          "type": "address"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "token",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "int64",
-          "name": "responseCode",
-          "type": "int64"
-        }
-      ],
-      "name": "AccountUnfrozen",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
           "name": "oldCore",
           "type": "address"
         },
@@ -81,19 +31,25 @@
       "anonymous": false,
       "inputs": [
         {
-          "indexed": false,
-          "internalType": "bool",
-          "name": "",
-          "type": "bool"
+          "indexed": true,
+          "internalType": "address",
+          "name": "member",
+          "type": "address"
         },
         {
           "indexed": false,
-          "internalType": "bytes",
-          "name": "",
-          "type": "bytes"
+          "internalType": "uint256",
+          "name": "requiredAmount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "actualAmount",
+          "type": "uint256"
         }
       ],
-      "name": "CallResponseEvent",
+      "name": "CollateralCalculated",
       "type": "event"
     },
     {
@@ -113,55 +69,12 @@
         },
         {
           "indexed": false,
-          "internalType": "address",
+          "internalType": "enum PaymentToken",
           "name": "token",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "int64",
-          "name": "responseCode",
-          "type": "int64"
+          "type": "uint8"
         }
       ],
-      "name": "CollateralLockedHts",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "defaulter",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "collateralAmount",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "pastPaymentsAmount",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "guarantorCollateral",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "totalSeized",
-          "type": "uint256"
-        }
-      ],
-      "name": "CollateralSeizedHts",
+      "name": "CollateralLiquidated",
       "type": "event"
     },
     {
@@ -181,18 +94,37 @@
         },
         {
           "indexed": false,
-          "internalType": "address",
+          "internalType": "enum PaymentToken",
           "name": "token",
+          "type": "uint8"
+        }
+      ],
+      "name": "CollateralLocked",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "member",
           "type": "address"
         },
         {
           "indexed": false,
-          "internalType": "int64",
-          "name": "responseCode",
-          "type": "int64"
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "enum PaymentToken",
+          "name": "token",
+          "type": "uint8"
         }
       ],
-      "name": "CollateralUnlockedHts",
+      "name": "CollateralUnlocked",
       "type": "event"
     },
     {
@@ -264,7 +196,7 @@
         {
           "indexed": true,
           "internalType": "address",
-          "name": "recipient",
+          "name": "member",
           "type": "address"
         },
         {
@@ -275,12 +207,25 @@
         },
         {
           "indexed": false,
-          "internalType": "address",
-          "name": "token",
-          "type": "address"
+          "internalType": "string",
+          "name": "reason",
+          "type": "string"
         }
       ],
-      "name": "SeizedCollateralRedistributed",
+      "name": "PaymentSeized",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        }
+      ],
+      "name": "SetupCompleted",
       "type": "event"
     },
     {
@@ -304,6 +249,32 @@
           "internalType": "uint256",
           "name": "",
           "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "HBAR",
+      "outputs": [
+        {
+          "internalType": "contract IERC20",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "USDC",
+      "outputs": [
+        {
+          "internalType": "contract IERC20",
+          "name": "",
+          "type": "address"
         }
       ],
       "stateMutability": "view",
@@ -396,7 +367,7 @@
           "type": "uint256"
         }
       ],
-      "stateMutability": "pure",
+      "stateMutability": "view",
       "type": "function"
     },
     {
@@ -429,6 +400,13 @@
       "type": "function"
     },
     {
+      "inputs": [],
+      "name": "completeSetup",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
       "inputs": [
         {
           "internalType": "enum PaymentToken",
@@ -447,6 +425,19 @@
         }
       ],
       "name": "emergencyWithdraw",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "defaulter",
+          "type": "address"
+        }
+      ],
+      "name": "executeSeizure",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -477,7 +468,7 @@
           "type": "uint256[]"
         }
       ],
-      "stateMutability": "pure",
+      "stateMutability": "view",
       "type": "function"
     },
     {
@@ -523,19 +514,6 @@
       "type": "function"
     },
     {
-      "inputs": [],
-      "name": "hbarToken",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
       "inputs": [
         {
           "internalType": "address",
@@ -544,7 +522,7 @@
         },
         {
           "internalType": "address",
-          "name": "_whbar",
+          "name": "_hbar",
           "type": "address"
         },
         {
@@ -556,11 +534,6 @@
           "internalType": "address",
           "name": "_ajoMembers",
           "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "_hederaTokenService",
-          "type": "address"
         }
       ],
       "name": "initialize",
@@ -569,33 +542,8 @@
       "type": "function"
     },
     {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "account",
-          "type": "address"
-        }
-      ],
-      "name": "isAccountFrozen",
-      "outputs": [
-        {
-          "internalType": "bool",
-          "name": "",
-          "type": "bool"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "name": "isFrozen",
+      "inputs": [],
+      "name": "isSetupComplete",
       "outputs": [
         {
           "internalType": "bool",
@@ -624,31 +572,8 @@
           "type": "uint8"
         }
       ],
-      "name": "lockCollateralHts",
-      "outputs": [
-        {
-          "components": [
-            {
-              "internalType": "int64",
-              "name": "responseCode",
-              "type": "int64"
-            },
-            {
-              "internalType": "bool",
-              "name": "success",
-              "type": "bool"
-            },
-            {
-              "internalType": "string",
-              "name": "errorMessage",
-              "type": "string"
-            }
-          ],
-          "internalType": "struct HtsTransferResult",
-          "name": "result",
-          "type": "tuple"
-        }
-      ],
+      "name": "lockCollateral",
+      "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
     },
@@ -679,125 +604,9 @@
       "type": "function"
     },
     {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "token",
-          "type": "address"
-        },
-        {
-          "internalType": "bytes",
-          "name": "encodedFunctionSelector",
-          "type": "bytes"
-        }
-      ],
-      "name": "redirectForToken",
-      "outputs": [
-        {
-          "internalType": "int256",
-          "name": "responseCode",
-          "type": "int256"
-        },
-        {
-          "internalType": "bytes",
-          "name": "response",
-          "type": "bytes"
-        }
-      ],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address[]",
-          "name": "recipients",
-          "type": "address[]"
-        },
-        {
-          "internalType": "uint256[]",
-          "name": "amounts",
-          "type": "uint256[]"
-        },
-        {
-          "internalType": "enum PaymentToken",
-          "name": "token",
-          "type": "uint8"
-        }
-      ],
-      "name": "redistributeSeizedCollateral",
-      "outputs": [
-        {
-          "components": [
-            {
-              "internalType": "int64",
-              "name": "responseCode",
-              "type": "int64"
-            },
-            {
-              "internalType": "bool",
-              "name": "success",
-              "type": "bool"
-            },
-            {
-              "internalType": "string",
-              "name": "errorMessage",
-              "type": "string"
-            }
-          ],
-          "internalType": "struct HtsTransferResult[]",
-          "name": "results",
-          "type": "tuple[]"
-        }
-      ],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
       "inputs": [],
       "name": "renounceOwnership",
       "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "defaulter",
-          "type": "address"
-        }
-      ],
-      "name": "seizeCollateralHts",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "totalSeized",
-          "type": "uint256"
-        },
-        {
-          "components": [
-            {
-              "internalType": "int64",
-              "name": "responseCode",
-              "type": "int64"
-            },
-            {
-              "internalType": "bool",
-              "name": "success",
-              "type": "bool"
-            },
-            {
-              "internalType": "string",
-              "name": "errorMessage",
-              "type": "string"
-            }
-          ],
-          "internalType": "struct HtsTransferResult",
-          "name": "result",
-          "type": "tuple"
-        }
-      ],
       "stateMutability": "nonpayable",
       "type": "function"
     },
@@ -812,6 +621,19 @@
       "name": "setAjoCore",
       "outputs": [],
       "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "setupComplete",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
       "type": "function"
     },
     {
@@ -836,74 +658,6 @@
         }
       ],
       "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "token",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "from",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "to",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        }
-      ],
-      "name": "transferFrom",
-      "outputs": [
-        {
-          "internalType": "int64",
-          "name": "responseCode",
-          "type": "int64"
-        }
-      ],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "token",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "from",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "to",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "serialNumber",
-          "type": "uint256"
-        }
-      ],
-      "name": "transferFromNFT",
-      "outputs": [
-        {
-          "internalType": "int64",
-          "name": "responseCode",
-          "type": "int64"
-        }
-      ],
-      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -937,42 +691,24 @@
           "type": "uint8"
         }
       ],
-      "name": "unlockCollateralHts",
-      "outputs": [
-        {
-          "components": [
-            {
-              "internalType": "int64",
-              "name": "responseCode",
-              "type": "int64"
-            },
-            {
-              "internalType": "bool",
-              "name": "success",
-              "type": "bool"
-            },
-            {
-              "internalType": "string",
-              "name": "errorMessage",
-              "type": "string"
-            }
-          ],
-          "internalType": "struct HtsTransferResult",
-          "name": "result",
-          "type": "tuple"
-        }
-      ],
+      "name": "unlockCollateral",
+      "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
     },
     {
       "inputs": [],
-      "name": "usdcToken",
+      "name": "verifySetup",
       "outputs": [
         {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
+          "internalType": "bool",
+          "name": "isValid",
+          "type": "bool"
+        },
+        {
+          "internalType": "string",
+          "name": "reason",
+          "type": "string"
         }
       ],
       "stateMutability": "view",

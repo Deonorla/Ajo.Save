@@ -24,38 +24,6 @@
       "type": "error"
     },
     {
-      "inputs": [
-        {
-          "internalType": "int64",
-          "name": "responseCode",
-          "type": "int64"
-        }
-      ],
-      "name": "HtsAssociationFailed",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "HtsAssociationRequired",
-      "type": "error"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "string",
-          "name": "operation",
-          "type": "string"
-        },
-        {
-          "internalType": "int64",
-          "name": "responseCode",
-          "type": "int64"
-        }
-      ],
-      "name": "HtsOperationFailed",
-      "type": "error"
-    },
-    {
       "inputs": [],
       "name": "InsufficientAllowance",
       "type": "error"
@@ -138,19 +106,31 @@
       "anonymous": false,
       "inputs": [
         {
-          "indexed": false,
-          "internalType": "bool",
-          "name": "",
-          "type": "bool"
+          "indexed": true,
+          "internalType": "address",
+          "name": "member",
+          "type": "address"
         },
         {
           "indexed": false,
-          "internalType": "bytes",
-          "name": "",
-          "type": "bytes"
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "enum PaymentToken",
+          "name": "token",
+          "type": "uint8"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "collateralContract",
+          "type": "address"
         }
       ],
-      "name": "CallResponseEvent",
+      "name": "CollateralTransferRequired",
       "type": "event"
     },
     {
@@ -178,12 +158,6 @@
           "indexed": false,
           "internalType": "address",
           "name": "governance",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "schedule",
           "type": "address"
         }
       ],
@@ -238,192 +212,6 @@
         }
       ],
       "name": "GuarantorAssigned",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "member",
-          "type": "address"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "token",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "int64",
-          "name": "responseCode",
-          "type": "int64"
-        }
-      ],
-      "name": "HtsAssociationAttempt",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "token",
-          "type": "address"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "account",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "int64",
-          "name": "responseCode",
-          "type": "int64"
-        }
-      ],
-      "name": "HtsFreezeAttempt",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "member",
-          "type": "address"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "token",
-          "type": "address"
-        }
-      ],
-      "name": "HtsTokenAssociated",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "token",
-          "type": "address"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "from",
-          "type": "address"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "to",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "int64",
-          "name": "amount",
-          "type": "int64"
-        },
-        {
-          "indexed": false,
-          "internalType": "int64",
-          "name": "responseCode",
-          "type": "int64"
-        }
-      ],
-      "name": "HtsTransferAttempt",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "token",
-          "type": "address"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "from",
-          "type": "address"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "to",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "int64",
-          "name": "responseCode",
-          "type": "int64"
-        }
-      ],
-      "name": "HtsTransferExecuted",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "token",
-          "type": "address"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "from",
-          "type": "address"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "to",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "int64",
-          "name": "responseCode",
-          "type": "int64"
-        },
-        {
-          "indexed": false,
-          "internalType": "string",
-          "name": "reason",
-          "type": "string"
-        }
-      ],
-      "name": "HtsTransferFailed",
       "type": "event"
     },
     {
@@ -642,32 +430,33 @@
       "type": "function"
     },
     {
-      "inputs": [],
-      "name": "distributePayout",
-      "outputs": [
+      "inputs": [
         {
-          "components": [
-            {
-              "internalType": "int64",
-              "name": "responseCode",
-              "type": "int64"
-            },
-            {
-              "internalType": "bool",
-              "name": "success",
-              "type": "bool"
-            },
-            {
-              "internalType": "string",
-              "name": "errorMessage",
-              "type": "string"
-            }
-          ],
-          "internalType": "struct HtsTransferResult",
-          "name": "",
-          "type": "tuple"
+          "internalType": "string",
+          "name": "description",
+          "type": "string"
+        },
+        {
+          "internalType": "bytes",
+          "name": "proposalData",
+          "type": "bytes"
         }
       ],
+      "name": "createProposal",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "distributePayout",
+      "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
     },
@@ -687,6 +476,19 @@
         }
       ],
       "name": "emergencyWithdraw",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "proposalId",
+          "type": "uint256"
+        }
+      ],
+      "name": "executeProposal",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -770,126 +572,6 @@
           "internalType": "enum PaymentToken",
           "name": "activeToken",
           "type": "uint8"
-        },
-        {
-          "internalType": "bool",
-          "name": "_usesHtsTokens",
-          "type": "bool"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "enum PaymentToken",
-          "name": "token",
-          "type": "uint8"
-        }
-      ],
-      "name": "getHtsTokenInfo",
-      "outputs": [
-        {
-          "components": [
-            {
-              "internalType": "address",
-              "name": "tokenAddress",
-              "type": "address"
-            },
-            {
-              "internalType": "bytes32",
-              "name": "tokenId",
-              "type": "bytes32"
-            },
-            {
-              "internalType": "string",
-              "name": "name",
-              "type": "string"
-            },
-            {
-              "internalType": "string",
-              "name": "symbol",
-              "type": "string"
-            },
-            {
-              "internalType": "uint8",
-              "name": "decimals",
-              "type": "uint8"
-            },
-            {
-              "internalType": "uint256",
-              "name": "totalSupply",
-              "type": "uint256"
-            },
-            {
-              "internalType": "bool",
-              "name": "hasFreezeKey",
-              "type": "bool"
-            },
-            {
-              "internalType": "bool",
-              "name": "hasWipeKey",
-              "type": "bool"
-            },
-            {
-              "internalType": "bool",
-              "name": "hasSupplyKey",
-              "type": "bool"
-            },
-            {
-              "internalType": "bool",
-              "name": "hasPauseKey",
-              "type": "bool"
-            },
-            {
-              "internalType": "address",
-              "name": "treasury",
-              "type": "address"
-            }
-          ],
-          "internalType": "struct HtsTokenInfo",
-          "name": "",
-          "type": "tuple"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "member",
-          "type": "address"
-        },
-        {
-          "internalType": "enum PaymentToken",
-          "name": "token",
-          "type": "uint8"
-        }
-      ],
-      "name": "getHtsTransferStatus",
-      "outputs": [
-        {
-          "internalType": "bool",
-          "name": "isAssociated",
-          "type": "bool"
-        },
-        {
-          "internalType": "bool",
-          "name": "isFrozen",
-          "type": "bool"
-        },
-        {
-          "internalType": "bool",
-          "name": "canReceive",
-          "type": "bool"
-        },
-        {
-          "internalType": "bool",
-          "name": "canSend",
-          "type": "bool"
         }
       ],
       "stateMutability": "view",
@@ -976,16 +658,6 @@
               "internalType": "uint256",
               "name": "guaranteePosition",
               "type": "uint256"
-            },
-            {
-              "internalType": "bool",
-              "name": "isHtsAssociated",
-              "type": "bool"
-            },
-            {
-              "internalType": "bool",
-              "name": "isFrozen",
-              "type": "bool"
             }
           ],
           "internalType": "struct Member",
@@ -1070,16 +742,6 @@
               "internalType": "bool",
               "name": "isActive",
               "type": "bool"
-            },
-            {
-              "internalType": "address",
-              "name": "htsTokenAddress",
-              "type": "address"
-            },
-            {
-              "internalType": "bool",
-              "name": "isHtsToken",
-              "type": "bool"
             }
           ],
           "internalType": "struct TokenConfig",
@@ -1131,40 +793,8 @@
         }
       ],
       "name": "handleDefault",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "totalRecovered",
-          "type": "uint256"
-        }
-      ],
+      "outputs": [],
       "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "hbarHtsToken",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "hcsTopicId",
-      "outputs": [
-        {
-          "internalType": "bytes32",
-          "name": "",
-          "type": "bytes32"
-        }
-      ],
-      "stateMutability": "view",
       "type": "function"
     },
     {
@@ -1198,50 +828,11 @@
           "internalType": "address",
           "name": "_ajoGovernance",
           "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "_ajoSchedule",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "_hederaTokenService",
-          "type": "address"
-        },
-        {
-          "internalType": "bytes32",
-          "name": "_hcsTopicId",
-          "type": "bytes32"
         }
       ],
       "name": "initialize",
       "outputs": [],
       "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "member",
-          "type": "address"
-        }
-      ],
-      "name": "isHtsAssociated",
-      "outputs": [
-        {
-          "internalType": "bool",
-          "name": "usdcAssociated",
-          "type": "bool"
-        },
-        {
-          "internalType": "bool",
-          "name": "hbarAssociated",
-          "type": "bool"
-        }
-      ],
-      "stateMutability": "view",
       "type": "function"
     },
     {
@@ -1253,30 +844,7 @@
         }
       ],
       "name": "joinAjo",
-      "outputs": [
-        {
-          "components": [
-            {
-              "internalType": "int64",
-              "name": "responseCode",
-              "type": "int64"
-            },
-            {
-              "internalType": "bool",
-              "name": "success",
-              "type": "bool"
-            },
-            {
-              "internalType": "string",
-              "name": "errorMessage",
-              "type": "string"
-            }
-          ],
-          "internalType": "struct HtsTransferResult",
-          "name": "collateralResult",
-          "type": "tuple"
-        }
-      ],
+      "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
     },
@@ -1380,30 +948,7 @@
     {
       "inputs": [],
       "name": "processPayment",
-      "outputs": [
-        {
-          "components": [
-            {
-              "internalType": "int64",
-              "name": "responseCode",
-              "type": "int64"
-            },
-            {
-              "internalType": "bool",
-              "name": "success",
-              "type": "bool"
-            },
-            {
-              "internalType": "string",
-              "name": "errorMessage",
-              "type": "string"
-            }
-          ],
-          "internalType": "struct HtsTransferResult",
-          "name": "",
-          "type": "tuple"
-        }
-      ],
+      "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
     },
@@ -1427,119 +972,9 @@
       "type": "function"
     },
     {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "token",
-          "type": "address"
-        },
-        {
-          "internalType": "bytes",
-          "name": "encodedFunctionSelector",
-          "type": "bytes"
-        }
-      ],
-      "name": "redirectForToken",
-      "outputs": [
-        {
-          "internalType": "int256",
-          "name": "responseCode",
-          "type": "int256"
-        },
-        {
-          "internalType": "bytes",
-          "name": "response",
-          "type": "bytes"
-        }
-      ],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
       "inputs": [],
       "name": "renounceOwnership",
       "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "scheduleContract",
-      "outputs": [
-        {
-          "internalType": "contract IAjoSchedule",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "token",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "from",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "to",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        }
-      ],
-      "name": "transferFrom",
-      "outputs": [
-        {
-          "internalType": "int64",
-          "name": "responseCode",
-          "type": "int64"
-        }
-      ],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "token",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "from",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "to",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "serialNumber",
-          "type": "uint256"
-        }
-      ],
-      "name": "transferFromNFT",
-      "outputs": [
-        {
-          "internalType": "int64",
-          "name": "responseCode",
-          "type": "int64"
-        }
-      ],
       "stateMutability": "nonpayable",
       "type": "function"
     },
@@ -1567,11 +1002,24 @@
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "newDuration",
           "type": "uint256"
         }
       ],
       "name": "updateCycleDuration",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "newPenaltyRate",
+          "type": "uint256"
+        }
+      ],
+      "name": "updatePenaltyRate",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -1597,50 +1045,6 @@
       "name": "updateTokenConfig",
       "outputs": [],
       "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "usdcHtsToken",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "usesHtsTokens",
-      "outputs": [
-        {
-          "internalType": "bool",
-          "name": "",
-          "type": "bool"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "verifyHtsSetup",
-      "outputs": [
-        {
-          "internalType": "bool",
-          "name": "isValid",
-          "type": "bool"
-        },
-        {
-          "internalType": "string",
-          "name": "reason",
-          "type": "string"
-        }
-      ],
-      "stateMutability": "view",
       "type": "function"
     }
   ]

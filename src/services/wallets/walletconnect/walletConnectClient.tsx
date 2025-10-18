@@ -28,7 +28,7 @@ import EventEmitter from "events";
 // Create refresh event for syncing wallet state
 const refreshEvent = new EventEmitter();
 
-// WalletConnect Project ID - replace with your own from https://cloud.walletconnect.com
+// WalletConnect Project ID
 const walletConnectProjectId =
   import.meta.env.VITE_WALLETCONNECT_PROJECT_ID ||
   "377d75bb6f86a2ffd427d032ff6ea7d3";
@@ -36,10 +36,10 @@ const walletConnectProjectId =
 const currentNetworkConfig = appConfig.networks.testnet;
 const hederaNetwork = currentNetworkConfig.network;
 
-// Create a client for freezing transactions (no operator needed for this)
+// Create a client for freezing transactions
 const hederaClient = Client.forName(hederaNetwork);
 
-// Metadata for your dApp
+// Metadata for Ajo.Save DApp
 const metadata = {
   name: "Ajo.Save",
   description: "Decentralized Savings Platform on Hedera",
