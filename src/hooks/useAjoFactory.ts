@@ -86,7 +86,6 @@ export const useAjoFactory = (ajoFactoryAddress?: string) => {
     throw new Error(`Invalid contract address format: ${address}`);
   };
 
-  console.log("Using contract address:", contractAddress);
   /**
    * Associate user with HTS tokens
    */
@@ -99,9 +98,7 @@ export const useAjoFactory = (ajoFactoryAddress?: string) => {
 
       setLoading(true);
       try {
-        const userAddress = isMetaMask
-          ? convertToEvmAddress(user)
-          : convertToHederaAddress(user);
+        const userAddress = convertToEvmAddress(user);
 
         if (isMetaMask) {
           const provider = new ethers.providers.Web3Provider(
@@ -158,10 +155,8 @@ export const useAjoFactory = (ajoFactoryAddress?: string) => {
 
       setLoading(true);
       try {
-        const convertedUsers = isMetaMask
-          ? users.map(convertToEvmAddress)
-          : users.map(convertToHederaAddress);
-
+        const convertedUsers = users.map(convertToEvmAddress);
+        console.log("Batch associating users:", convertedUsers);
         if (isMetaMask) {
           const provider = new ethers.providers.Web3Provider(
             (window as any).ethereum
@@ -205,6 +200,7 @@ export const useAjoFactory = (ajoFactoryAddress?: string) => {
 
   /**
    * Batch fund users with HTS tokens
+   * FIXED: Convert amounts to BigInt for proper int64 handling
    */
   const batchFundUsers = useCallback(
     async (users: string[], usdcAmount: number, hbarAmount: number) => {
@@ -215,9 +211,7 @@ export const useAjoFactory = (ajoFactoryAddress?: string) => {
 
       setLoading(true);
       try {
-        const convertedUsers = isMetaMask
-          ? users.map(convertToEvmAddress)
-          : users.map(convertToHederaAddress);
+        const convertedUsers = users.map(convertToEvmAddress);
 
         if (isMetaMask) {
           const provider = new ethers.providers.Web3Provider(
@@ -241,14 +235,23 @@ export const useAjoFactory = (ajoFactoryAddress?: string) => {
           const receipt = await tx.wait();
           return receipt.transactionHash;
         } else {
+          // ✅ FIX: Convert to BigInt for proper int64 encoding
           const params = new ContractFunctionParameterBuilder()
             .addParam({
               type: "address[]",
               name: "users",
               value: convertedUsers,
             })
-            .addParam({ type: "int64", name: "usdcAmount", value: usdcAmount })
-            .addParam({ type: "int64", name: "hbarAmount", value: hbarAmount });
+            .addParam({
+              type: "int64",
+              name: "usdcAmount",
+              value: BigInt(usdcAmount), // ✅ CHANGED: Must be BigInt
+            })
+            .addParam({
+              type: "int64",
+              name: "hbarAmount",
+              value: BigInt(hbarAmount), // ✅ CHANGED: Must be BigInt
+            });
 
           const txId = await walletInterface.executeContractFunction(
             getContractId(contractAddress),
@@ -615,6 +618,7 @@ export const useAjoFactory = (ajoFactoryAddress?: string) => {
 
   /**
    * Fund user with HTS tokens
+   * FIXED: Convert amounts to BigInt for proper int64 handling
    */
   const fundUserWithHtsTokens = useCallback(
     async (user: string, usdcAmount: number, hbarAmount: number) => {
@@ -625,9 +629,14 @@ export const useAjoFactory = (ajoFactoryAddress?: string) => {
 
       setLoading(true);
       try {
-        const userAddress = isMetaMask
-          ? convertToEvmAddress(user)
-          : convertToHederaAddress(user);
+        const userAddress = convertToEvmAddress(user);
+
+        console.log("fundUserWithHtsTokens:", {
+          userAddress,
+          usdcAmount,
+          hbarAmount,
+          isMetaMask,
+        });
 
         if (isMetaMask) {
           const provider = new ethers.providers.Web3Provider(
@@ -651,10 +660,25 @@ export const useAjoFactory = (ajoFactoryAddress?: string) => {
           const receipt = await tx.wait();
           return receipt.transactionHash;
         } else {
+          // ✅ FIX: For HashPack/WalletConnect, use BigInt for int64 values
           const params = new ContractFunctionParameterBuilder()
             .addParam({ type: "address", name: "user", value: userAddress })
-            .addParam({ type: "int64", name: "usdcAmount", value: usdcAmount })
-            .addParam({ type: "int64", name: "hbarAmount", value: hbarAmount });
+            .addParam({
+              type: "int64",
+              name: "usdcAmount",
+              value: BigInt(usdcAmount), // ✅ CHANGED: Must be BigInt for proper int64 encoding
+            })
+            .addParam({
+              type: "int64",
+              name: "hbarAmount",
+              value: BigInt(hbarAmount), // ✅ CHANGED: Must be BigInt for proper int64 encoding
+            });
+
+          console.log("HAPI Params built:", {
+            userAddress,
+            usdcAmountBigInt: BigInt(usdcAmount).toString(),
+            hbarAmountBigInt: BigInt(hbarAmount).toString(),
+          });
 
           const txId = await walletInterface.executeContractFunction(
             getContractId(contractAddress),
@@ -662,6 +686,8 @@ export const useAjoFactory = (ajoFactoryAddress?: string) => {
             params,
             3_000_000
           );
+
+          console.log("Transaction submitted:", txId?.toString());
           return txId?.toString() || null;
         }
       } catch (error: any) {
@@ -673,6 +699,8 @@ export const useAjoFactory = (ajoFactoryAddress?: string) => {
     },
     [walletInterface, accountId, contractAddress, isMetaMask]
   );
+
+  // ... (rest of the functions remain the same - initializeAjoPhase2-5, setHtsTokensForFactory, etc.)
 
   /**
    * Initialize Ajo Phase 2
@@ -715,6 +743,7 @@ export const useAjoFactory = (ajoFactoryAddress?: string) => {
             params,
             3_000_000
           );
+
           console.log("initializeAjoPhase2 tx:", txId?.toString());
           return txId?.toString() || null;
         }
@@ -1248,8 +1277,6 @@ export const useAjoFactory = (ajoFactoryAddress?: string) => {
       throw new Error(error.message || "Failed to get total Ajos");
     }
   }, [readAddress]);
-
-  // Add other view functions like hbarHtsToken, hederaScheduleService, hssEnabled, htsEnabled, isHtsEnabled, owner, userHbarAssociated, etc., as needed in similar fashion.
 
   return {
     loading,

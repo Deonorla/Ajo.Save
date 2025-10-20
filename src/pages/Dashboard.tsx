@@ -102,29 +102,30 @@ const Dashboard = () => {
         >
           {/* Welcome Banner with Refresh Button */}
           <div className="bg-gradient-to-br from-primary to-accent text-primary-foreground p-6 rounded-xl shadow-lg border border-border">
-            <div className="flex justify-between items-start">
-              <div>
-                <h2 className="text-2xl font-bold mb-2">Welcome</h2>
+            <div className="flex items-start w-full">
+              <div className="w-full">
+                <div className="flex justify-between items-start w-full">
+                  <h2 className="text-2xl font-bold mb-2">Welcome</h2>
+                  {/* Refresh Button */}
+                  <button
+                    onClick={handleManualRefresh}
+                    disabled={isRefreshing}
+                    className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors disabled:opacity-50"
+                    title="Refresh Ajos"
+                  >
+                    <RefreshCw
+                      size={18}
+                      className={isRefreshing ? "animate-spin" : ""}
+                    />
+                    <span className="text-sm font-medium">Refresh</span>
+                  </button>
+                </div>
                 <p className="text-primary-foreground/90">Ajo Platform</p>
-                <p className="text-sm text-primary-foreground/80 mt-2">
+                <p className="text-sm text-primary-foreground/80 mt-2 w-full">
                   Transparency on-chain, blockchain-powered savings groups.
                   Build wealth with your community.
                 </p>
               </div>
-
-              {/* Refresh Button */}
-              <button
-                onClick={handleManualRefresh}
-                disabled={isRefreshing}
-                className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors disabled:opacity-50"
-                title="Refresh Ajos"
-              >
-                <RefreshCw
-                  size={18}
-                  className={isRefreshing ? "animate-spin" : ""}
-                />
-                <span className="text-sm font-medium">Refresh</span>
-              </button>
             </div>
 
             {/* Last Update Timestamp */}

@@ -45,6 +45,25 @@ export class ContractFunctionParameterBuilder {
           `Invalid type: ${param.type}. Type must only contain alphanumeric characters.`
         );
       }
+      // Special handling for int64
+      if (param.type.toLowerCase() === "int64") {
+        let int64Value = param.value;
+        if (typeof param.value === "bigint") {
+          const MAX_INT64 = BigInt("9223372036854775807");
+          const MIN_INT64 = BigInt("-9223372036854775808");
+
+          if (param.value > MAX_INT64 || param.value < MIN_INT64) {
+            throw new Error(
+              `int64 value ${param.value} is outside safe int64 range`
+            );
+          }
+
+          int64Value = Number(param.value);
+        }
+
+        contractFunctionParams.addInt64(int64Value);
+        continue;
+      }
       // captitalize the first letter of the type
       const type = param.type.charAt(0).toUpperCase() + param.type.slice(1);
       const functionName = `add${type}`;

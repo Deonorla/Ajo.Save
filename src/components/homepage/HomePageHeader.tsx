@@ -7,11 +7,11 @@ const HomePageHeader = () => {
   return (
     <header className="sticky top-0 z-50 bg-[#070101] backdrop-blur-md border-b border-primary/20">
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center">
-            <Coins className="w-5 h-5 text-white" />
+        <div className="flex items-center space-x-3 shrink-0 cursor-pointer">
+          <div className="w-10 h-10 bg-gradient-to-br from-primary via-primary/90 to-accent rounded-xl flex items-center justify-center shadow-lg hover:shadow-primary/50 transition-all duration-300 hover:scale-110">
+            <Coins className="w-6 h-6 text-white" />
           </div>
-          <span className=" text-sm lg:text-xl font-bold text-foreground">
+          <span className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
             Ajo.Save
           </span>
         </div>

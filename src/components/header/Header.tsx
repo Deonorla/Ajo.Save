@@ -10,45 +10,37 @@ import {
   LogOut,
   Copy,
   Check,
+  ChevronDown,
+  RefreshCw,
+  Zap,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTokenStore } from "@/store/tokenStore";
-import FormattedBalance from "@/utils/FormatedBalance";
 import { toast } from "sonner";
-import { ethers } from "ethers";
 import { useWalletInterface } from "../../services/wallets/useWalletInterface";
 import { openWalletConnectModal } from "../../services/wallets/walletconnect/walletConnectClient";
 import { connectToMetamask } from "../../services/wallets/metamask/metamaskClient";
 import { MirrorNodeClient } from "../../services/wallets/mirrorNodeClient";
 import { appConfig } from "../../config";
-import { AccountId, TokenId } from "@hashgraph/sdk";
+import { AccountId } from "@hashgraph/sdk";
 import WalletModal from "../ui/WalletModal";
-
-// --- Mock ERC20/HTS Facade ABI ---
-const TOKEN_ABI = ["function mint(uint256 amount) external"];
+import { useTokenMinting } from "@/hooks/useTokenMinting";
 
 // Helper to convert Hedera address format (0.0.X) to EVM format (0x...)
 const convertHederaToEvmAddress = (hederaAddress: string): string => {
-  if (hederaAddress.startsWith("0x")) {
-    return hederaAddress;
-  }
-
+  if (hederaAddress.startsWith("0x")) return hederaAddress;
   const parts = hederaAddress.split(".");
   if (parts.length === 3) {
     const accountNum = parseInt(parts[2]);
     return "0x" + accountNum.toString(16).padStart(40, "0");
   }
-
   return hederaAddress;
 };
 
 // Helper to convert EVM address (0x...) back to Hedera format (0.0.X)
 const convertEvmToHederaAddress = (evmAddress: string): string => {
-  if (!evmAddress.startsWith("0x")) {
-    return evmAddress;
-  }
-
+  if (!evmAddress.startsWith("0x")) return evmAddress;
   try {
     const accountNum = parseInt(evmAddress.slice(2), 16);
     return `0.0.${accountNum}`;
@@ -59,38 +51,45 @@ const convertEvmToHederaAddress = (evmAddress: string): string => {
 };
 
 const Header = () => {
-  const rawUsdcAddress = import.meta.env.VITE_MOCK_USDC_ADDRESS;
-  const usdcContractId = convertHederaToEvmAddress(rawUsdcAddress);
-
-  //
-  const { setHbar, setAddress } = useTokenStore();
-
+  const { setHbar, setAddress, setUsdc } = useTokenStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-  const { usdc, loading, setUsdc } = useTokenStore();
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
+  const [isWalletDropdownOpen, setIsWalletDropdownOpen] = useState(false);
+  const [showMintModal, setShowMintModal] = useState(false);
 
   // Use the unified wallet interface
   const { accountId, walletInterface } = useWalletInterface();
   const connected = !!accountId;
-  console.log("accountId", accountId);
+
+  // Use token minting hook
+  const {
+    loading: minting,
+    mintTokens,
+    mintPresetTokens,
+    getTokenBalances,
+  } = useTokenMinting();
+
   const [balance, setBalance] = useState<string | null>(null);
-  const [minting, setMinting] = useState(false);
-  const [isAssociated, setIsAssociated] = useState(false);
+  const [usdcBalance, setUsdcBalance] = useState<string>("0");
+  const [whbarBalance, setWhbarBalance] = useState<string>("0");
+  const [loadingBalances, setLoadingBalances] = useState(false);
   const [walletType, setWalletType] = useState<
     "metamask" | "walletconnect" | null
   >(null);
+  const [customUSDC, setCustomUSDC] = useState("1000");
+  const [customHBAR, setCustomHBAR] = useState("1000");
 
-  const MINT_AMOUNT = ethers.utils.parseUnits("100", 6);
   const mirrorNodeClient = new MirrorNodeClient(appConfig.networks.testnet);
 
   const handleCopy = async () => {
     if (accountId) {
       await navigator.clipboard.writeText(accountId);
       setCopied(true);
+      toast.success("Address copied!");
       setTimeout(() => setCopied(false), 1500);
     }
   };
@@ -107,9 +106,9 @@ const Header = () => {
     } else {
       setWalletType(null);
     }
-  }, [accountId]);
+  }, [accountId, setAddress]);
 
-  // Get HBAR balance
+  // Get HBAR balance from mirror node
   const getHbarBalance = async () => {
     if (!accountId) return;
 
@@ -121,74 +120,87 @@ const Header = () => {
       const accountInfo = await mirrorNodeClient.getAccountInfo(
         AccountId.fromString(hederaAccountId)
       );
-      const hbarBalance = (accountInfo.balance.balance / 100000000).toFixed(2);
-      setBalance(hbarBalance);
-      setHbar(hbarBalance);
-      console.log("My Hbar Balance:", hbarBalance);
+      const hbarBal = (accountInfo.balance.balance / 100000000).toFixed(2);
+      setBalance(hbarBal);
+      setHbar(hbarBal);
     } catch (error) {
       console.error("Failed to fetch HBAR balance:", error);
     }
   };
 
-  // Check token association on mount and when wallet connects
-  useEffect(() => {
-    const checkAssociation = async () => {
-      if (!connected || !accountId || !usdcContractId) return;
+  // Load all balances
+  const loadBalances = async () => {
+    if (!accountId) return;
 
-      try {
-        const hederaTokenId = convertEvmToHederaAddress(usdcContractId);
-        const hederaAccountId = accountId.startsWith("0x")
-          ? convertEvmToHederaAddress(accountId)
-          : accountId;
+    setLoadingBalances(true);
+    try {
+      const balances = await getTokenBalances();
+      setUsdcBalance(parseFloat(balances.usdc).toFixed(2));
+      setWhbarBalance(parseFloat(balances.hbar).toFixed(2));
+      setUsdc(parseFloat(balances.usdc).toFixed(2));
 
-        console.log("Checking association for token:", hederaTokenId);
-
-        const tokenBalances =
-          await mirrorNodeClient.getAccountTokenBalancesWithTokenInfo(
-            AccountId.fromString(hederaAccountId)
-          );
-
-        const tokenBalance = tokenBalances.find(
-          (t) => t.token_id === hederaTokenId
-        );
-        if (tokenBalance) {
-          setIsAssociated(true);
-          const decimals = parseInt(tokenBalance.info.decimals);
-          const balance = (
-            tokenBalance.balance / Math.pow(10, decimals)
-          ).toFixed(decimals);
-          console.log("Token already associated. Balance:", balance);
-          setUsdc(balance);
-        } else {
-          setIsAssociated(false);
-        }
-      } catch (error) {
-        console.log("Token not yet associated or error checking:", error);
-        setIsAssociated(false);
-      }
-    };
-
-    checkAssociation();
-  }, [connected, accountId, usdcContractId, setUsdc]);
+      // Also get HBAR from mirror node
+      await getHbarBalance();
+    } catch (error) {
+      console.error("Failed to load balances:", error);
+    } finally {
+      setLoadingBalances(false);
+    }
+  };
 
   // Fetch balances when connected
   useEffect(() => {
     if (connected) {
-      getHbarBalance();
+      loadBalances();
     }
   }, [connected, accountId]);
 
-  /**
-   * Connect wallet - shows modal to choose between WalletConnect and MetaMask
-   */
+  // Handle quick mint
+  const handleQuickMint = async () => {
+    try {
+      await mintPresetTokens();
+      toast.success("Successfully minted 1000 USDC + 1000 WHBAR!");
+      setShowMintModal(false);
+      await loadBalances();
+    } catch (error: any) {
+      console.error("Mint failed:", error);
+    }
+  };
+
+  // Handle custom mint
+  const handleCustomMint = async () => {
+    const usdcAmount = parseFloat(customUSDC);
+    const hbarAmount = parseFloat(customHBAR);
+
+    if (
+      isNaN(usdcAmount) ||
+      isNaN(hbarAmount) ||
+      usdcAmount <= 0 ||
+      hbarAmount <= 0
+    ) {
+      toast.error("Please enter valid amounts");
+      return;
+    }
+
+    try {
+      await mintTokens(usdcAmount, hbarAmount);
+      toast.success(
+        `Successfully minted ${usdcAmount} USDC + ${hbarAmount} WHBAR!`
+      );
+      setShowMintModal(false);
+      await loadBalances();
+    } catch (error: any) {
+      console.error("Mint failed:", error);
+    }
+  };
+
+  // Connect wallet handlers
   const handleConnect = () => {
     setIsWalletModalOpen(true);
   };
-  /**
-   * Handles WalletConnect selection
-   */
+
   const handleConnectWalletConnect = async () => {
-    setIsWalletModalOpen(false); // Close the modal first
+    setIsWalletModalOpen(false);
     try {
       await openWalletConnectModal();
       toast.success("Connected via WalletConnect!");
@@ -197,11 +209,8 @@ const Header = () => {
     }
   };
 
-  /**
-   * Handles MetaMask selection
-   */
   const handleConnectMetamask = async () => {
-    setIsWalletModalOpen(false); // Close the modal first
+    setIsWalletModalOpen(false);
     try {
       const accounts = await connectToMetamask();
       if (accounts.length > 0) {
@@ -212,236 +221,15 @@ const Header = () => {
     }
   };
 
-  /**
-   * Disconnect wallet
-   */
   const handleDisconnect = () => {
     if (walletInterface) {
       walletInterface.disconnect();
       setBalance(null);
+      setUsdcBalance("0");
+      setWhbarBalance("0");
       setUsdc("");
-      setIsAssociated(false);
       toast.success("Wallet disconnected");
     }
-  };
-
-  /**
-   * Mints HTS USDC tokens
-   * Works with both MetaMask and WalletConnect
-   */
-  const handleMint = () => {
-    if (!connected || !accountId) {
-      toast.error("Wallet not connected.");
-      return;
-    }
-
-    if (!walletInterface) {
-      toast.error("Wallet interface not available.");
-      return;
-    }
-
-    if (
-      !usdcContractId ||
-      usdcContractId === "0x0000000000000000000000000000000000000000"
-    ) {
-      toast.error(
-        "USDC token address not configured. Please check your .env file."
-      );
-      return;
-    }
-
-    setMinting(true);
-    // eslint-disable-next-line no-async-promise-executor
-    const mintPromise = new Promise<string>(async (resolve, reject) => {
-      try {
-        console.log("=== MINT TRANSACTION START ===");
-        console.log("Wallet Type:", walletType);
-
-        // --- PHASE 1: TOKEN ASSOCIATION ---
-        if (!isAssociated) {
-          toast.info("Associating token with your account...");
-          try {
-            const hederaTokenId = convertEvmToHederaAddress(usdcContractId);
-            await walletInterface.associateToken(
-              TokenId.fromString(hederaTokenId)
-            );
-            setIsAssociated(true);
-            toast.success("Token associated successfully!");
-            await new Promise((resolve) => setTimeout(resolve, 2000));
-          } catch (assocError: any) {
-            if (
-              assocError.message?.includes(
-                "TOKEN_ALREADY_ASSOCIATED_TO_ACCOUNT"
-              )
-            ) {
-              setIsAssociated(true);
-              toast.info("Token already associated");
-            } else {
-              throw new Error(
-                `Token association failed: ${assocError.message}`
-              );
-            }
-          }
-        } else {
-          console.log("✅ Token already associated, skipping association");
-        }
-
-        // --- PHASE 2: MINT TRANSACTION ---
-        toast.info("Preparing mint transaction...");
-
-        // For MetaMask, use ethers directly
-        if (walletType === "metamask") {
-          const provider = new ethers.providers.Web3Provider(
-            (window as any).ethereum
-          );
-          const signer = provider.getSigner();
-
-          const contractInterface = new ethers.utils.Interface(TOKEN_ABI);
-          const mintData = contractInterface.encodeFunctionData("mint", [
-            MINT_AMOUNT,
-          ]);
-
-          console.log("✅ Transaction data encoded");
-          console.log("Contract address:", usdcContractId);
-          console.log(
-            "Mint amount:",
-            ethers.utils.formatUnits(MINT_AMOUNT, 6),
-            "USDC"
-          );
-
-          toast.info("Sending mint transaction...");
-
-          const txRequest = {
-            to: usdcContractId,
-            data: mintData,
-            gasLimit: ethers.utils.hexlify(3_000_000),
-          };
-
-          const txResponse = await signer.sendTransaction(txRequest);
-          const txHash = txResponse.hash;
-
-          console.log("✅ Transaction sent. Hash:", txHash);
-          toast.info("Waiting for confirmation...");
-
-          const receipt = await provider.waitForTransaction(txHash, 1, 30000);
-
-          if (!receipt) {
-            throw new Error("Transaction receipt not found after 30 seconds");
-          }
-
-          if (receipt.status !== 1) {
-            throw new Error(
-              `Transaction failed on chain. Status: ${receipt.status}`
-            );
-          }
-
-          console.log("✅ Transaction confirmed!");
-          resolve(txHash);
-        }
-        // For WalletConnect, use the wallet interface
-        else if (walletType === "walletconnect") {
-          const { ContractFunctionParameterBuilder } = await import(
-            "../../services/wallets/contractFunctionParameterBuilder"
-          );
-          const { ContractId } = await import("@hashgraph/sdk");
-
-          const functionParams =
-            new ContractFunctionParameterBuilder().addParam({
-              type: "uint256",
-              name: "amount",
-              value: MINT_AMOUNT.toString(),
-            });
-
-          toast.info("Sending mint transaction...");
-
-          const txId = await walletInterface.executeContractFunction(
-            ContractId.fromString(convertEvmToHederaAddress(usdcContractId)),
-            "mint",
-            functionParams,
-            3_000_000
-          );
-
-          if (!txId) {
-            throw new Error("Transaction failed");
-          }
-
-          console.log("✅ Transaction sent. ID:", txId);
-          toast.info("Waiting for confirmation...");
-
-          // Wait for mirror node to update
-          await new Promise((resolve) => setTimeout(resolve, 5000));
-
-          console.log("✅ Transaction confirmed!");
-          resolve(txId.toString());
-        } else {
-          throw new Error("Unknown wallet type");
-        }
-
-        // --- PHASE 3: UPDATE BALANCE ---
-        toast.info("Updating balance...");
-        await new Promise((resolve) => setTimeout(resolve, 3000));
-
-        try {
-          const hederaTokenId = convertEvmToHederaAddress(usdcContractId);
-          const hederaAccountId = accountId.startsWith("0x")
-            ? convertEvmToHederaAddress(accountId)
-            : accountId;
-
-          const tokenBalances =
-            await mirrorNodeClient.getAccountTokenBalancesWithTokenInfo(
-              AccountId.fromString(hederaAccountId)
-            );
-
-          const tokenBalance = tokenBalances.find(
-            (t) => t.token_id === hederaTokenId
-          );
-          if (tokenBalance) {
-            const decimals = parseInt(tokenBalance.info.decimals);
-            const newBalance = (
-              tokenBalance.balance / Math.pow(10, decimals)
-            ).toFixed(decimals);
-            setUsdc(newBalance);
-            console.log("✅ New balance:", newBalance);
-          }
-        } catch (balError) {
-          console.warn("Could not fetch updated balance:", balError);
-        }
-
-        console.log("=== MINT TRANSACTION SUCCESS ===");
-      } catch (error: any) {
-        console.error("=== MINT TRANSACTION FAILED ===");
-        console.error("Full error:", error);
-
-        let errorMessage = "Minting transaction failed";
-
-        if (error.reason) {
-          errorMessage = error.reason;
-        } else if (error.error?.message) {
-          errorMessage = error.error.message;
-        } else if (error.message) {
-          const message = error.message.split("\n")[0];
-          if (message.length < 200) {
-            errorMessage = message;
-          }
-        }
-
-        reject(new Error(errorMessage));
-      } finally {
-        setMinting(false);
-      }
-    });
-
-    const mintAmountDisplay = ethers.utils.formatUnits(MINT_AMOUNT, 6);
-
-    toast.promise(mintPromise, {
-      loading: `Minting ${mintAmountDisplay} USDC...`,
-      success: (hash) =>
-        `Successfully minted ${mintAmountDisplay} USDC! TX: ${hash.slice(
-          0,
-          8
-        )}...`,
-      error: (err) => `${err.message || "Unknown error"}`,
-    });
   };
 
   useEffect(() => {
@@ -456,19 +244,26 @@ const Header = () => {
   };
 
   return (
-    <div className="bg-background">
+    <>
       {/* Desktop Navigation */}
-      <nav className="hidden lg:block fixed bg-background border-b border-ring w-full top-0 z-40">
+      <nav className="hidden lg:block fixed bg-gradient-to-r from-background via-background to-background/95 backdrop-blur-xl border-b border-primary/20 w-full top-0 z-50 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-2 shrink-0">
-              <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center">
-                <Coins className="w-5 h-5 text-white" />
+            {/* Logo */}
+            <div
+              className="flex items-center space-x-3 shrink-0 cursor-pointer"
+              onClick={() => navigate("/dashboard")}
+            >
+              <div className="w-10 h-10 bg-gradient-to-br from-primary via-primary/90 to-accent rounded-xl flex items-center justify-center shadow-lg hover:shadow-primary/50 transition-all duration-300 hover:scale-110">
+                <Coins className="w-6 h-6 text-white" />
               </div>
-              <span className="text-xl font-bold text-white">Ajo.Save</span>
+              <span className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                Ajo.Save
+              </span>
             </div>
 
-            <div className="flex items-center gap-4 flex-wrap justify-center">
+            {/* Navigation */}
+            <div className="flex items-center gap-2">
               {[
                 { id: "dashboard", label: "Dashboard", icon: Home },
                 { id: "profile", label: "Profile", icon: User },
@@ -476,10 +271,10 @@ const Header = () => {
                 <button
                   key={tab.id}
                   onClick={() => navigateTo(tab.id)}
-                  className={`flex cursor-pointer items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 ${
                     activeTab === tab.id
-                      ? "bg-primary/15 text-primary"
-                      : "text-muted-foreground hover:text-primary"
+                      ? "bg-gradient-to-r from-primary to-primary/80 text-white shadow-lg shadow-primary/30"
+                      : "text-muted-foreground hover:text-primary hover:bg-primary/10"
                   }`}
                 >
                   <tab.icon className="h-4 w-4" />
@@ -488,51 +283,160 @@ const Header = () => {
               ))}
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
+            {/* Wallet Section */}
+            <div className="flex items-center gap-3 shrink-0">
               {accountId ? (
-                <div className="flex flex-wrap md:flex-nowrap items-center gap-2 bg-primary/15 px-3 py-2 rounded-lg text-sm font-medium">
-                  <Wallet className="h-4 w-4 text-primary" />
-                  <FormattedBalance
-                    value={usdc ?? ""}
-                    symbol="USDC"
-                    loading={loading}
-                  />
-                  <FormattedBalance
-                    value={balance ?? ""}
-                    symbol="HBAR"
-                    loading={loading}
-                  />
-
+                <div className="relative">
                   <button
-                    onClick={handleMint}
-                    className="ml-2 flex items-center gap-1 text-primary hover:text-primary/80 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={minting || !connected}
+                    onClick={() =>
+                      setIsWalletDropdownOpen(!isWalletDropdownOpen)
+                    }
+                    className="flex items-center gap-3 bg-gradient-to-r from-primary/20 to-accent/20 hover:from-primary/30 hover:to-accent/30 border border-primary/30 px-4 py-2 rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-primary/20"
                   >
-                    <BadgeDollarSign className="h-4 w-4" />
-                    {minting ? (
-                      <div className="flex items-center">
-                        <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2"></div>
-                        minting
+                    <div className="flex items-center gap-2">
+                      <Wallet className="h-4 w-4 text-primary" />
+                      <div className="flex flex-col items-start">
+                        <span className="text-xs text-muted-foreground">
+                          Balance
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-foreground">
+                            {balance} HBAR
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            |
+                          </span>
+                          <span className="text-sm font-bold text-foreground">
+                            {usdcBalance} USDC
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            |
+                          </span>
+                          <span className="text-sm font-bold text-foreground">
+                            {whbarBalance} USDC
+                          </span>
+                        </div>
                       </div>
-                    ) : (
-                      "Mint USDC"
-                    )}
+                    </div>
+                    <ChevronDown
+                      className={`h-4 w-4 text-muted-foreground transition-transform ${
+                        isWalletDropdownOpen ? "rotate-180" : ""
+                      }`}
+                    />
                   </button>
-                  <span className="hidden xl:block ml-2 text-xs text-white ">
-                    {walletType === "metamask" ? "MetaMask" : "WalletConnect"}
-                  </span>
-                  <button
-                    onClick={handleDisconnect}
-                    className="ml-2 flex items-center gap-1 text-red-600 hover:text-red-700 cursor-pointer"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    Disconnect
-                  </button>
+
+                  {/* Dropdown Menu */}
+                  {isWalletDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-80 bg-card border border-primary/20 rounded-xl shadow-2xl overflow-hidden z-50">
+                      <div className="p-4 bg-gradient-to-r from-primary/10 to-accent/10 border-b border-primary/20">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                            Connected Wallet
+                          </span>
+                          <button
+                            onClick={loadBalances}
+                            disabled={loadingBalances}
+                            className="p-1 hover:bg-primary/10 rounded-lg transition-colors"
+                          >
+                            <RefreshCw
+                              className={`h-4 w-4 text-primary ${
+                                loadingBalances ? "animate-spin" : ""
+                              }`}
+                            />
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                          <span className="text-sm font-medium text-foreground">
+                            {walletType === "metamask"
+                              ? "MetaMask"
+                              : "WalletConnect"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground font-mono">
+                            {accountId.startsWith("0x")
+                              ? `${accountId.slice(0, 8)}...${accountId.slice(
+                                  -6
+                                )}`
+                              : `${accountId}`}
+                          </span>
+                          <button
+                            onClick={handleCopy}
+                            className="p-1 hover:bg-primary/10 rounded transition-colors"
+                          >
+                            {copied ? (
+                              <Check className="h-3 w-3 text-green-500" />
+                            ) : (
+                              <Copy className="h-3 w-3 text-muted-foreground" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Balances */}
+                      <div className="p-4 space-y-3">
+                        <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                          <span className="text-sm text-muted-foreground">
+                            USDC Balance
+                          </span>
+                          <span className="text-lg font-bold text-foreground">
+                            {usdcBalance}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                          <span className="text-sm text-muted-foreground">
+                            WHBAR Balance
+                          </span>
+                          <span className="text-lg font-bold text-foreground">
+                            {whbarBalance}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                          <span className="text-sm text-muted-foreground">
+                            HBAR Balance
+                          </span>
+                          <span className="text-lg font-bold text-foreground">
+                            {balance}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="p-4 border-t border-primary/20 space-y-2">
+                        <button
+                          onClick={() => {
+                            setShowMintModal(true);
+                            setIsWalletDropdownOpen(false);
+                          }}
+                          disabled={minting}
+                          className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white px-4 py-2 rounded-lg font-semibold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <BadgeDollarSign className="h-4 w-4" />
+                          {minting ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              <span>Minting...</span>
+                            </>
+                          ) : (
+                            <span>Mint Tokens</span>
+                          )}
+                        </button>
+                        <button
+                          onClick={handleDisconnect}
+                          className="w-full flex items-center justify-center gap-2 bg-red-600/10 hover:bg-red-600/20 text-red-600 border border-red-600/30 px-4 py-2 rounded-lg font-semibold transition-all duration-300"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          Disconnect
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <button
                   onClick={handleConnect}
-                  className="flex items-center gap-2 bg-primary text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-primary/90"
+                  className="flex items-center gap-2 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white px-6 py-2.5 rounded-xl text-sm font-semibold shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all duration-300 hover:scale-105"
                 >
                   <Wallet className="h-4 w-4" />
                   Connect Wallet
@@ -544,29 +448,36 @@ const Header = () => {
       </nav>
 
       {/* Mobile Navigation */}
-      <nav className="lg:hidden bg-background border-b border-primary/25 fixed w-full top-0 z-40">
+      <nav className="lg:hidden bg-gradient-to-r from-background via-background to-background/95 backdrop-blur-xl border-b border-primary/20 fixed w-full top-0 z-50 shadow-lg">
         <div className="px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center">
+          <div
+            className="flex items-center space-x-2 cursor-pointer"
+            onClick={() => navigate("/dashboard")}
+          >
+            <div className="w-9 h-9 bg-gradient-to-br from-primary via-primary/90 to-accent rounded-xl flex items-center justify-center shadow-lg">
               <Coins className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-white">Ajo.Save</span>
+            <span className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              Ajo.Save
+            </span>
           </div>
 
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="p-2 text-white hover:text-primary rounded-lg"
+            className="p-2 hover:bg-primary/10 rounded-lg transition-colors"
           >
             {isMobileMenuOpen ? (
-              <X className="h-5 w-5" />
+              <X className="h-6 w-6 text-foreground" />
             ) : (
-              <Menu className="h-5 w-5" />
+              <Menu className="h-6 w-6 text-foreground" />
             )}
           </button>
         </div>
 
+        {/* Mobile Menu */}
         {isMobileMenuOpen && (
-          <div className="border-t border-primary/25 bg-background px-4 py-3 space-y-2">
+          <div className="border-t border-primary/20 bg-background/95 backdrop-blur-xl px-4 py-4 space-y-3 max-h-[calc(100vh-4rem)] overflow-y-auto">
+            {/* Navigation Links */}
             {[
               { id: "dashboard", label: "Dashboard", icon: Home },
               { id: "profile", label: "Profile", icon: User },
@@ -574,73 +485,113 @@ const Header = () => {
               <button
                 key={tab.id}
                 onClick={() => navigateTo(tab.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${
                   activeTab === tab.id
-                    ? "bg-primary/15 text-primary"
-                    : "text-white hover:bg-primary/20"
+                    ? "bg-gradient-to-r from-primary to-primary/80 text-white shadow-lg"
+                    : "text-muted-foreground hover:bg-primary/10"
                 }`}
               >
-                <tab.icon className="h-4 w-4" />
+                <tab.icon className="h-5 w-5" />
                 {tab.label}
               </button>
             ))}
 
-            <div className="pt-4 border-t border-primary/25">
+            <div className="pt-3 border-t border-primary/20">
               {accountId ? (
-                <div className="bg-primary/15 border border-primary/25 rounded-xl p-4 shadow-sm flex flex-col gap-3">
+                <div className="bg-gradient-to-br from-primary/10 to-accent/10 border border-primary/20 rounded-xl p-4 shadow-lg space-y-4">
+                  {/* Wallet Info */}
                   <div className="flex items-center justify-between">
-                    <span className="text-white text-sm">Balance</span>
-                    <div className="flex flex-col gap-2 items-end">
-                      <span className="text-white font-semibold">
-                        {usdc} USDC
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      <span className="text-sm font-medium text-foreground">
+                        {walletType === "metamask"
+                          ? "MetaMask"
+                          : "WalletConnect"}
                       </span>
-                      <span className="text-white font-semibold">
-                        {balance} HBAR
+                    </div>
+                    <button
+                      onClick={loadBalances}
+                      disabled={loadingBalances}
+                      className="p-1.5 hover:bg-primary/10 rounded-lg transition-colors"
+                    >
+                      <RefreshCw
+                        className={`h-4 w-4 text-primary ${
+                          loadingBalances ? "animate-spin" : ""
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Address */}
+                  <div className="flex items-center justify-between p-3 bg-background/50 rounded-lg">
+                    <span className="text-xs font-mono text-muted-foreground">
+                      {accountId.startsWith("0x")
+                        ? `${accountId.slice(0, 8)}...${accountId.slice(-6)}`
+                        : `${accountId}`}
+                    </span>
+                    <button
+                      onClick={handleCopy}
+                      className="p-1.5 hover:bg-primary/10 rounded transition-colors"
+                    >
+                      {copied ? (
+                        <Check className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <Copy className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Balances */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="bg-background/50 p-3 rounded-lg">
+                      <span className="text-xs text-muted-foreground block mb-1">
+                        USDC
+                      </span>
+                      <span className="text-sm font-bold text-foreground">
+                        {usdcBalance}
+                      </span>
+                    </div>
+                    <div className="bg-background/50 p-3 rounded-lg">
+                      <span className="text-xs text-muted-foreground block mb-1">
+                        WHBAR
+                      </span>
+                      <span className="text-sm font-bold text-foreground">
+                        {whbarBalance}
+                      </span>
+                    </div>
+                    <div className="bg-background/50 p-3 rounded-lg">
+                      <span className="text-xs text-muted-foreground block mb-1">
+                        HBAR
+                      </span>
+                      <span className="text-sm font-bold text-foreground">
+                        {balance}
                       </span>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-white text-sm">Wallet</span>
-                    <span className="text-white font-medium text-xs">
-                      {accountId?.slice(0, 6)}...{accountId?.slice(-4)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-white text-sm">Type</span>
-                    <span className="text-white text-sm">
-                      {walletType === "metamask" ? "MetaMask" : "WalletConnect"}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between gap-3 pt-2">
+
+                  {/* Actions */}
+                  <div className="space-y-2">
                     <button
-                      onClick={handleCopy}
-                      className="flex items-center gap-1 px-3 py-1 text-sm rounded-lg border border-primary text-white hover:bg-primary/20"
-                    >
-                      {copied ? (
-                        <Check className="h-4 w-4 text-primary" />
-                      ) : (
-                        <Copy className="h-4 w-4 text-white" />
-                      )}
-                      {copied ? "Copied" : "Copy"}
-                    </button>
-                    <button
-                      onClick={handleMint}
-                      className="px-3 py-1 text-xs flex justify-center items-center gap-1 rounded-lg border border-primary text-primary hover:text-primary/80 disabled:opacity-50"
-                      disabled={minting || !connected}
+                      onClick={() => {
+                        setShowMintModal(true);
+                        setIsMobileMenuOpen(false);
+                      }}
+                      disabled={minting}
+                      className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-primary to-primary/80 text-white px-4 py-2.5 rounded-lg font-semibold transition-all duration-300 disabled:opacity-50"
                     >
                       <BadgeDollarSign className="h-4 w-4" />
                       {minting ? (
-                        <div className="flex items-center">
-                          <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2"></div>
-                          minting
-                        </div>
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          <span>Minting...</span>
+                        </>
                       ) : (
-                        "Mint"
+                        <span>Mint Tokens</span>
                       )}
                     </button>
                     <button
                       onClick={handleDisconnect}
-                      className="flex items-center gap-1 px-3 py-2 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700"
+                      className="w-full flex items-center justify-center gap-2 bg-red-600/10 text-red-600 border border-red-600/30 px-4 py-2.5 rounded-lg font-semibold transition-all duration-300"
                     >
                       <LogOut className="h-4 w-4" />
                       Disconnect
@@ -650,9 +601,9 @@ const Header = () => {
               ) : (
                 <button
                   onClick={handleConnect}
-                  className="w-full flex items-center justify-center gap-2 bg-primary text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-primary/90"
+                  className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-primary to-accent text-white px-6 py-3 rounded-xl text-sm font-semibold shadow-lg transition-all duration-300"
                 >
-                  <Wallet className="h-4 w-4" />
+                  <Wallet className="h-5 w-5" />
                   Connect Wallet
                 </button>
               )}
@@ -661,21 +612,142 @@ const Header = () => {
         )}
       </nav>
 
-      <div className="fixed bottom-6 right-6 z-10">
+      {/* Floating Create Ajo Button */}
+      <div className="fixed bottom-6 right-6 z-40">
         <button
           onClick={() => navigate("/ajo/create-ajo")}
-          className="bg-primary text-white p-4 rounded-full shadow-lg hover:bg-primary/90 transition-colors cursor-pointer"
+          className="bg-gradient-to-r from-primary to-accent text-white p-4 rounded-full shadow-2xl hover:shadow-primary/50 transition-all duration-300 hover:scale-110 group"
         >
-          <Coins className="h-6 w-6" />
+          <Coins className="h-6 w-6 group-hover:rotate-180 transition-transform duration-300" />
         </button>
       </div>
+
+      {/* Mint Modal */}
+      {showMintModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-card border border-primary/20 rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-primary/20">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                    <BadgeDollarSign className="w-6 h-6 text-primary" />
+                  </div>
+                  <h3 className="text-xl font-bold text-foreground">
+                    Mint Tokens
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setShowMintModal(false)}
+                  className="p-2 hover:bg-muted rounded-lg transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Quick Mint */}
+              <div>
+                <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                  <Zap className="h-4 w-4 text-primary" />
+                  Quick Mint (Recommended)
+                </h4>
+                <button
+                  onClick={handleQuickMint}
+                  disabled={minting}
+                  className="w-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white px-6 py-4 rounded-xl font-semibold transition-all duration-300 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {minting ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Minting...</span>
+                    </div>
+                  ) : (
+                    <span>Mint 1,000 USDC + 1,000 WHBAR</span>
+                  )}
+                </button>
+                <p className="text-xs text-muted-foreground mt-2 text-center">
+                  Perfect amount to join an Ajo and participate
+                </p>
+              </div>
+
+              {/* Custom Amount */}
+              <div className="pt-6 border-t border-primary/20">
+                <h4 className="text-sm font-semibold text-foreground mb-3">
+                  Custom Amount
+                </h4>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-2">
+                      USDC Amount
+                    </label>
+                    <input
+                      type="number"
+                      value={customUSDC}
+                      onChange={(e) => setCustomUSDC(e.target.value)}
+                      placeholder="1000"
+                      className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors text-foreground"
+                      disabled={minting}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-2">
+                      WHBAR Amount
+                    </label>
+                    <input
+                      type="number"
+                      value={customHBAR}
+                      onChange={(e) => setCustomHBAR(e.target.value)}
+                      placeholder="1000"
+                      className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors text-foreground"
+                      disabled={minting}
+                    />
+                  </div>
+                  <button
+                    onClick={handleCustomMint}
+                    disabled={minting}
+                    className="w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground px-6 py-3 rounded-lg font-semibold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {minting ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                        <span>Minting...</span>
+                      </div>
+                    ) : (
+                      <span>Mint Custom Amount</span>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Info */}
+              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <p className="text-xs text-blue-900 dark:text-blue-100">
+                  ℹ️ These are test tokens on Hedera Testnet. You'll need tokens
+                  to join an Ajo and participate in the savings cycle.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Wallet Selection Modal */}
       <WalletModal
         isOpen={isWalletModalOpen}
         onClose={() => setIsWalletModalOpen(false)}
         onSelectWalletConnect={handleConnectWalletConnect}
         onSelectMetamask={handleConnectMetamask}
       />
-    </div>
+
+      {/* Click outside to close dropdown */}
+      {isWalletDropdownOpen && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setIsWalletDropdownOpen(false)}
+        />
+      )}
+    </>
   );
 };
 

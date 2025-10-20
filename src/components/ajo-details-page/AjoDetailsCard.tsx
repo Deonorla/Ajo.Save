@@ -130,7 +130,7 @@ const AjoDetailsCard = ({
         console.log("🙋 Member details:", member);
       }
       setLoading(false);
-      window.location.reload();
+      // window.location.reload();
     } catch (err) {
       console.log("Error joining:", err);
       toast.error("Failed to join");
