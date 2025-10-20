@@ -12,7 +12,7 @@ import { useAjoCore } from "@/hooks/useAjoCore";
 import { useWallet } from "@/auth/WalletContext";
 import { useTokenStore } from "@/store/tokenStore";
 import { hederaAccountToEvmAddress, useAjoDetails } from "@/utils/utils";
-// import { useAjoFactory } from "@/hooks/useAjoFactory";
+import { useAjoFactory } from "@/hooks/useAjoFactory";
 import { useParams } from "react-router-dom";
 import { useAjoDetailsStore } from "@/store/ajoDetailsStore";
 
@@ -20,6 +20,7 @@ const AjoDetails = () => {
   const { ajoId, ajoCore } = useParams<{ ajoId: string; ajoCore: string }>();
   const parsedId = ajoId ? parseInt(ajoId, 10) : 0;
   const { address } = useTokenStore();
+  const ajo = useAjoDetails();
   const {
     getMemberInfo,
     // getQueueInfo,
@@ -27,7 +28,7 @@ const AjoDetails = () => {
     // needsToPayThisCycle,
   } = useAjoCore(ajoCore ? ajoCore : "");
   const loadNewAjo = useAjoDetailsStore((state) => state.loadNewAjo);
-  // const { getAjoOperationalStatus } = useAjoFactory();
+  const { getAjoOperationalStatus } = useAjoFactory();
   const [isVisible, setIsVisible] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [contractStats, setContractStats] = useState<ContractStats | null>(
@@ -35,7 +36,6 @@ const AjoDetails = () => {
   );
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [monthlyPayment, setMonthlyPayment] = useState<string | undefined>("");
-  const ajo = useAjoDetails();
   // const { accountId } = useWallet();
 
   useEffect(() => {
@@ -47,7 +47,7 @@ const AjoDetails = () => {
   // operational status
   const _getAjoOperationalStatus = useCallback(async () => {
     try {
-      // const status = await getAjoOperationalStatus(parsedId, ajo);
+      const status = await getAjoOperationalStatus(parsedId, ajo);
       console.log("✅ Ajo details:", status);
     } catch (err) {
       console.error("Error fetching Ajo operational status:", err);
@@ -74,7 +74,7 @@ const AjoDetails = () => {
       }
       // const queue = await getQueueInfo(address);
       const tokenConfig = await getTokenConfig(0);
-      console.log("Token Config", tokenConfig);
+      // console.log("Token Config", tokenConfig);
       setMonthlyPayment(tokenConfig?.monthlyPayment);
       // console.log("monthlyPayment:", monthlyPayment);
     } catch (err) {
@@ -125,7 +125,7 @@ const AjoDetails = () => {
         >
           {activeTab === "overview" && <AjoOverviewTab ajo={ajo} />}
 
-          {/* {activeTab === "members" && <AjoMembers ajo={ajo} />} */}
+          {activeTab === "members" && <AjoMembers ajo={ajo} />}
           {/* {activeTab === "payments" && <AjoPaymentHistory />} */}
 
           {/* {activeTab === "governance" && <AjoGovernance />} */}

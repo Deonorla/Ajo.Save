@@ -3,7 +3,7 @@ import { useTokenStore } from "@/store/tokenStore";
 import { formatAddress, useAjoDetails } from "@/utils/utils";
 import formatCurrency from "@/utils/formatCurrency";
 import { Users, Star } from "lucide-react";
-// import useAjoMembers from "@/hooks/useAjoMembers";
+import useAjoMembers from "@/hooks/useAjoMembers";
 import { useCallback, useEffect } from "react";
 import type { AjoInfo } from "@/store/ajoStore";
 
@@ -11,19 +11,19 @@ const AjoMembers = ({ ajo }: { ajo: AjoInfo | null | undefined }) => {
   const { membersDetails } = useMembersStore();
   const selectedAjo = useAjoDetails();
   const { nairaRate } = useTokenStore();
-  // const { getAllMembersDetails } = useAjoMembers(ajo ? ajo?.ajoMembers : "");
+  const { getAllMembersDetails } = useAjoMembers(ajo ? ajo?.ajoMembers : "");
 
-  const getFunctions = useCallback(async () => {
+  // Fetch all members
+  const getAllMembers = useCallback(async () => {
     try {
-      // await getAllMembersDetails();
+      await getAllMembersDetails();
     } catch (err) {
-      console.log("Error", err);
+      console.log("Error:", err);
     }
-  }, []);
+  }, [getAllMembersDetails]);
 
   useEffect(() => {
-    getFunctions();
-    console.log("Members", membersDetails);
+    getAllMembers();
   }, []);
 
   return (

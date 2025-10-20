@@ -13,6 +13,7 @@ import AjoFactoryABI from "@/abi/AjoFactory.json";
 import { toast } from "sonner";
 import { useAjoStore } from "@/store/ajoStore";
 import { appConfig } from "@/config";
+import { bnToString, useAjoDetailsStore } from "@/store/ajoDetailsStore";
 
 const AJO_FACTORY_ADDRESS_HEDERA = import.meta.env
   .VITE_AJO_FACTORY_CONTRACT_ADDRESS_HEDERA;
@@ -27,7 +28,9 @@ export const useAjoFactory = (ajoFactoryAddress?: string) => {
   const { accountId, walletInterface } = useWalletInterface();
   const [loading, setLoading] = useState(false);
   const { setAjoInfos } = useAjoStore();
+  const { setAjoDetails } = useAjoDetailsStore();
   const isMetaMask = accountId?.startsWith("0x");
+
   const contractAddress =
     ajoFactoryAddress ||
     (isMetaMask ? AJO_FACTORY_ADDRESS_EVM : AJO_FACTORY_ADDRESS_HEDERA);
@@ -1278,6 +1281,65 @@ export const useAjoFactory = (ajoFactoryAddress?: string) => {
     }
   }, [readAddress]);
 
+  /**
+   * Get operational status
+   */
+
+  const getAjoOperationalStatus = useCallback(
+    async (ajoId: number, ajo: any) => {
+      try {
+        const provider = new ethers.providers.JsonRpcProvider(
+          import.meta.env.VITE_HEDERA_JSON_RPC_RELAY_URL ||
+            "https://testnet.hashio.io/api"
+        );
+        const contract = new ethers.Contract(
+          readAddress,
+          AjoFactoryABI.abi,
+          provider
+        );
+
+        const status = await contract.getAjoOperationalStatus(ajoId);
+        setAjoDetails({
+          ajoId: ajoId,
+          ajoCore: ajo?.ajoCore,
+          totalMembers: bnToString(status.totalMembers),
+          //  activeMembers: bnToString(status.activeMembers),
+          //  totalCollateralUSDC: bnToString(status.totalCollateralUSDC),
+          //  totalCollateralHBAR: bnToString(status.totalCollateralHBAR),
+          //  contractBalanceUSDC: bnToString(status.contractBalanceUSDC),
+          //  contractBalanceHBAR: bnToString(status.contractBalanceHBAR),
+          currentCycle: bnToString(status.currentCycle),
+          //  activeToken: String(status.activeToken),
+          canAcceptMembers: status.canAcceptMembers,
+          hasActiveGovernance: status.hasActiveGovernance,
+          hasActiveScheduling: status.hasActiveScheduling,
+          //  canProcessPayments: status.canProcessPayments,
+          //  canDistributePayouts: status.canDistributePayouts,
+        });
+        // 🔹 Return the typed object
+        return {
+          totalMembers: status.totalMembers,
+          //  activeMembers: status.activeMembers,
+          //  totalCollateralUSDC: status.totalCollateralUSDC,
+          //  totalCollateralHBAR: status.totalCollateralHBAR,
+          //  contractBalanceUSDC: status.contractBalanceUSDC,
+          //  contractBalanceHBAR: status.contractBalanceHBAR,
+          currentCycle: status.currentCycle,
+          //  activeToken: status.activeToken,
+          canAcceptMembers: status.canAcceptMembers,
+          hasActiveGovernance: status.hasActiveGovernance,
+          hasActiveScheduling: status.hasActiveScheduling,
+          //  canProcessPayments: status.canProcessPayments,
+          //  canDistributePayouts: status.canDistributePayouts,
+        };
+      } catch (error: any) {
+        console.error("Get operational status failed:", error);
+        throw new Error(error.message || "Failed to get operational status");
+      }
+    },
+    []
+  );
+
   return {
     loading,
     associateUserWithHtsTokens,
@@ -1302,6 +1364,7 @@ export const useAjoFactory = (ajoFactoryAddress?: string) => {
     getHtsAllowance,
     getHtsTokenAddresses,
     totalAjos,
+    getAjoOperationalStatus,
     isConnected: !!accountId,
     accountId,
   };

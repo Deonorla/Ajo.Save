@@ -27,14 +27,14 @@ const AjoOverviewTab = ({ ajo }: { ajo: AjoInfo | null | undefined }) => {
   const { membersDetails } = useMembersStore();
   //   const { getCurrentCycle } = useAjoPayment(ajo ? ajo?.ajoPayments : "");
   //   const { getAllMembersDetails } = useAjoMembers(ajo ? ajo?.ajoMembers : "");
-  //   const {
-  //     activeMembers,
-  //     activeToken,
-  //     totalCollateralUSDC,
-  //     contractBalanceUSDC,
-  //     contractBalanceHBAR,
-  //     ajoId,
-  //   } = useAjoDetailsStore();
+  const {
+    totalMembers,
+    // activeToken,
+    // totalCollateralUSDC,
+    // contractBalanceUSDC,
+    // contractBalanceHBAR,
+    ajoId,
+  } = useAjoDetailsStore();
   const [demoData, setDemoData] = useState<{
     positions: string[];
     collaterals: string[];
@@ -43,7 +43,7 @@ const AjoOverviewTab = ({ ajo }: { ajo: AjoInfo | null | undefined }) => {
   const getFunctions = useCallback(async () => {
     try {
       const demo = await getCollateralDemo(10, "50");
-      console.log("demo", demo);
+      // console.log("demo", demo);
       setDemoData(demo);
       //   const count = await getCurrentCycle();
       //   if (!count) return null;
@@ -98,13 +98,13 @@ const AjoOverviewTab = ({ ajo }: { ajo: AjoInfo | null | undefined }) => {
               </div>
               <div>
                 <div className="text-2xl font-bold text-accent">
-                  {/* {activeMembers} */}
+                  {totalMembers}
                 </div>
                 <div className="text-sm text-muted-foreground">Active</div>
               </div>
               <div>
                 <div className="text-2xl font-bold text-muted-foreground">
-                  {/* {10 - Number(activeMembers)} */}
+                  {10 - Number(totalMembers)}
                 </div>
                 <div className="text-sm text-muted-foreground">Remaining</div>
               </div>
@@ -117,9 +117,9 @@ const AjoOverviewTab = ({ ajo }: { ajo: AjoInfo | null | undefined }) => {
           <h3 className="text-xl font-bold text-card-foreground mb-4 flex items-center space-x-2">
             <Database className="w-6 h-6 text-accent" />
             <span>Ajo Contract Status</span>
-            {/* {!ajoId && (
+            {!ajoId && (
               <RefreshCw className="w-4 h-4 animate-spin text-muted-foreground" />
-            )} */}
+            )}
           </h3>
 
           {/* {ajoId ? (

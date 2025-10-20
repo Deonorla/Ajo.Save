@@ -60,7 +60,6 @@ const AjoDetailsCard = ({
   // const { getPayOut, getCurrentCycle } = useAjoPayment(
   //   ajo ? ajo?.ajoPayments : ""
   // );
-  const { address } = useWallet();
   const { accountId } = useWalletInterface();
   const [paidAddress, setPaidAddress] = useState("");
   const [cycleCount, setCycleCount] = useState(0);
@@ -68,7 +67,6 @@ const AjoDetailsCard = ({
 
   const getFunctions = useCallback(async () => {
     try {
-      console.log("Ajo Core Address:", ajoCore);
       const collateralRequired = await getRequiredCollateral(0);
       console.log("collateral---", collateralRequired);
       setCollateralRequired(Number(collateralRequired?.toString()));
@@ -96,10 +94,11 @@ const AjoDetailsCard = ({
     // console.log("Ajo name", ajo?.name);
   }, [getFunctions, memberData?.memberInfo.lockedCollateral]);
 
+  // Join Ajo
   const _joinAjo = async () => {
     try {
       setLoading(true);
-      if (!address) {
+      if (!accountId) {
         toast.error("Wallet address not found");
         setLoading(false);
         return;
@@ -108,23 +107,15 @@ const AjoDetailsCard = ({
       console.log("ajoCollateral", ajo.ajoCollateral);
       console.log("ajoPayments", ajo.ajoPayments);
 
-      // const join = await joinAjo(
-      //   0,
-      //   import.meta.env.VITE_MOCK_USDC_ADDRESS,
-      //   ajo?.ajoCollateral,
-      //   ajo?.ajoPayments
-      // );
+      const join = await joinAjo(ajo?.ajoCollateral, ajo?.ajoPayments, 0);
 
       // join is a receipt (ethers v5 transaction receipt)
-      // console.log("✅ Joined Ajo, tx hash:", join.transactionHash);
+      console.log("✅ Joined Ajo, tx hash:", join.transactionHash);
       // Check logs
-      // console.log("📜 Logs:", join.logs);
+      console.log("📜 Logs:", join.logs);
       toast.success("Collateral Locked and Ajo joined Successfully");
-      // Step 2: refresh global stats
-      const stats = await getContractStats();
-      console.log("📊 Updated stats:", stats);
 
-      // Step 3: fetch this user’s details
+      // Step 2: fetch this user’s details
       if (accountId) {
         const member = await getMemberInfo(accountId);
         console.log("🙋 Member details:", member);
@@ -264,7 +255,7 @@ const AjoDetailsCard = ({
                     month of this ajo cycle
                   </div>
                 ) : cycleCount == Number(cycle) ? (
-                  address == paidAddress ? (
+                  accountId == paidAddress ? (
                     <div className="text-xs flex text-primary">
                       you have been paid for this cycle
                     </div>
@@ -462,7 +453,7 @@ const AjoDetailsCard = ({
                 month of this ajo cycle
               </div>
             ) : cycleCount == Number(cycle) ? (
-              address == paidAddress ? (
+              accountId == paidAddress ? (
                 <div className="text-xs flex text-primary">
                   you have been paid for this cycle
                 </div>

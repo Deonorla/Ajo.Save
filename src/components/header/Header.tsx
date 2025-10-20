@@ -51,7 +51,8 @@ const convertEvmToHederaAddress = (evmAddress: string): string => {
 };
 
 const Header = () => {
-  const { setHbar, setAddress, setUsdc } = useTokenStore();
+  const { hbar, usdc, whbar, setHbar, setAddress, setUsdc, setWhbar } =
+    useTokenStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -73,9 +74,6 @@ const Header = () => {
     getTokenBalances,
   } = useTokenMinting();
 
-  const [balance, setBalance] = useState<string | null>(null);
-  const [usdcBalance, setUsdcBalance] = useState<string>("0");
-  const [whbarBalance, setWhbarBalance] = useState<string>("0");
   const [loadingBalances, setLoadingBalances] = useState(false);
   const [walletType, setWalletType] = useState<
     "metamask" | "walletconnect" | null
@@ -121,7 +119,6 @@ const Header = () => {
         AccountId.fromString(hederaAccountId)
       );
       const hbarBal = (accountInfo.balance.balance / 100000000).toFixed(2);
-      setBalance(hbarBal);
       setHbar(hbarBal);
     } catch (error) {
       console.error("Failed to fetch HBAR balance:", error);
@@ -135,10 +132,8 @@ const Header = () => {
     setLoadingBalances(true);
     try {
       const balances = await getTokenBalances();
-      setUsdcBalance(parseFloat(balances.usdc).toFixed(2));
-      setWhbarBalance(parseFloat(balances.hbar).toFixed(2));
       setUsdc(parseFloat(balances.usdc).toFixed(2));
-
+      setWhbar(parseFloat(balances.hbar).toFixed(2));
       // Also get HBAR from mirror node
       await getHbarBalance();
     } catch (error) {
@@ -224,10 +219,9 @@ const Header = () => {
   const handleDisconnect = () => {
     if (walletInterface) {
       walletInterface.disconnect();
-      setBalance(null);
-      setUsdcBalance("0");
-      setWhbarBalance("0");
       setUsdc("");
+      setWhbar("");
+      setHbar("");
       toast.success("Wallet disconnected");
     }
   };
@@ -301,19 +295,19 @@ const Header = () => {
                         </span>
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-bold text-foreground">
-                            {balance} HBAR
+                            {hbar} HBAR
                           </span>
                           <span className="text-xs text-muted-foreground">
                             |
                           </span>
                           <span className="text-sm font-bold text-foreground">
-                            {usdcBalance} USDC
+                            {usdc} USDC
                           </span>
                           <span className="text-xs text-muted-foreground">
                             |
                           </span>
                           <span className="text-sm font-bold text-foreground">
-                            {whbarBalance} USDC
+                            {whbar} WHBAR
                           </span>
                         </div>
                       </div>
@@ -381,7 +375,7 @@ const Header = () => {
                             USDC Balance
                           </span>
                           <span className="text-lg font-bold text-foreground">
-                            {usdcBalance}
+                            {usdc}
                           </span>
                         </div>
                         <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
@@ -389,7 +383,7 @@ const Header = () => {
                             WHBAR Balance
                           </span>
                           <span className="text-lg font-bold text-foreground">
-                            {whbarBalance}
+                            {whbar}
                           </span>
                         </div>
                         <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
@@ -397,7 +391,7 @@ const Header = () => {
                             HBAR Balance
                           </span>
                           <span className="text-lg font-bold text-foreground">
-                            {balance}
+                            {hbar}
                           </span>
                         </div>
                       </div>
@@ -548,7 +542,7 @@ const Header = () => {
                         USDC
                       </span>
                       <span className="text-sm font-bold text-foreground">
-                        {usdcBalance}
+                        {usdc}
                       </span>
                     </div>
                     <div className="bg-background/50 p-3 rounded-lg">
@@ -556,7 +550,7 @@ const Header = () => {
                         WHBAR
                       </span>
                       <span className="text-sm font-bold text-foreground">
-                        {whbarBalance}
+                        {whbar}
                       </span>
                     </div>
                     <div className="bg-background/50 p-3 rounded-lg">
@@ -564,7 +558,7 @@ const Header = () => {
                         HBAR
                       </span>
                       <span className="text-sm font-bold text-foreground">
-                        {balance}
+                        {hbar}
                       </span>
                     </div>
                   </div>

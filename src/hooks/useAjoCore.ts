@@ -1,8 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useCallback } from "react";
-import { ContractId, AccountId, TokenId } from "@hashgraph/sdk";
+import {
+  ContractId,
+  AccountAllowanceApproveTransaction,
+  Client,
+  TokenId,
+  AccountId,
+  TransactionId,
+} from "@hashgraph/sdk";
 import { ethers } from "ethers";
 import { useWalletInterface } from "@/services/wallets/useWalletInterface";
+import { dappConnector } from "@/services/wallets/walletconnect/walletConnectClient";
 import { ContractFunctionParameterBuilder } from "@/services/wallets/contractFunctionParameterBuilder";
 import AjoCoreABI from "@/abi/AjoCore.json";
 import { toast } from "sonner";
@@ -44,28 +52,64 @@ export const useAjoCore = (ajoCoreAddress?: string) => {
     ajoCoreAddress ||
     (isMetaMask ? AJO_CORE_ADDRESS_EVM : AJO_CORE_ADDRESS_HEDERA);
 
-  // Helper to convert Hedera address to EVM
+  // Helper to check if an address is an HTS token (starts with many zeros)
+  const isHtsToken = (address: string): boolean => {
+    if (!address.startsWith("0x")) return false;
+    // HTS tokens have the format 0x000000000000000000000000000000000XXXXXXX
+    // They have at least 32 leading zeros after 0x
+    return address.toLowerCase().startsWith("0x" + "0".repeat(30));
+  };
+
+  // Helper to convert EVM address to Hedera using mirror node
+  const convertEvmToHederaAddress = useCallback(
+    async (evmAddress: string): Promise<string> => {
+      if (!evmAddress.startsWith("0x")) return evmAddress;
+
+      // If it's an HTS token, extract the token ID directly
+      if (isHtsToken(evmAddress)) {
+        const tokenNum = BigInt(evmAddress);
+        const hederaId = `0.0.${tokenNum.toString()}`;
+        console.log(`✅ HTS Token ${evmAddress} -> ${hederaId}`);
+        return hederaId;
+      }
+
+      try {
+        const mirrorNodeUrl =
+          import.meta.env.VITE_HEDERA_MIRROR_NODE_URL ||
+          "https://testnet.mirrornode.hedera.com";
+
+        // Query mirror node for account/contract by EVM address
+        const response = await fetch(
+          `${mirrorNodeUrl}/api/v1/accounts/${evmAddress}`
+        );
+
+        if (!response.ok) {
+          throw new Error(`Mirror node query failed: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        const hederaId = data.account;
+        console.log(`✅ Converted ${evmAddress} to ${hederaId}`);
+        return hederaId;
+      } catch (error) {
+        console.error("Failed to convert EVM to Hedera address:", error);
+        throw new Error(
+          `Could not convert address ${evmAddress} to Hedera format`
+        );
+      }
+    },
+    []
+  );
+
+  // Helper to convert Hedera address to EVM (for reading data via JSON-RPC)
   const convertToEvmAddress = (address: string): string => {
-    console.log("Converting address:", address);
     if (address.startsWith("0x")) return address;
     const parts = address.split(".");
     if (parts.length === 3) {
-      const accountNum = parseInt(parts[2]);
+      const accountNum = BigInt(parts[2]);
       return "0x" + accountNum.toString(16).padStart(40, "0");
     }
     return address;
-  };
-
-  // Helper to convert EVM address to Hedera
-  const convertToHederaAddress = (address: string): string => {
-    console.log("Converting address:", address);
-    if (!address.startsWith("0x")) return address;
-    try {
-      const accountNum = parseInt(address.slice(2), 16);
-      return `0.0.${accountNum}`;
-    } catch {
-      return address;
-    }
   };
 
   /**
@@ -107,7 +151,7 @@ export const useAjoCore = (ajoCoreAddress?: string) => {
           );
 
           const tx = await tokenContract.approve(
-            convertToEvmAddress(collateralAddress),
+            collateralAddress,
             approvalAmount,
             { gasLimit: 800000 }
           );
@@ -115,25 +159,56 @@ export const useAjoCore = (ajoCoreAddress?: string) => {
           toast.success("Collateral approval successful!");
           return tx.hash;
         } else {
-          // For WalletConnect/HashPack - using direct ERC20 approve
-          const provider = new ethers.providers.Web3Provider(
-            (window as any).ethereum
+          // HashPack/WalletConnect: Use AccountAllowanceApproveTransaction for HTS
+          const hederaCollateralAddress = await convertEvmToHederaAddress(
+            collateralAddress
           );
-          const signer = provider.getSigner();
-          const tokenContract = new ethers.Contract(
-            tokenAddress,
-            ERC20_ABI,
-            signer
+          const hederaTokenAddress = await convertEvmToHederaAddress(
+            tokenAddress
           );
 
-          const tx = await tokenContract.approve(
-            convertToEvmAddress(collateralAddress),
-            approvalAmount,
-            { gasLimit: 800000 }
-          );
-          await tx.wait();
+          // Convert approval amount to int64 (Hedera's max allowance)
+          // Max int64: 9,223,372,036,854,775,807
+          const MAX_INT64 = BigInt("9223372036854775807");
+          const approvalBigInt = approvalAmount.toBigInt();
+          const hederaAllowanceAmount =
+            approvalBigInt > MAX_INT64 ? MAX_INT64 : approvalBigInt;
+
+          console.log("Approving HTS token:", hederaTokenAddress);
+          console.log("For spender:", hederaCollateralAddress);
+          console.log("Amount:", hederaAllowanceAmount.toString());
+
+          // Get the signer from dappConnector
+          const signer = dappConnector.signers?.[0];
+          if (!signer) {
+            throw new Error("No signer available from wallet");
+          }
+
+          // Create approval transaction using AccountAllowanceApproveTransaction
+          const hederaClient = Client.forTestnet();
+
+          const approveTx = new AccountAllowanceApproveTransaction()
+            .approveTokenAllowance(
+              TokenId.fromString(hederaTokenAddress),
+              AccountId.fromString(accountId),
+              AccountId.fromString(hederaCollateralAddress),
+              Number(hederaAllowanceAmount)
+            )
+            .setTransactionId(
+              TransactionId.generate(AccountId.fromString(accountId))
+            )
+            .setNodeAccountIds([AccountId.fromString("0.0.3")]);
+
+          // Freeze the transaction
+          await approveTx.freezeWith(hederaClient);
+
+          // Execute with signer
+          const txResponse = await approveTx.executeWithSigner(signer);
+          const txId = txResponse.transactionId;
+
           toast.success("Collateral approval successful!");
-          return tx.hash;
+          console.log("✅ Collateral approved, tx ID:", txId.toString());
+          return txId.toString();
         }
       } catch (error: any) {
         console.error("Approve collateral failed:", error);
@@ -143,7 +218,7 @@ export const useAjoCore = (ajoCoreAddress?: string) => {
         setLoading(false);
       }
     },
-    [walletInterface, accountId, isMetaMask]
+    [walletInterface, accountId, isMetaMask, convertEvmToHederaAddress]
   );
 
   /**
@@ -184,7 +259,7 @@ export const useAjoCore = (ajoCoreAddress?: string) => {
           );
 
           const tx = await tokenContract.approve(
-            convertToEvmAddress(paymentsAddress),
+            paymentsAddress,
             approvalAmount,
             { gasLimit: 800000 }
           );
@@ -192,24 +267,55 @@ export const useAjoCore = (ajoCoreAddress?: string) => {
           toast.success("Payments approval successful!");
           return tx.hash;
         } else {
-          const provider = new ethers.providers.Web3Provider(
-            (window as any).ethereum
+          // HashPack/WalletConnect: Use AccountAllowanceApproveTransaction for HTS
+          const hederaPaymentsAddress = await convertEvmToHederaAddress(
+            paymentsAddress
           );
-          const signer = provider.getSigner();
-          const tokenContract = new ethers.Contract(
-            tokenAddress,
-            ERC20_ABI,
-            signer
+          const hederaTokenAddress = await convertEvmToHederaAddress(
+            tokenAddress
           );
 
-          const tx = await tokenContract.approve(
-            convertToEvmAddress(paymentsAddress),
-            approvalAmount,
-            { gasLimit: 800000 }
-          );
-          await tx.wait();
+          // Convert approval amount to int64 (Hedera's max allowance)
+          const MAX_INT64 = BigInt("9223372036854775807");
+          const approvalBigInt = approvalAmount.toBigInt();
+          const hederaAllowanceAmount =
+            approvalBigInt > MAX_INT64 ? MAX_INT64 : approvalBigInt;
+
+          console.log("Approving HTS token:", hederaTokenAddress);
+          console.log("For spender:", hederaPaymentsAddress);
+          console.log("Amount:", hederaAllowanceAmount.toString());
+
+          // Get the signer from dappConnector
+          const signer = dappConnector.signers?.[0];
+          if (!signer) {
+            throw new Error("No signer available from wallet");
+          }
+
+          // Create approval transaction using AccountAllowanceApproveTransaction
+          const hederaClient = Client.forTestnet();
+
+          const approveTx = new AccountAllowanceApproveTransaction()
+            .approveTokenAllowance(
+              TokenId.fromString(hederaTokenAddress),
+              AccountId.fromString(accountId),
+              AccountId.fromString(hederaPaymentsAddress),
+              Number(hederaAllowanceAmount)
+            )
+            .setTransactionId(
+              TransactionId.generate(AccountId.fromString(accountId))
+            )
+            .setNodeAccountIds([AccountId.fromString("0.0.3")]);
+
+          // Freeze the transaction
+          await approveTx.freezeWith(hederaClient);
+
+          // Execute with signer
+          const txResponse = await approveTx.executeWithSigner(signer);
+          const txId = txResponse.transactionId;
+
+          console.log("✅ Payments approved, tx ID:", txId.toString());
           toast.success("Payments approval successful!");
-          return tx.hash;
+          return txId.toString();
         }
       } catch (error: any) {
         console.error("Approve payments failed:", error);
@@ -219,7 +325,7 @@ export const useAjoCore = (ajoCoreAddress?: string) => {
         setLoading(false);
       }
     },
-    [walletInterface, accountId, isMetaMask]
+    [walletInterface, accountId, isMetaMask, convertEvmToHederaAddress]
   );
 
   /**
@@ -254,11 +360,11 @@ export const useAjoCore = (ajoCoreAddress?: string) => {
           await Promise.all([
             tokenContract.allowance(
               convertToEvmAddress(accountId),
-              convertToEvmAddress(collateralAddress)
+              collateralAddress
             ),
             tokenContract.allowance(
               convertToEvmAddress(accountId),
-              convertToEvmAddress(paymentsAddress)
+              paymentsAddress
             ),
             tokenContract.balanceOf(convertToEvmAddress(accountId)),
           ]);
@@ -299,7 +405,7 @@ export const useAjoCore = (ajoCoreAddress?: string) => {
 
       setLoading(true);
       try {
-        // Step 1: Check if approvals are needed
+        // Step 1: Check current allowances
         const allowances = await checkAllowances(
           collateralAddress,
           paymentsAddress,
@@ -308,20 +414,106 @@ export const useAjoCore = (ajoCoreAddress?: string) => {
         const requiredCollateral = await getRequiredCollateral(tokenChoice);
 
         const collateralNeeded = parseFloat(requiredCollateral);
-        const paymentsNeeded = parseFloat(requiredCollateral); // Approximate
+        const paymentsNeeded = parseFloat(requiredCollateral);
 
-        // Step 2: Approve if needed
+        console.log("💰 Pre-join checks:");
+        console.log("- Collateral allowance:", allowances.collateralAllowance);
+        console.log("- Payments allowance:", allowances.paymentsAllowance);
+        console.log("- Balance:", allowances.balance);
+        console.log("- Required:", requiredCollateral);
+
+        // Check sufficient balance
+        if (parseFloat(allowances.balance) < collateralNeeded) {
+          toast.error(
+            `Insufficient balance! Need ${collateralNeeded} but have ${allowances.balance}`
+          );
+          throw new Error("Insufficient token balance");
+        }
+
+        // Step 2: Approve if needed (with proper waiting)
         if (parseFloat(allowances.collateralAllowance) < collateralNeeded) {
           toast.info("Approving collateral...");
           await approveCollateral(collateralAddress, tokenChoice);
+
+          // Wait for approval to be confirmed on-chain
+          console.log("⏳ Waiting for collateral approval to confirm...");
+          await new Promise((resolve) => setTimeout(resolve, 5000));
+
+          // Verify the approval went through
+          const newAllowances = await checkAllowances(
+            collateralAddress,
+            paymentsAddress,
+            tokenChoice
+          );
+          console.log(
+            "✅ New collateral allowance:",
+            newAllowances.collateralAllowance
+          );
+
+          if (
+            parseFloat(newAllowances.collateralAllowance) < collateralNeeded
+          ) {
+            throw new Error(
+              "Collateral approval did not complete successfully"
+            );
+          }
         }
 
         if (parseFloat(allowances.paymentsAllowance) < paymentsNeeded) {
           toast.info("Approving payments...");
           await approvePayments(paymentsAddress, tokenChoice);
+
+          // Wait for approval to be confirmed on-chain
+          console.log("⏳ Waiting for payments approval to confirm...");
+          await new Promise((resolve) => setTimeout(resolve, 5000));
+
+          // Verify the approval went through
+          const newAllowances = await checkAllowances(
+            collateralAddress,
+            paymentsAddress,
+            tokenChoice
+          );
+          console.log(
+            "✅ New payments allowance:",
+            newAllowances.paymentsAllowance
+          );
+
+          if (parseFloat(newAllowances.paymentsAllowance) < paymentsNeeded) {
+            throw new Error("Payments approval did not complete successfully");
+          }
         }
 
-        // Step 3: Join Ajo
+        // Step 3: Final verification before joining
+        console.log("🔍 Final pre-join verification...");
+        const finalAllowances = await checkAllowances(
+          collateralAddress,
+          paymentsAddress,
+          tokenChoice
+        );
+
+        console.log("Final state:");
+        console.log(
+          "- Collateral allowance:",
+          finalAllowances.collateralAllowance
+        );
+        console.log("- Payments allowance:", finalAllowances.paymentsAllowance);
+        console.log("- Balance:", finalAllowances.balance);
+
+        if (
+          parseFloat(finalAllowances.collateralAllowance) < collateralNeeded
+        ) {
+          throw new Error(
+            `Collateral allowance still insufficient: ${finalAllowances.collateralAllowance} < ${collateralNeeded}`
+          );
+        }
+
+        if (parseFloat(finalAllowances.paymentsAllowance) < paymentsNeeded) {
+          throw new Error(
+            `Payments allowance still insufficient: ${finalAllowances.paymentsAllowance} < ${paymentsNeeded}`
+          );
+        }
+
+        // Step 4: Join Ajo
         toast.info("Joining Ajo...");
 
         if (isMetaMask) {
@@ -330,7 +522,7 @@ export const useAjoCore = (ajoCoreAddress?: string) => {
           );
           const signer = provider.getSigner();
           const contract = new ethers.Contract(
-            convertToEvmAddress(contractAddress),
+            contractAddress,
             AjoCoreABI.abi,
             signer
           );
@@ -342,6 +534,14 @@ export const useAjoCore = (ajoCoreAddress?: string) => {
           toast.success("Successfully joined Ajo!");
           return receipt.transactionHash;
         } else {
+          // HashPack/WalletConnect
+          const hederaContractAddress = await convertEvmToHederaAddress(
+            contractAddress
+          );
+
+          console.log("🎯 Joining Ajo on contract:", hederaContractAddress);
+          console.log("🔢 Token choice:", tokenChoice);
+
           const params = new ContractFunctionParameterBuilder().addParam({
             type: "uint8",
             name: "tokenChoice",
@@ -349,18 +549,35 @@ export const useAjoCore = (ajoCoreAddress?: string) => {
           });
 
           const txId = await walletInterface.executeContractFunction(
-            ContractId.fromString(convertToHederaAddress(contractAddress)),
+            ContractId.fromString(hederaContractAddress),
             "joinAjo",
             params,
             3_000_000
           );
+
+          console.log("📝 Join Ajo transaction ID:", txId?.toString());
           toast.success("Successfully joined Ajo!");
           return txId?.toString() || null;
         }
       } catch (error: any) {
-        console.error("Join Ajo failed:", error);
-        toast.error(error.message || "Failed to join Ajo");
-        throw new Error(error.message || "Failed to join Ajo");
+        console.error("❌ Join Ajo failed:", error);
+
+        let errorMessage = "Failed to join Ajo";
+        if (error.message) {
+          if (error.message.includes("CollateralNotTransferred")) {
+            errorMessage =
+              "Collateral transfer failed. Your approvals may not have been confirmed yet. Please try again in a few seconds.";
+          } else if (error.message.includes("Insufficient")) {
+            errorMessage = error.message;
+          } else if (error.message.includes("allowance")) {
+            errorMessage = error.message;
+          } else {
+            errorMessage = error.message;
+          }
+        }
+
+        toast.error(errorMessage);
+        throw new Error(errorMessage);
       } finally {
         setLoading(false);
       }
@@ -373,6 +590,7 @@ export const useAjoCore = (ajoCoreAddress?: string) => {
       approveCollateral,
       approvePayments,
       checkAllowances,
+      convertEvmToHederaAddress,
     ]
   );
 
@@ -392,7 +610,7 @@ export const useAjoCore = (ajoCoreAddress?: string) => {
         );
         const signer = provider.getSigner();
         const contract = new ethers.Contract(
-          convertToEvmAddress(contractAddress),
+          contractAddress,
           AjoCoreABI.abi,
           signer
         );
@@ -403,9 +621,12 @@ export const useAjoCore = (ajoCoreAddress?: string) => {
         const receipt = await tx.wait();
         return receipt.transactionHash;
       } else {
+        const hederaContractAddress = await convertEvmToHederaAddress(
+          contractAddress
+        );
         const params = new ContractFunctionParameterBuilder();
         const txId = await walletInterface.executeContractFunction(
-          ContractId.fromString(convertToHederaAddress(contractAddress)),
+          ContractId.fromString(hederaContractAddress),
           "processPayment",
           params,
           3_000_000
@@ -418,7 +639,13 @@ export const useAjoCore = (ajoCoreAddress?: string) => {
     } finally {
       setLoading(false);
     }
-  }, [walletInterface, accountId, contractAddress, isMetaMask]);
+  }, [
+    walletInterface,
+    accountId,
+    contractAddress,
+    isMetaMask,
+    convertEvmToHederaAddress,
+  ]);
 
   /**
    * Distribute payout to current cycle receiver
@@ -436,7 +663,7 @@ export const useAjoCore = (ajoCoreAddress?: string) => {
         );
         const signer = provider.getSigner();
         const contract = new ethers.Contract(
-          convertToEvmAddress(contractAddress),
+          contractAddress,
           AjoCoreABI.abi,
           signer
         );
@@ -447,9 +674,12 @@ export const useAjoCore = (ajoCoreAddress?: string) => {
         const receipt = await tx.wait();
         return receipt.transactionHash;
       } else {
+        const hederaContractAddress = await convertEvmToHederaAddress(
+          contractAddress
+        );
         const params = new ContractFunctionParameterBuilder();
         const txId = await walletInterface.executeContractFunction(
-          ContractId.fromString(convertToHederaAddress(contractAddress)),
+          ContractId.fromString(hederaContractAddress),
           "distributePayout",
           params,
           3_000_000
@@ -462,7 +692,13 @@ export const useAjoCore = (ajoCoreAddress?: string) => {
     } finally {
       setLoading(false);
     }
-  }, [walletInterface, accountId, contractAddress, isMetaMask]);
+  }, [
+    walletInterface,
+    accountId,
+    contractAddress,
+    isMetaMask,
+    convertEvmToHederaAddress,
+  ]);
 
   /**
    * Exit from Ajo (withdraw collateral and exit)
@@ -480,7 +716,7 @@ export const useAjoCore = (ajoCoreAddress?: string) => {
         );
         const signer = provider.getSigner();
         const contract = new ethers.Contract(
-          convertToEvmAddress(contractAddress),
+          contractAddress,
           AjoCoreABI.abi,
           signer
         );
@@ -491,9 +727,12 @@ export const useAjoCore = (ajoCoreAddress?: string) => {
         const receipt = await tx.wait();
         return receipt.transactionHash;
       } else {
+        const hederaContractAddress = await convertEvmToHederaAddress(
+          contractAddress
+        );
         const params = new ContractFunctionParameterBuilder();
         const txId = await walletInterface.executeContractFunction(
-          ContractId.fromString(convertToHederaAddress(contractAddress)),
+          ContractId.fromString(hederaContractAddress),
           "exitAjo",
           params,
           3_000_000
@@ -506,7 +745,13 @@ export const useAjoCore = (ajoCoreAddress?: string) => {
     } finally {
       setLoading(false);
     }
-  }, [walletInterface, accountId, contractAddress, isMetaMask]);
+  }, [
+    walletInterface,
+    accountId,
+    contractAddress,
+    isMetaMask,
+    convertEvmToHederaAddress,
+  ]);
 
   /**
    * Get member information
@@ -651,9 +896,8 @@ export const useAjoCore = (ajoCoreAddress?: string) => {
   );
 
   /**
-   * Get required collateral for joining
+   * Get Token configuration
    */
-
   const getTokenConfig = useCallback(
     async (token: number) => {
       try {
@@ -680,9 +924,8 @@ export const useAjoCore = (ajoCoreAddress?: string) => {
   );
 
   /**
-   * Get required collateral demo
+   * Get Collateral demo
    */
-
   const getCollateralDemo = useCallback(
     async (participants: number, monthlyPayment: string) => {
       try {

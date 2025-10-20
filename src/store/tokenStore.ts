@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 
 interface TokenState {
   hbar: string | null;
+  whbar: string | null;
   usdc: string | null;
   loading: boolean;
   nairaRate: number;
@@ -10,6 +11,7 @@ interface TokenState {
   error: string | null;
   setAddress: (add: string) => void;
   setHbar: (bal: string) => void;
+  setWhbar: (bal: string) => void;
   setNaira: (bal: number) => void;
   setUsdc: (bal: string) => void;
   setLoading: (loading: boolean) => void;
@@ -21,6 +23,7 @@ export const useTokenStore = create<TokenState>()(
   persist(
     (set) => ({
       hbar: null,
+      whbar: null,
       usdc: null,
       nairaRate: 0,
       address: "",
@@ -28,6 +31,7 @@ export const useTokenStore = create<TokenState>()(
       error: null,
       setAddress: (add) => set({ address: add }),
       setHbar: (bal) => set({ hbar: bal }),
+      setWhbar: (bal) => set({ whbar: bal }),
       setNaira: (bal) => set({ nairaRate: bal }),
       setUsdc: (bal) => set({ usdc: bal }),
       setLoading: (loading) => set({ loading }),
