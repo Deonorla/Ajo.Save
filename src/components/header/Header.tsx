@@ -26,6 +26,8 @@ import { appConfig } from "../../config";
 import { AccountId } from "@hashgraph/sdk";
 import WalletModal from "../ui/WalletModal";
 import { useTokenMinting } from "@/hooks/useTokenMinting";
+import { Tooltip, Whisper, Button } from "rsuite";
+import "rsuite/Tooltip/styles/index.css";
 
 // Helper to convert Hedera address format (0.0.X) to EVM format (0x...)
 const convertHederaToEvmAddress = (hederaAddress: string): string => {
@@ -302,12 +304,6 @@ const Header = () => {
                           </span>
                           <span className="text-sm font-bold text-foreground">
                             {usdc} USDC
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            |
-                          </span>
-                          <span className="text-sm font-bold text-foreground">
-                            {whbar} WHBAR
                           </span>
                         </div>
                       </div>
@@ -607,13 +603,15 @@ const Header = () => {
       </nav>
 
       {/* Floating Create Ajo Button */}
-      <div className="fixed bottom-6 right-6 z-40">
-        <button
-          onClick={() => navigate("/ajo/create-ajo")}
-          className="bg-gradient-to-r from-primary to-accent text-white p-4 rounded-full shadow-2xl hover:shadow-primary/50 transition-all duration-300 hover:scale-110 group"
-        >
-          <Coins className="h-6 w-6 group-hover:rotate-180 transition-transform duration-300" />
-        </button>
+      <div className="fixed bottom-6 right-6 z-40 cursor-pointer">
+        <Whisper placement="auto" speaker={<Tooltip>Create Ajo</Tooltip>}>
+          <button
+            onClick={() => navigate("/ajo/create-ajo")}
+            className="bg-gradient-to-r from-primary to-accent text-white p-4 rounded-full shadow-2xl hover:shadow-primary/50 transition-all duration-300 hover:scale-110 group"
+          >
+            <Coins className="h-6 w-6 group-hover:rotate-180 transition-transform duration-300" />
+          </button>
+        </Whisper>
       </div>
 
       {/* Mint Modal */}
@@ -660,9 +658,9 @@ const Header = () => {
                     <span>Mint 1,000 USDC + 1,000 WHBAR</span>
                   )}
                 </button>
-                <p className="text-xs text-muted-foreground mt-2 text-center">
+                {/* <p className="text-xs text-muted-foreground mt-2 text-center">
                   Perfect amount to join an Ajo and participate
-                </p>
+                </p> */}
               </div>
 
               {/* Custom Amount */}
@@ -680,7 +678,7 @@ const Header = () => {
                       value={customUSDC}
                       onChange={(e) => setCustomUSDC(e.target.value)}
                       placeholder="1000"
-                      className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors text-foreground"
+                      className="w-full px-4 py-3 bg-background border rounded-lg focus:ring-0 outline-none focus:ring-primary focus:border-primary transition-colors text-foreground"
                       disabled={minting}
                     />
                   </div>
@@ -693,7 +691,7 @@ const Header = () => {
                       value={customHBAR}
                       onChange={(e) => setCustomHBAR(e.target.value)}
                       placeholder="1000"
-                      className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors text-foreground"
+                      className="w-full px-4 py-3 bg-background border rounded-lg focus:ring-0 outline-none focus:ring-primary focus:border-primary transition-colors text-foreground"
                       disabled={minting}
                     />
                   </div>

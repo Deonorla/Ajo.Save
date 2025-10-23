@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useWallet } from "@/auth/WalletContext";
 import { useTokenStore } from "@/store/tokenStore";
-import ProfileHeader from "@/components/profile/ProfileHeader";
 import StatsCard from "@/components/profile/StatsCard";
 import ProfileNavigationTab from "@/components/profile/ProfileNavigationTab";
 import ProfileOverview from "@/components/profile/ProfileOverview";
@@ -12,6 +11,7 @@ import ProfileRecentActivity from "@/components/profile/ProfileRecentActivity";
 // import useAjoCore from "@/hooks/useAjoCore";
 import { useAjoStore } from "@/store/ajoStore";
 import { useParams } from "react-router-dom";
+import Header from "@/components/header/Header";
 
 const Profile = () => {
   // const { ajoId, ajoCore } = useParams<{ ajoId: string; ajoCore: string }>();
@@ -80,9 +80,9 @@ const Profile = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <ProfileHeader />
+      <Header />
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         {/* Profile Header */}
 
         <UserProfileCard

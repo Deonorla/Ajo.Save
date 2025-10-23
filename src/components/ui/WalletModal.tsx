@@ -49,7 +49,7 @@ const WalletModal: React.FC<WalletModalProps> = ({
           </button>
 
           {/* MetaMask Option */}
-          <button
+          {/* <button
             onClick={onSelectMetamask}
             className="w-full flex items-center justify-between p-4 bg-gray-700/50 hover:bg-gray-700 transition-colors duration-200 rounded-lg border border-gray-600 group"
           >
@@ -58,7 +58,7 @@ const WalletModal: React.FC<WalletModalProps> = ({
               <span className="font-semibold text-white">MetaMask / EVM</span>
             </div>
             <ArrowRight className="h-5 w-5 text-yellow-500 group-hover:translate-x-1 transition-transform" />
-          </button>
+          </button> */}
         </div>
       </div>
     </div>

@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import ProfileHeader from "@/components/profile/ProfileHeader";
 import AjoDetailsCard from "@/components/ajo-details-page/AjoDetailsCard";
 import AjoDetailsStatsGrid from "@/components/ajo-details-page/AjoDetailsStatsGrid";
 import AjoDetailsNavigationTab from "@/components/ajo-details-page/AjoDetailsNavigationTab";
@@ -11,32 +10,37 @@ import AjoGovernance from "@/components/ajo-details-page/AjoGovernance";
 import { useAjoCore } from "@/hooks/useAjoCore";
 import { useWallet } from "@/auth/WalletContext";
 import { useTokenStore } from "@/store/tokenStore";
-import { hederaAccountToEvmAddress, useAjoDetails } from "@/utils/utils";
+import {
+  hederaAccountToEvmAddress,
+  useAjoDetails,
+  useIndividualMemberDetails,
+} from "@/utils/utils";
 import { useAjoFactory } from "@/hooks/useAjoFactory";
 import { useParams } from "react-router-dom";
 import { useAjoDetailsStore } from "@/store/ajoDetailsStore";
+import Header from "@/components/header/Header";
+import useAjoMembers from "@/hooks/useAjoMembers";
+import { usePaymentStore } from "@/store/ajoPaymentStore";
 
 const AjoDetails = () => {
   const { ajoId, ajoCore } = useParams<{ ajoId: string; ajoCore: string }>();
   const parsedId = ajoId ? parseInt(ajoId, 10) : 0;
   const { address } = useTokenStore();
   const ajo = useAjoDetails();
+  const member = useIndividualMemberDetails(address ? address : "");
   const {
     getMemberInfo,
     // getQueueInfo,
     getTokenConfig,
     // needsToPayThisCycle,
   } = useAjoCore(ajoCore ? ajoCore : "");
+  const { getAllMembersDetails } = useAjoMembers(ajo ? ajo?.ajoMembers : "");
   const loadNewAjo = useAjoDetailsStore((state) => state.loadNewAjo);
   const { getAjoOperationalStatus } = useAjoFactory();
   const [isVisible, setIsVisible] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
-  const [contractStats, setContractStats] = useState<ContractStats | null>(
-    null
-  );
+  const { monthlyPayment, setMonthlyPayment } = usePaymentStore();
   const [lastUpdated, setLastUpdated] = useState(new Date());
-  const [monthlyPayment, setMonthlyPayment] = useState<string | undefined>("");
-  // const { accountId } = useWallet();
 
   useEffect(() => {
     if (parsedId) {
@@ -57,10 +61,8 @@ const AjoDetails = () => {
   //  Get member info
   const _getMemberInfo = useCallback(async () => {
     try {
-      // const evmAddress = hederaAccountToEvmAddress(accountId ? accountId : "");
-      // console.log("✅ evmAddress:", evmAddress);
-      // const info = await getMemberInfo(evmAddress);
-      // console.log("✅ Info:", info);
+      const evmAddress = hederaAccountToEvmAddress(address ? address : "");
+      const info = await getMemberInfo(evmAddress);
     } catch (err) {
       console.log("Error getting member info:", err);
     }
@@ -75,29 +77,41 @@ const AjoDetails = () => {
       // const queue = await getQueueInfo(address);
       const tokenConfig = await getTokenConfig(0);
       // console.log("Token Config", tokenConfig);
-      setMonthlyPayment(tokenConfig?.monthlyPayment);
-      // console.log("monthlyPayment:", monthlyPayment);
+      setMonthlyPayment(Number(tokenConfig?.monthlyPayment) / 1000000);
+      console.log("monthlyPayment:", monthlyPayment);
     } catch (err) {
       console.log("Error fetching member info:", err);
     }
   }, [getMemberInfo]);
+
+  // Fetch all members
+  const getAllMembers = useCallback(async () => {
+    try {
+      await getAllMembersDetails();
+    } catch (err) {
+      console.log("Error:", err);
+    }
+  }, [getAllMembersDetails]);
 
   useEffect(() => {
     setIsVisible(true);
     _getMemberInfo();
     _getAjoOperationalStatus();
     getUserData();
-  }, [getMemberInfo]);
+    getAllMembers();
+  }, [getMemberInfo, getAllMembersDetails]);
 
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <ProfileHeader />
+      <Header />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         {/* Ajo Header */}
         <AjoDetailsCard
           ajo={ajo}
+          member={member.member}
+          memberLoading={member.isLoading}
           monthlyPayment={monthlyPayment}
           isVisible={isVisible}
           lastUpdated={lastUpdated}
@@ -105,11 +119,7 @@ const AjoDetails = () => {
 
         {/* Stats Grid */}
 
-        {/* <AjoDetailsStatsGrid
-          monthlyPayment={monthlyPayment}
-          isVisible={isVisible}
-          contractStats={contractStats}
-        /> */}
+        <AjoDetailsStatsGrid isVisible={isVisible} />
         {/* Tab Navigation */}
 
         <AjoDetailsNavigationTab

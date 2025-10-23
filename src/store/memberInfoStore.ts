@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // store/memberInfoStore.ts
+
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
@@ -80,6 +81,7 @@ export const useMemberStore = create<MemberStore>()(
       cycleConfig: null,
       loading: false,
       error: null,
+      isHydrated: false,
 
       setMemberData: (data) => {
         // ✅ Ensure BigInts are strings before persisting

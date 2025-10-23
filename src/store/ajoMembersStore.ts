@@ -54,18 +54,18 @@ export const deserializeMembers = (members: MemberDetail[]) =>
   }));
 
 export const useMembersStore = create<MembersStoreState>()(
-  persist(
-    (set) => ({
-      membersDetails: [],
-      setMembersDetails: (members: any[]) => {
-        const serialized = serializeMembers(members);
-        set({ membersDetails: serialized });
-      },
-      clearMembersDetails: () => set({ membersDetails: [] }),
-    }),
-    {
-      name: "ajo-members-storage", // localStorage key
-      version: 1,
-    }
-  )
+  // persist(
+  (set) => ({
+    membersDetails: [],
+    setMembersDetails: (members: any[]) => {
+      const serialized = serializeMembers(members);
+      set({ membersDetails: serialized });
+    },
+    clearMembersDetails: () => set({ membersDetails: [] }),
+  })
+  // {
+  //   name: "ajo-members-storage", // localStorage key
+  //   version: 1,
+  // }
+  // )
 );

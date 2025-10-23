@@ -1,6 +1,7 @@
 import { useParams } from "react-router-dom";
 import { useAjoStore } from "./../store/ajoStore";
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMembersStore, type MemberDetail } from "@/store/ajoMembersStore";
 
 export const formatAddress = (address: string) => {
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -38,6 +39,95 @@ export const useAjoDetails = () => {
   }, [ajoId, ajoCore, ajoInfos]);
 
   return ajo;
+};
+
+export const useIndividualMemberDetails = (memberAddress: string) => {
+  const { membersDetails } = useMembersStore();
+  const [member, setMember] = useState<MemberDetail | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Helper to check if an address is an HTS token (starts with many zeros)
+  const isHtsToken = (address: string): boolean => {
+    if (!address.startsWith("0x")) return false;
+    return address.toLowerCase().startsWith("0x" + "0".repeat(30));
+  };
+
+  // Helper to convert EVM address to Hedera using mirror node
+  const convertEvmToHederaAddress = useCallback(
+    async (evmAddress: string): Promise<string> => {
+      if (!evmAddress.startsWith("0x")) return evmAddress;
+
+      // If it's an HTS token, extract the token ID directly
+      if (isHtsToken(evmAddress)) {
+        const tokenNum = BigInt(evmAddress);
+        const hederaId = `0.0.${tokenNum.toString()}`;
+        // console.log(`✅ HTS Token ${evmAddress} -> ${hederaId}`);
+        return hederaId;
+      }
+
+      try {
+        const mirrorNodeUrl =
+          import.meta.env.VITE_HEDERA_MIRROR_NODE_URL ||
+          "https://testnet.mirrornode.hedera.com";
+
+        const response = await fetch(
+          `${mirrorNodeUrl}/api/v1/accounts/${evmAddress}`
+        );
+
+        if (!response.ok) {
+          throw new Error(`Mirror node query failed: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        const hederaId = data.account;
+        // console.log(`✅ Converted ${evmAddress} to ${hederaId}`);
+        return hederaId;
+      } catch (error) {
+        console.error("Failed to convert EVM to Hedera address:", error);
+        throw new Error(
+          `Could not convert address ${evmAddress} to Hedera format`
+        );
+      }
+    },
+    []
+  );
+
+  useEffect(() => {
+    const findMember = async () => {
+      if (!memberAddress || membersDetails.length === 0) {
+        setMember(null);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        // Check each member's address
+        for (const memberDetail of membersDetails) {
+          const hederaAddress = await convertEvmToHederaAddress(
+            memberDetail.userAddress
+          );
+
+          if (hederaAddress === memberAddress) {
+            setMember(memberDetail);
+            setIsLoading(false);
+            return;
+          }
+        }
+
+        // No match found
+        setMember(null);
+      } catch (error) {
+        console.error("Error finding member:", error);
+        setMember(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    findMember();
+  }, [memberAddress, membersDetails, convertEvmToHederaAddress]);
+  // console.log("individual member details---", member);
+  return { member, isLoading };
 };
 
 // utils/formatTimestamp.ts

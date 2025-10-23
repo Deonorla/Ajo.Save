@@ -1,6 +1,6 @@
 import { useAjoCore } from "@/hooks/useAjoCore";
 // import useAjoMembers from "@/hooks/useAjoMembers";
-// import useAjoPayment from "@/hooks/useAjoPayment";
+import useAjoPayment from "@/hooks/useAjoPayment";
 import { useAjoDetailsStore } from "@/store/ajoDetailsStore";
 import { useMembersStore } from "@/store/ajoMembersStore";
 import { type AjoInfo } from "@/store/ajoStore";
@@ -25,7 +25,7 @@ const AjoOverviewTab = ({ ajo }: { ajo: AjoInfo | null | undefined }) => {
   const { nairaRate } = useTokenStore();
   const { memberData } = useMemberStore();
   const { membersDetails } = useMembersStore();
-  //   const { getCurrentCycle } = useAjoPayment(ajo ? ajo?.ajoPayments : "");
+  const { getCurrentCycle } = useAjoPayment(ajo ? ajo?.ajoPayments : "");
   //   const { getAllMembersDetails } = useAjoMembers(ajo ? ajo?.ajoMembers : "");
   const {
     totalMembers,
@@ -54,10 +54,23 @@ const AjoOverviewTab = ({ ajo }: { ajo: AjoInfo | null | undefined }) => {
     }
   }, []);
 
+  // get current cycle count
+  const _getCurrentCycle = useCallback(async () => {
+    try {
+      const count = await getCurrentCycle();
+      if (!count) return null;
+      setCycleCount(count);
+    } catch (err) {
+      console.log("Error", err);
+    }
+  }, []);
+
   useEffect(() => {
     getFunctions();
-    console.log("Members", membersDetails);
-  }, []);
+    _getCurrentCycle();
+  }, [_getCurrentCycle, getFunctions]);
+
+  useEffect(() => {}, []);
 
   return (
     <div className="grid lg:grid-cols-3 gap-8">
@@ -78,7 +91,7 @@ const AjoOverviewTab = ({ ajo }: { ajo: AjoInfo | null | undefined }) => {
                 Cycle {cycleCount} of {10}
               </span>
               <span className="text-sm font-semibold text-card-foreground">
-                {/* Next payout: Queue {cycleCount} */}
+                Next payout: Queue {cycleCount}
               </span>
             </div>
 
@@ -93,14 +106,18 @@ const AjoOverviewTab = ({ ajo }: { ajo: AjoInfo | null | undefined }) => {
 
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
-                <div className="text-2xl font-bold text-primary">{0}</div>
+                <div className="text-2xl font-bold text-primary">
+                  {cycleCount}
+                </div>
                 <div className="text-sm text-muted-foreground">Completed</div>
               </div>
               <div>
                 <div className="text-2xl font-bold text-accent">
                   {totalMembers}
                 </div>
-                <div className="text-sm text-muted-foreground">Active</div>
+                <div className="text-sm text-muted-foreground">
+                  Active Members
+                </div>
               </div>
               <div>
                 <div className="text-2xl font-bold text-muted-foreground">

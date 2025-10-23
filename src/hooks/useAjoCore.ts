@@ -433,7 +433,11 @@ export const useAjoCore = (ajoCoreAddress?: string) => {
         // Step 2: Approve if needed (with proper waiting)
         if (parseFloat(allowances.collateralAllowance) < collateralNeeded) {
           toast.info("Approving collateral...");
-          await approveCollateral(collateralAddress, tokenChoice);
+          await approveCollateral(
+            collateralAddress,
+            tokenChoice,
+            requiredCollateral === "0" ? "1000" : requiredCollateral
+          );
 
           // Wait for approval to be confirmed on-chain
           console.log("⏳ Waiting for collateral approval to confirm...");
@@ -461,7 +465,11 @@ export const useAjoCore = (ajoCoreAddress?: string) => {
 
         if (parseFloat(allowances.paymentsAllowance) < paymentsNeeded) {
           toast.info("Approving payments...");
-          await approvePayments(paymentsAddress, tokenChoice);
+          await approvePayments(
+            paymentsAddress,
+            tokenChoice,
+            requiredCollateral === "0" ? "1000" : requiredCollateral
+          );
 
           // Wait for approval to be confirmed on-chain
           console.log("⏳ Waiting for payments approval to confirm...");
@@ -595,57 +603,186 @@ export const useAjoCore = (ajoCoreAddress?: string) => {
   );
 
   /**
+   * Check payment token allowance
+   */
+  const checkPaymentAllowance = useCallback(
+    async (ajoPaymentAddress: string, tokenChoice: PaymentToken) => {
+      if (!accountId) {
+        throw new Error("Wallet not connected");
+      }
+
+      try {
+        const tokenAddress =
+          tokenChoice === PaymentToken.USDC
+            ? USDC_TOKEN_ADDRESS
+            : HBAR_TOKEN_ADDRESS;
+
+        const provider = new ethers.providers.JsonRpcProvider(
+          import.meta.env.VITE_HEDERA_JSON_RPC_RELAY_URL ||
+            "https://testnet.hashio.io/api"
+        );
+        const tokenContract = new ethers.Contract(
+          tokenAddress,
+          ERC20_ABI,
+          provider
+        );
+
+        const [allowance, balance] = await Promise.all([
+          tokenContract.allowance(
+            convertToEvmAddress(accountId),
+            ajoPaymentAddress
+          ),
+          tokenContract.balanceOf(convertToEvmAddress(accountId)),
+        ]);
+
+        const decimals = tokenChoice === PaymentToken.USDC ? 6 : 8;
+        return {
+          allowance: ethers.utils.formatUnits(allowance, decimals),
+          balance: ethers.utils.formatUnits(balance, decimals),
+        };
+      } catch (error: any) {
+        console.error("Check payment allowance failed:", error);
+        throw new Error(error.message || "Failed to check payment allowance");
+      }
+    },
+    [accountId]
+  );
+
+  /**
    * Process monthly payment
    */
-  const processPayment = useCallback(async () => {
-    if (!walletInterface || !accountId) {
-      throw new Error("Wallet not connected");
-    }
-
-    setLoading(true);
-    try {
-      if (isMetaMask) {
-        const provider = new ethers.providers.Web3Provider(
-          (window as any).ethereum
-        );
-        const signer = provider.getSigner();
-        const contract = new ethers.Contract(
-          contractAddress,
-          AjoCoreABI.abi,
-          signer
-        );
-
-        const tx = await contract.processPayment({
-          gasLimit: ethers.utils.hexlify(3_000_000),
-        });
-        const receipt = await tx.wait();
-        return receipt.transactionHash;
-      } else {
-        const hederaContractAddress = await convertEvmToHederaAddress(
-          contractAddress
-        );
-        const params = new ContractFunctionParameterBuilder();
-        const txId = await walletInterface.executeContractFunction(
-          ContractId.fromString(hederaContractAddress),
-          "processPayment",
-          params,
-          3_000_000
-        );
-        return txId?.toString() || null;
+  const processPayment = useCallback(
+    async (
+      ajoPaymentAddress: string,
+      tokenChoice: PaymentToken = PaymentToken.USDC
+    ) => {
+      if (!walletInterface || !accountId) {
+        throw new Error("Wallet not connected");
       }
-    } catch (error: any) {
-      console.error("Process payment failed:", error);
-      throw new Error(error.message || "Failed to process payment");
-    } finally {
-      setLoading(false);
-    }
-  }, [
-    walletInterface,
-    accountId,
-    contractAddress,
-    isMetaMask,
-    convertEvmToHederaAddress,
-  ]);
+
+      setLoading(true);
+      try {
+        // Step 1: Get monthly payment amount from contract
+        const provider = new ethers.providers.JsonRpcProvider(
+          import.meta.env.VITE_HEDERA_JSON_RPC_RELAY_URL ||
+            "https://testnet.hashio.io/api"
+        );
+
+        const paymentContract = new ethers.Contract(
+          ajoPaymentAddress,
+          AjoCoreABI.abi,
+          provider
+        );
+        const tokenConfig = await paymentContract.getTokenConfig(tokenChoice);
+        const monthlyPayment = tokenConfig.monthlyPayment;
+        const decimals = tokenChoice === PaymentToken.USDC ? 6 : 8;
+        const monthlyPaymentFormatted = ethers.utils.formatUnits(
+          monthlyPayment,
+          decimals
+        );
+
+        console.log(`💵 Monthly payment required: ${monthlyPaymentFormatted}`);
+
+        // Step 2: Check allowance and balance
+        const { allowance, balance } = await checkPaymentAllowance(
+          ajoPaymentAddress,
+          tokenChoice
+        );
+
+        console.log("💳 Current allowance:", allowance);
+        console.log("💵 Current balance:", balance);
+
+        if (parseFloat(balance) < parseFloat(monthlyPaymentFormatted)) {
+          toast.error(
+            `Insufficient balance! Need ${monthlyPaymentFormatted} but have ${balance}`
+          );
+          throw new Error("Insufficient token balance");
+        }
+        // Step 3: Approve if needed
+        if (parseFloat(allowance) < parseFloat(monthlyPaymentFormatted)) {
+          toast.info("Approving payment...");
+          await approvePayments(
+            ajoPaymentAddress,
+            tokenChoice,
+            monthlyPaymentFormatted
+          );
+
+          // Wait for approval to be confirmed on-chain
+          console.log("⏳ Waiting for payment approval to confirm...");
+          await new Promise((resolve) => setTimeout(resolve, 5000));
+
+          // Verify the approval went through
+          const newAllowanceData = await checkPaymentAllowance(
+            ajoPaymentAddress,
+            tokenChoice
+          );
+          console.log("✅ New payment allowance:", newAllowanceData.allowance);
+          if (
+            parseFloat(newAllowanceData.allowance) <
+            parseFloat(monthlyPaymentFormatted)
+          ) {
+            throw new Error("Payment approval did not complete successfully");
+          }
+        }
+
+        // Step 4: Process payment
+        toast.info("Processing payment...");
+        if (isMetaMask) {
+          const provider = new ethers.providers.Web3Provider(
+            (window as any).ethereum
+          );
+          const signer = provider.getSigner();
+          const contract = new ethers.Contract(
+            contractAddress,
+            AjoCoreABI.abi,
+            signer
+          );
+
+          const tx = await contract.processPayment({
+            gasLimit: ethers.utils.hexlify(3_000_000),
+          });
+          const receipt = await tx.wait();
+          return receipt.transactionHash;
+        } else {
+          const hederaContractAddress = await convertEvmToHederaAddress(
+            contractAddress
+          );
+          const params = new ContractFunctionParameterBuilder();
+          const txId = await walletInterface.executeContractFunction(
+            ContractId.fromString(hederaContractAddress),
+            "processPayment",
+            params,
+            3_000_000
+          );
+          return txId?.toString() || null;
+        }
+      } catch (error: any) {
+        console.error("❌ Process payment failed:", error);
+
+        let errorMessage = "Failed to process payment";
+        if (error.message) {
+          if (error.message.includes("Insufficient")) {
+            errorMessage = error.message;
+          } else if (error.message.includes("allowance")) {
+            errorMessage = error.message;
+          } else if (error.message.includes("already paid")) {
+            errorMessage = "You have already paid for this cycle";
+          } else {
+            errorMessage = error.message;
+          }
+        }
+      } finally {
+        setLoading(false);
+      }
+    },
+    [
+      walletInterface,
+      accountId,
+      contractAddress,
+      isMetaMask,
+      convertEvmToHederaAddress,
+    ]
+  );
 
   /**
    * Distribute payout to current cycle receiver
@@ -684,6 +821,7 @@ export const useAjoCore = (ajoCoreAddress?: string) => {
           params,
           3_000_000
         );
+        console.log("Distributed");
         return txId?.toString() || null;
       }
     } catch (error: any) {

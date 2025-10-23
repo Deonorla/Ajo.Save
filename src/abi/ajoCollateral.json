@@ -108,6 +108,37 @@
         {
           "indexed": true,
           "internalType": "address",
+          "name": "defaulter",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "guarantor",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "totalAmount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "enum PaymentToken",
+          "name": "token",
+          "type": "uint8"
+        }
+      ],
+      "name": "CollateralSeized",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
           "name": "member",
           "type": "address"
         },

@@ -8,10 +8,16 @@ export interface AjoDetailsState {
   ajoId: number | null;
   ajoCore?: string;
   totalMembers: string;
+  activeMembers: string;
+  totalCollateralUSDC: string;
+  totalCollateralHBAR: string;
+  contractBalanceUSDC: string;
+  contractBalanceHBAR: string;
   currentCycle: string;
+  activeToken: string;
   canAcceptMembers: boolean;
-  hasActiveGovernance: boolean;
-  hasActiveScheduling: boolean;
+  canProcessPayments: boolean;
+  canDistributePayouts: boolean;
   setAjoDetails: (details: Partial<AjoDetailsState>) => void;
   resetAjoDetails: () => void;
   loadNewAjo: (ajoId: number) => void;
@@ -24,10 +30,16 @@ const initialState: Omit<
   ajoId: null,
   ajoCore: "",
   totalMembers: "0",
+  activeMembers: "0",
+  totalCollateralUSDC: "0",
+  totalCollateralHBAR: "0",
+  contractBalanceUSDC: "0",
+  contractBalanceHBAR: "0",
   currentCycle: "0",
+  activeToken: "0",
   canAcceptMembers: false,
-  hasActiveGovernance: false,
-  hasActiveScheduling: false,
+  canProcessPayments: false,
+  canDistributePayouts: false,
 };
 
 export const useAjoDetailsStore = create<AjoDetailsState>()(

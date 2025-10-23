@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { ChevronRight, Zap } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const Hero = () => {
+  const navigate = useNavigate();
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -57,7 +59,10 @@ const Hero = () => {
           </p> */}
 
           {/* Single CTA - longer than illustration */}
-          <button className="bg-primary hover:bg-primary/90 text-primary-foreground px-12 py-4 rounded-full font-semibold text-lg transition-all hover:scale-105 hover:shadow-lg flex items-center space-x-3  h-[7vh] w-fit justify-center cursor-pointer">
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="bg-primary hover:bg-primary/90 text-primary-foreground px-12 py-4 rounded-full font-semibold text-lg transition-all hover:scale-105 hover:shadow-lg flex items-center space-x-3  h-[7vh] w-fit justify-center cursor-pointer"
+          >
             <span className="text-xl">Start Your Ajo Journey</span>
             <ChevronRight className="w-6 h-6 transform transition-transform duration-300 group-hover:translate-x-1 group-hover:rotate-12 animate-ping" />
           </button>

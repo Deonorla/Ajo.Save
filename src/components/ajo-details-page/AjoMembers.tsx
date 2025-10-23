@@ -59,7 +59,7 @@ const AjoMembers = ({ ajo }: { ajo: AjoInfo | null | undefined }) => {
 
                   {selectedAjo?.creator === member.userAddress && (
                     <div className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-accent rounded-full flex items-center justify-center">
-                      <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-accent-foreground" />
+                      <Star className="w-2.5 h-2.5 sm:w-4 sm:h-4 text-accent-foreground" />
                     </div>
                   )}
                 </div>

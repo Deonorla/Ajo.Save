@@ -1051,6 +1051,21 @@
           "internalType": "bool",
           "name": "_useScheduledPayments",
           "type": "bool"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_cycleDuration",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_monthlyPaymentUSDC",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_monthlyPaymentHBAR",
+          "type": "uint256"
         }
       ],
       "name": "createAjo",
@@ -1301,6 +1316,35 @@
           "type": "uint256"
         }
       ],
+      "name": "getAjoConfiguration",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "cycleDuration",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "monthlyPaymentUSDC",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "monthlyPaymentHBAR",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "ajoId",
+          "type": "uint256"
+        }
+      ],
       "name": "getAjoInitializationStatus",
       "outputs": [
         {
@@ -1333,29 +1377,66 @@
       "name": "getAjoOperationalStatus",
       "outputs": [
         {
-          "internalType": "uint256",
-          "name": "totalMembers",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "currentCycle",
-          "type": "uint256"
-        },
-        {
-          "internalType": "bool",
-          "name": "canAcceptMembers",
-          "type": "bool"
-        },
-        {
-          "internalType": "bool",
-          "name": "hasActiveGovernance",
-          "type": "bool"
-        },
-        {
-          "internalType": "bool",
-          "name": "hasActiveScheduling",
-          "type": "bool"
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "totalMembers",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "activeMembers",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "totalCollateralUSDC",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "totalCollateralHBAR",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "contractBalanceUSDC",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "contractBalanceHBAR",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "currentCycle",
+              "type": "uint256"
+            },
+            {
+              "internalType": "enum PaymentToken",
+              "name": "activeToken",
+              "type": "uint8"
+            },
+            {
+              "internalType": "bool",
+              "name": "canAcceptMembers",
+              "type": "bool"
+            },
+            {
+              "internalType": "bool",
+              "name": "canProcessPayments",
+              "type": "bool"
+            },
+            {
+              "internalType": "bool",
+              "name": "canDistributePayouts",
+              "type": "bool"
+            }
+          ],
+          "internalType": "struct AjoFactory.AjoOperationalStatus",
+          "name": "status",
+          "type": "tuple"
         }
       ],
       "stateMutability": "view",
@@ -1644,13 +1725,18 @@
           "internalType": "uint256",
           "name": "ajoId",
           "type": "uint256"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "hcsTopicId",
+          "type": "bytes32"
         }
       ],
       "name": "initializeAjoPhase2",
       "outputs": [
         {
           "internalType": "bytes32",
-          "name": "hcsTopicId",
+          "name": "",
           "type": "bytes32"
         }
       ],

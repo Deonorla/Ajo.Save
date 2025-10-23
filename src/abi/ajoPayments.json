@@ -671,6 +671,19 @@
       "type": "function"
     },
     {
+      "inputs": [],
+      "name": "getCycleDuration",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
       "inputs": [
         {
           "internalType": "uint256",
@@ -1073,13 +1086,6 @@
       "type": "function"
     },
     {
-      "inputs": [],
-      "name": "pausePayments",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
       "inputs": [
         {
           "internalType": "uint256",
@@ -1171,13 +1177,6 @@
     {
       "inputs": [],
       "name": "renounceOwnership",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "resumePayments",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

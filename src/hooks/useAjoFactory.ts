@@ -382,7 +382,10 @@ export const useAjoFactory = (ajoFactoryAddress?: string) => {
     async (
       name: string,
       usesHtsTokens: boolean,
-      usesScheduledPayments: boolean
+      usesScheduledPayments: boolean,
+      cycleDuration: number, // in seconds
+      monthlyPaymentUSDC: number, // in token units
+      monthlyPaymentHBAR: number // in token units
     ) => {
       if (!walletInterface || !accountId) {
         toast.error("Wallet not connected");
@@ -431,6 +434,9 @@ export const useAjoFactory = (ajoFactoryAddress?: string) => {
             name,
             usesHtsTokens,
             usesScheduledPayments,
+            cycleDuration,
+            monthlyPaymentUSDC,
+            monthlyPaymentHBAR,
             {
               gasLimit: ethers.utils.hexlify(5_000_000),
             }
@@ -453,6 +459,21 @@ export const useAjoFactory = (ajoFactoryAddress?: string) => {
               type: "bool",
               name: "usesScheduledPayments",
               value: usesScheduledPayments,
+            })
+            .addParam({
+              type: "uint256",
+              name: "cycleDuration",
+              value: cycleDuration,
+            })
+            .addParam({
+              type: "uint256",
+              name: "monthlyPaymentUSDC",
+              value: monthlyPaymentUSDC,
+            })
+            .addParam({
+              type: "uint256",
+              name: "monthlyPaymentHBAR",
+              value: monthlyPaymentHBAR,
             });
 
           console.log("Params before build:", params);
@@ -703,13 +724,13 @@ export const useAjoFactory = (ajoFactoryAddress?: string) => {
     [walletInterface, accountId, contractAddress, isMetaMask]
   );
 
-  // ... (rest of the functions remain the same - initializeAjoPhase2-5, setHtsTokensForFactory, etc.)
-
   /**
-   * Initialize Ajo Phase 2
+   * Initialize Ajo Phase 2 - WITH HCS Topic ID
+   * @param ajoId - The Ajo ID
+   * @param hcsTopicIdBytes32 - HCS topic ID in bytes32 format
    */
   const initializeAjoPhase2 = useCallback(
-    async (ajoId: number) => {
+    async (ajoId: number, hcsTopicIdBytes32: string) => {
       if (!walletInterface || !accountId) {
         toast.error("Wallet not connected");
         throw new Error("Wallet not connected");
@@ -728,17 +749,30 @@ export const useAjoFactory = (ajoFactoryAddress?: string) => {
             signer
           );
 
-          const tx = await contract.initializeAjoPhase2(ajoId, {
-            gasLimit: ethers.utils.hexlify(3_000_000),
-          });
+          const tx = await contract.initializeAjoPhase2(
+            ajoId,
+            hcsTopicIdBytes32,
+            {
+              gasLimit: ethers.utils.hexlify(3_000_000),
+            }
+          );
           const receipt = await tx.wait();
           return receipt.transactionHash;
         } else {
-          const params = new ContractFunctionParameterBuilder().addParam({
-            type: "uint256",
-            name: "ajoId",
-            value: ajoId,
-          });
+          // ✅ FIX: Convert hex string to Uint8Array
+          const hcsBytes32 = ethers.utils.arrayify(hcsTopicIdBytes32);
+          console.log("✅ hcsTopicBytes32", hcsBytes32);
+          const params = new ContractFunctionParameterBuilder()
+            .addParam({
+              type: "uint256",
+              name: "ajoId",
+              value: ajoId,
+            })
+            .addParam({
+              type: "bytes32",
+              name: "hcsTopicId",
+              value: hcsBytes32,
+            });
 
           const txId = await walletInterface.executeContractFunction(
             getContractId(contractAddress),
@@ -1303,34 +1337,32 @@ export const useAjoFactory = (ajoFactoryAddress?: string) => {
           ajoId: ajoId,
           ajoCore: ajo?.ajoCore,
           totalMembers: bnToString(status.totalMembers),
-          //  activeMembers: bnToString(status.activeMembers),
-          //  totalCollateralUSDC: bnToString(status.totalCollateralUSDC),
-          //  totalCollateralHBAR: bnToString(status.totalCollateralHBAR),
-          //  contractBalanceUSDC: bnToString(status.contractBalanceUSDC),
-          //  contractBalanceHBAR: bnToString(status.contractBalanceHBAR),
+          activeMembers: bnToString(status.activeMembers),
+          totalCollateralUSDC: bnToString(status.totalCollateralUSDC),
+          totalCollateralHBAR: bnToString(status.totalCollateralHBAR),
+          contractBalanceUSDC: bnToString(status.contractBalanceUSDC),
+          contractBalanceHBAR: bnToString(status.contractBalanceHBAR),
           currentCycle: bnToString(status.currentCycle),
-          //  activeToken: String(status.activeToken),
+          activeToken: String(status.activeToken),
           canAcceptMembers: status.canAcceptMembers,
-          hasActiveGovernance: status.hasActiveGovernance,
-          hasActiveScheduling: status.hasActiveScheduling,
-          //  canProcessPayments: status.canProcessPayments,
-          //  canDistributePayouts: status.canDistributePayouts,
+          canProcessPayments: status.canProcessPayments,
+          canDistributePayouts: status.canDistributePayouts,
         });
         // 🔹 Return the typed object
         return {
           totalMembers: status.totalMembers,
-          //  activeMembers: status.activeMembers,
-          //  totalCollateralUSDC: status.totalCollateralUSDC,
-          //  totalCollateralHBAR: status.totalCollateralHBAR,
-          //  contractBalanceUSDC: status.contractBalanceUSDC,
-          //  contractBalanceHBAR: status.contractBalanceHBAR,
+          activeMembers: status.activeMembers,
+          totalCollateralUSDC: status.totalCollateralUSDC,
+          totalCollateralHBAR: status.totalCollateralHBAR,
+          contractBalanceUSDC: status.contractBalanceUSDC,
+          contractBalanceHBAR: status.contractBalanceHBAR,
           currentCycle: status.currentCycle,
-          //  activeToken: status.activeToken,
+          activeToken: status.activeToken,
           canAcceptMembers: status.canAcceptMembers,
-          hasActiveGovernance: status.hasActiveGovernance,
-          hasActiveScheduling: status.hasActiveScheduling,
-          //  canProcessPayments: status.canProcessPayments,
-          //  canDistributePayouts: status.canDistributePayouts,
+          // hasActiveGovernance: status.hasActiveGovernance,
+          // hasActiveScheduling: status.hasActiveScheduling,
+          canProcessPayments: status.canProcessPayments,
+          canDistributePayouts: status.canDistributePayouts,
         };
       } catch (error: any) {
         console.error("Get operational status failed:", error);

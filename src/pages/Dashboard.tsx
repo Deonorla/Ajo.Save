@@ -78,7 +78,6 @@ const Dashboard = () => {
 
   // Initial fetch + wallet balances
   useEffect(() => {
-    loadContractStats();
     fetchAjos();
     getHbarBalance();
   }, [accountId]);

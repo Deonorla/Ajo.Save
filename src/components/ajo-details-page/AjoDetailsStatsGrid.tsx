@@ -1,3 +1,5 @@
+import { useAjoCore } from "@/hooks/useAjoCore";
+import { useWalletInterface } from "@/services/wallets/useWalletInterface";
 import { useAjoDetailsStore } from "@/store/ajoDetailsStore";
 import { useAjoStore } from "@/store/ajoStore";
 import { useMemberStore } from "@/store/memberInfoStore";
@@ -13,31 +15,45 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 
 interface AjoDetailsStatsGridProps {
   isVisible: boolean;
-  contractStats: ContractStats | null;
-  monthlyPayment: string | undefined;
 }
 
-const AjoDetailsStatsGrid = ({
-  isVisible,
-  contractStats,
-  monthlyPayment,
-}: AjoDetailsStatsGridProps) => {
+const AjoDetailsStatsGrid = ({ isVisible }: AjoDetailsStatsGridProps) => {
   const { memberData } = useMemberStore();
   const { nairaRate } = useTokenStore();
+  const { accountId: address } = useWalletInterface();
   const [copied, setCopied] = useState(false);
-  const { activeMembers, totalCollateralUSDC, totalCollateralHBAR } =
+  const { totalMembers, totalCollateralHBAR, totalCollateralUSDC } =
     useAjoDetailsStore();
-
+  const { ajoCore } = useParams<{ ajoId: string; ajoCore: string }>();
+  const { getTokenConfig } = useAjoCore(ajoCore ? ajoCore : "");
   const formattedTotalCollateralHBAR = Number(totalCollateralHBAR) / 1000000;
   const [formattedTotalCollateralUSDC, setFormattedTotalCollateralUSDC] =
     useState(0);
+  const [monthlyPayment, setMonthlyPayment] = useState(0);
+
+  // GET USER DATA
+  const getMonthlyPayement = useCallback(async () => {
+    try {
+      if (!address) {
+        throw "Address not found, connect to hashpack";
+      }
+      const tokenConfig = await getTokenConfig(0);
+      setMonthlyPayment(Number(tokenConfig?.monthlyPayment) / 1000000);
+      // console.log("monthlyPayment:", monthlyPayment);
+    } catch (err) {
+      console.log("Error fetching member info:", err);
+    }
+  }, [address, getTokenConfig, monthlyPayment]);
+
   useEffect(() => {
     setFormattedTotalCollateralUSDC(Number(totalCollateralUSDC) / 1000000);
-  }, [activeMembers]);
+    getMonthlyPayement();
+  }, [totalMembers, getMonthlyPayement]);
 
   // Copy guarantor's address
   const handleCopy = async () => {
@@ -62,9 +78,7 @@ const AjoDetailsStatsGrid = ({
           <span className="text-xs text-muted-foreground">Monthly</span>
         </div>
         <div className="text-lg md:text-2xl font-bold text-card-foreground">
-          {formatCurrency(
-            nairaRate * (monthlyPayment ? Number(monthlyPayment) / 1000000 : 0)
-          )}
+          {formatCurrency(monthlyPayment * nairaRate)}
           {/* {formatCurrency(50 * nairaRate)} */}
         </div>
         <div className="text-sm text-muted-foreground">Payment Amount</div>
@@ -78,7 +92,7 @@ const AjoDetailsStatsGrid = ({
           <span className="text-xs text-muted-foreground">Progress</span>
         </div>
         <div className="text-lg md:text-2xl font-bold text-card-foreground">
-          {activeMembers}/10
+          {totalMembers}/10
         </div>
         <div className="text-sm text-muted-foreground">Members</div>
       </div>
