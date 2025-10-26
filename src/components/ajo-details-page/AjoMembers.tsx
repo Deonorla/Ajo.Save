@@ -2,16 +2,22 @@ import { useMembersStore } from "@/store/ajoMembersStore";
 import { useTokenStore } from "@/store/tokenStore";
 import { formatAddress, useAjoDetails } from "@/utils/utils";
 import formatCurrency from "@/utils/formatCurrency";
-import { Users, Star } from "lucide-react";
+import { Users, Star, Database } from "lucide-react";
 import useAjoMembers from "@/hooks/useAjoMembers";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { AjoInfo } from "@/store/ajoStore";
+import useAjoPayment from "@/hooks/useAjoPayment";
 
 const AjoMembers = ({ ajo }: { ajo: AjoInfo | null | undefined }) => {
   const { membersDetails } = useMembersStore();
   const selectedAjo = useAjoDetails();
   const { nairaRate } = useTokenStore();
   const { getAllMembersDetails } = useAjoMembers(ajo ? ajo?.ajoMembers : "");
+  const { getCurrentCycleDashboard } = useAjoPayment(
+    ajo ? ajo.ajoPayments : ""
+  );
+  const [paidMembers, setPaidMembers] = useState<string[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
 
   // Fetch all members
   const getAllMembers = useCallback(async () => {
@@ -22,9 +28,45 @@ const AjoMembers = ({ ajo }: { ajo: AjoInfo | null | undefined }) => {
     }
   }, [getAllMembersDetails]);
 
+  // get cycle dashboard
+  const cycleDashboard = useCallback(async () => {
+    try {
+      setLoadingMembers(true);
+      const dashboard = await getCurrentCycleDashboard();
+      // console.log("paid Members:", dashboard?.membersPaid);
+      setPaidMembers(dashboard?.membersPaid);
+    } catch (err) {
+      console.log("Dashboard err:", err);
+    } finally {
+      setLoadingMembers(false);
+    }
+  }, []);
+
   useEffect(() => {
     getAllMembers();
-  }, []);
+    cycleDashboard();
+  }, [cycleDashboard, getAllMembers]);
+
+  const hasPaid = (memberAddress: string) => {
+    if (!memberAddress) {
+      return false;
+    }
+    if (!paidMembers || paidMembers.length === 0) {
+      return false;
+    }
+    const isPaid = paidMembers.some(
+      (address) => address.toLowerCase() === memberAddress.toLowerCase()
+    );
+    return isPaid;
+  };
+
+  if (loadingMembers)
+    return (
+      <div className=" bg-card rounded-xl shadow-lg p-8 border border-border text-center py-8 text-muted-foreground my-4">
+        <Database className="w-12 h-12 mx-auto mb-2 opacity-50" />
+        <p>Loading Members data...</p>
+      </div>
+    );
 
   return (
     <div className="space-y-6">
@@ -113,12 +155,12 @@ const AjoMembers = ({ ajo }: { ajo: AjoInfo | null | undefined }) => {
                   Paid this cycle:{" "}
                   <span
                     className={`font-semibold ${
-                      member.hasPaidThisCycle
+                      hasPaid(member.userAddress)
                         ? "text-[#3DB569]"
                         : "text-[#EA4343]"
                     }`}
                   >
-                    {member.hasPaidThisCycle ? "Yes ✓" : "Not yet"}
+                    {hasPaid(member.userAddress) ? "Yes ✓" : "Not yet"}
                   </span>
                 </div>
 

@@ -55,8 +55,7 @@ const Profile = () => {
 
         // if you already have balances
         if (hbar) setBalanceInNGN(parseFloat(hbar) * hbarPrice);
-        if (usdc)
-          setUsdcBalanceInNGN(parseFloat(usdc) * usdcPrice * Number(usdc));
+        if (usdc) setUsdcBalanceInNGN(parseFloat(usdc) * usdcPrice);
       } catch (error) {
         console.error("Failed to fetch prices:", error);
       }

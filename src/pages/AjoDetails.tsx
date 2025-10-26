@@ -6,7 +6,7 @@ import AjoOverviewTab from "@/components/ajo-details-page/AjoOverviewTab";
 import AjoMembers from "@/components/ajo-details-page/AjoMembers";
 import AjoGovernance from "@/components/ajo-details-page/AjoGovernance";
 // import AjoDetailAnalytics from "@/components/ajo-details-page/AjoDetailAnalytics";
-// import AjoPaymentHistory from "@/components/ajo-details-page/AjoPaymentHistory";
+import AjoPaymentHistory from "@/components/ajo-details-page/AjoPaymentHistory";
 import { useAjoCore } from "@/hooks/useAjoCore";
 import { useWallet } from "@/auth/WalletContext";
 import { useTokenStore } from "@/store/tokenStore";
@@ -21,6 +21,7 @@ import { useAjoDetailsStore } from "@/store/ajoDetailsStore";
 import Header from "@/components/header/Header";
 import useAjoMembers from "@/hooks/useAjoMembers";
 import { usePaymentStore } from "@/store/ajoPaymentStore";
+import useAjoPayment from "@/hooks/useAjoPayment";
 
 const AjoDetails = () => {
   const { ajoId, ajoCore } = useParams<{ ajoId: string; ajoCore: string }>();
@@ -40,6 +41,9 @@ const AjoDetails = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const { monthlyPayment, setMonthlyPayment } = usePaymentStore();
+  const { getCurrentCycleDashboard } = useAjoPayment(
+    ajo ? ajo?.ajoPayments : ""
+  );
   const [lastUpdated, setLastUpdated] = useState(new Date());
 
   useEffect(() => {
@@ -93,6 +97,15 @@ const AjoDetails = () => {
     }
   }, [getAllMembersDetails]);
 
+  // fetch cycle dashboard
+  const cycleDashboard = useCallback(async () => {
+    try {
+      await getCurrentCycleDashboard();
+    } catch (err) {
+      console.log("Dashboard err:", err);
+    }
+  }, []);
+
   useEffect(() => {
     setIsVisible(true);
     _getMemberInfo();
@@ -100,6 +113,10 @@ const AjoDetails = () => {
     getUserData();
     getAllMembers();
   }, [getMemberInfo, getAllMembersDetails]);
+
+  useEffect(() => {
+    getCurrentCycleDashboard();
+  }, [getCurrentCycleDashboard]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -136,9 +153,9 @@ const AjoDetails = () => {
           {activeTab === "overview" && <AjoOverviewTab ajo={ajo} />}
 
           {activeTab === "members" && <AjoMembers ajo={ajo} />}
-          {/* {activeTab === "payments" && <AjoPaymentHistory />} */}
+          {activeTab === "payments" && <AjoPaymentHistory />}
 
-          {/* {activeTab === "governance" && <AjoGovernance />} */}
+          {activeTab === "governance" && <AjoGovernance ajo={ajo} />}
 
           {/* {activeTab === "analytics" && <AjoDetailAnalytics />} */}
         </div>

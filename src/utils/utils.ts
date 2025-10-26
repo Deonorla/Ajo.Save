@@ -173,3 +173,58 @@ export const hederaAccountToEvmAddress = (accountId: string): string => {
 
   return `0x${paddedAddress}`;
 };
+
+// Helper to check if an address is an HTS token (starts with many zeros)
+const isHtsToken = (address: string): boolean => {
+  if (!address.startsWith("0x")) return false;
+  // HTS tokens have the format 0x000000000000000000000000000000000XXXXXXX
+  // They have at least 32 leading zeros after 0x
+  return address.toLowerCase().startsWith("0x" + "0".repeat(30));
+};
+
+export const convertEvmToHederaAddress = async (
+  evmAddress: string
+): Promise<string> => {
+  if (!evmAddress.startsWith("0x")) return evmAddress;
+
+  // If it's an HTS token, extract the token ID directly
+  if (isHtsToken(evmAddress)) {
+    const tokenNum = BigInt(evmAddress);
+    const hederaId = `0.0.${tokenNum.toString()}`;
+    console.log(`✅ HTS Token ${evmAddress} -> ${hederaId}`);
+    return hederaId;
+  }
+
+  try {
+    const mirrorNodeUrl =
+      import.meta.env.VITE_HEDERA_MIRROR_NODE_URL ||
+      "https://testnet.mirrornode.hedera.com";
+
+    // Query mirror node for account/contract by EVM address
+    const response = await fetch(
+      `${mirrorNodeUrl}/api/v1/accounts/${evmAddress}`
+    );
+
+    if (!response.ok) {
+      throw new Error(`Mirror node query failed: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const hederaId = data.account;
+    console.log(`✅ Converted ${evmAddress} to ${hederaId}`);
+    return hederaId;
+  } catch (error) {
+    console.error("Failed to convert EVM to Hedera address:", error);
+    throw new Error(`Could not convert address ${evmAddress} to Hedera format`);
+  }
+};
+
+export const convertToEvmAddress = (address: string): string => {
+  if (address.startsWith("0x")) return address;
+  const parts = address.split(".");
+  if (parts.length === 3) {
+    const accountNum = BigInt(parts[2]);
+    return "0x" + accountNum.toString(16).padStart(40, "0");
+  }
+  return address;
+};

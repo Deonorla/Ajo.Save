@@ -50,44 +50,6 @@
       "anonymous": false,
       "inputs": [
         {
-          "indexed": true,
-          "internalType": "uint256",
-          "name": "cycle",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "timestamp",
-          "type": "uint256"
-        }
-      ],
-      "name": "CycleCompleted",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "newDuration",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "newMonthlyPayment",
-          "type": "uint256"
-        }
-      ],
-      "name": "CycleParametersUpdated",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
           "indexed": false,
           "internalType": "uint8",
           "name": "version",
@@ -95,37 +57,6 @@
         }
       ],
       "name": "Initialized",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "uint256",
-          "name": "cycle",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "duration",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "monthlyContribution",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "address[]",
-          "name": "members",
-          "type": "address[]"
-        }
-      ],
-      "name": "NewCycleStarted",
       "type": "event"
     },
     {
@@ -151,6 +82,37 @@
         }
       ],
       "name": "NewMemberProposed",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "season",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "duration",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "monthlyContribution",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "address[]",
+          "name": "members",
+          "type": "address[]"
+        }
+      ],
+      "name": "NewSeasonStarted",
       "type": "event"
     },
     {
@@ -184,7 +146,7 @@
         {
           "indexed": false,
           "internalType": "uint256",
-          "name": "cycle",
+          "name": "season",
           "type": "uint256"
         }
       ],
@@ -209,7 +171,7 @@
         {
           "indexed": true,
           "internalType": "uint256",
-          "name": "nextCycle",
+          "name": "nextSeason",
           "type": "uint256"
         }
       ],
@@ -308,6 +270,44 @@
         }
       ],
       "name": "ProposalExecuted",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "season",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        }
+      ],
+      "name": "SeasonCompleted",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "newDuration",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "newMonthlyPayment",
+          "type": "uint256"
+        }
+      ],
+      "name": "SeasonParametersUpdated",
       "type": "event"
     },
     {
@@ -644,7 +644,7 @@
     },
     {
       "inputs": [],
-      "name": "carryPenaltiesToNextCycle",
+      "name": "carryPenaltiesToNextSeason",
       "outputs": [
         {
           "internalType": "bool",
@@ -657,7 +657,7 @@
     },
     {
       "inputs": [],
-      "name": "carryReputationToNextCycle",
+      "name": "carryReputationToNextSeason",
       "outputs": [
         {
           "internalType": "bool",
@@ -694,74 +694,12 @@
     },
     {
       "inputs": [],
-      "name": "currentCycle",
+      "name": "currentSeason",
       "outputs": [
         {
           "internalType": "uint256",
           "name": "",
           "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "cycleCompleted",
-      "outputs": [
-        {
-          "internalType": "bool",
-          "name": "",
-          "type": "bool"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "cycleEndTime",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        },
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "name": "cycleParticipation",
-      "outputs": [
-        {
-          "internalType": "bool",
-          "name": "",
-          "type": "bool"
         }
       ],
       "stateMutability": "view",
@@ -775,7 +713,7 @@
           "type": "bool"
         }
       ],
-      "name": "declareNextCycleParticipation",
+      "name": "declareNextSeasonParticipation",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -904,34 +842,6 @@
           "internalType": "address[]",
           "name": "",
           "type": "address[]"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "getCycleStatus",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "_currentCycle",
-          "type": "uint256"
-        },
-        {
-          "internalType": "bool",
-          "name": "_isCycleCompleted",
-          "type": "bool"
-        },
-        {
-          "internalType": "uint256",
-          "name": "_participationDeadline",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "_declaredParticipants",
-          "type": "uint256"
         }
       ],
       "stateMutability": "view",
@@ -1102,6 +1012,34 @@
         {
           "internalType": "uint256",
           "name": "votesNeeded",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getSeasonStatus",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "_currentSeason",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bool",
+          "name": "_isSeasonCompleted",
+          "type": "bool"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_participationDeadline",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_declaredParticipants",
           "type": "uint256"
         }
       ],
@@ -1437,59 +1375,6 @@
     {
       "inputs": [
         {
-          "internalType": "string",
-          "name": "description",
-          "type": "string"
-        }
-      ],
-      "name": "proposeCycleCompletion",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "proposalId",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "string",
-          "name": "description",
-          "type": "string"
-        },
-        {
-          "internalType": "uint256",
-          "name": "newDuration",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "newMonthlyContribution",
-          "type": "uint256"
-        },
-        {
-          "internalType": "address[]",
-          "name": "newMembers",
-          "type": "address[]"
-        }
-      ],
-      "name": "proposeNewCycleRestart",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "proposalId",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
           "internalType": "address",
           "name": "newMember",
           "type": "address"
@@ -1525,11 +1410,64 @@
         },
         {
           "internalType": "uint256",
+          "name": "newMonthlyContribution",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address[]",
+          "name": "newMembers",
+          "type": "address[]"
+        }
+      ],
+      "name": "proposeNewSeasonRestart",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "proposalId",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "string",
+          "name": "description",
+          "type": "string"
+        }
+      ],
+      "name": "proposeSeasonCompletion",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "proposalId",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "string",
+          "name": "description",
+          "type": "string"
+        },
+        {
+          "internalType": "uint256",
+          "name": "newDuration",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
           "name": "newMonthlyPayment",
           "type": "uint256"
         }
       ],
-      "name": "proposeUpdateCycleParameters",
+      "name": "proposeUpdateSeasonParameters",
       "outputs": [
         {
           "internalType": "uint256",
@@ -1587,6 +1525,68 @@
       "name": "renounceOwnership",
       "outputs": [],
       "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "seasonCompleted",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "seasonEndTime",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "seasonParticipation",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
       "type": "function"
     },
     {
@@ -1941,7 +1941,7 @@
           "type": "address"
         }
       ],
-      "name": "willParticipateInNextCycle",
+      "name": "willParticipateInNextSeason",
       "outputs": [
         {
           "internalType": "bool",

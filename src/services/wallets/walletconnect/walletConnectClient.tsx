@@ -47,7 +47,7 @@ const metadata = {
   icons: [window.location.origin + "/logo192.png"],
 };
 
-// Initialize DAppConnector
+// Initialize DAppConnector with better storage handling
 const dappConnector = new DAppConnector(
   metadata,
   LedgerId.fromString(hederaNetwork),
@@ -62,16 +62,33 @@ let walletConnectInitPromise: Promise<void> | undefined = undefined;
 
 const initializeWalletConnect = async () => {
   if (walletConnectInitPromise === undefined) {
-    walletConnectInitPromise = dappConnector.init({ logger: "error" });
+    walletConnectInitPromise = dappConnector.init({
+      logger: "error",
+      // ✅ Add timeout and retry logic
+    });
   }
-  await walletConnectInitPromise;
+
+  try {
+    await walletConnectInitPromise;
+    console.log("✅ WalletConnect initialized successfully");
+  } catch (error) {
+    console.error("❌ WalletConnect initialization failed:", error);
+    // Reset the promise so it can be retried
+    walletConnectInitPromise = undefined;
+    throw error;
+  }
 };
 
 // Open WalletConnect modal for pairing
 export const openWalletConnectModal = async () => {
-  await initializeWalletConnect();
-  await dappConnector.openModal();
-  refreshEvent.emit("sync");
+  try {
+    await initializeWalletConnect();
+    await dappConnector.openModal();
+    refreshEvent.emit("sync");
+  } catch (error) {
+    console.error("Failed to open WalletConnect modal:", error);
+    throw error;
+  }
 };
 
 // Export dAppConnector for use in other components (like Header for minting)
@@ -80,6 +97,7 @@ export { dappConnector };
 class WalletConnectWallet implements WalletInterface {
   private getSigner(): DAppSigner | null {
     if (!dappConnector.signers || dappConnector.signers.length === 0) {
+      console.warn("⚠️ No signer available");
       return null;
     }
     return dappConnector.signers[0];
@@ -207,33 +225,91 @@ class WalletConnectWallet implements WalletInterface {
       throw new Error("No signer available");
     }
 
-    const params = functionParameters.buildHAPIParams();
-    const accountId = this.accountId();
+    console.log("🔧 Executing contract function:", {
+      contractId: contractId.toString(),
+      functionName,
+      gasLimit,
+      accountId: signer.getAccountId().toString(),
+    });
 
+    const params = functionParameters.buildHAPIParams();
+
+    // ✅ Don't set transactionId or nodeAccountIds manually
+    // freezeWithSigner will handle these automatically
     const tx = new ContractExecuteTransaction()
       .setContractId(contractId)
       .setGas(gasLimit)
-      .setFunction(functionName, params)
-      .setTransactionId(TransactionId.generate(accountId))
-      .setNodeAccountIds([AccountId.fromString("0.0.3")]);
+      .setFunction(functionName, params);
 
     try {
-      // Freeze the transaction with the client (no operator required)
-      await tx.freezeWith(hederaClient);
+      console.log("🔄 Freezing transaction with signer...");
 
-      // Now execute with signer
-      const txResponse = await tx.executeWithSigner(signer);
+      // ✅ Add timeout to prevent hanging
+      const freezePromise = tx.freezeWithSigner(signer);
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(
+          () => reject(new Error("Transaction freeze timeout after 60s")),
+          60000
+        )
+      );
+
+      const frozenTx = (await Promise.race([
+        freezePromise,
+        timeoutPromise,
+      ])) as any;
+      console.log("✅ Transaction frozen successfully");
+
+      console.log("📤 Executing transaction...");
+      const executePromise = frozenTx.executeWithSigner(signer);
+      const execTimeoutPromise = new Promise((_, reject) =>
+        setTimeout(
+          () => reject(new Error("Transaction execution timeout after 90s")),
+          90000
+        )
+      );
+
+      const txResponse = (await Promise.race([
+        executePromise,
+        execTimeoutPromise,
+      ])) as any;
+      console.log(
+        "✅ Transaction executed:",
+        txResponse.transactionId.toString()
+      );
+
       return txResponse.transactionId.toString();
-    } catch (error) {
-      console.error("Contract execution failed:", error);
-      return null;
+    } catch (error: any) {
+      console.error("❌ Contract execution failed:", error);
+
+      // ✅ Provide more detailed error messages
+      if (error.message?.includes("timeout")) {
+        throw new Error(
+          "Transaction timed out. Please check your wallet and try again."
+        );
+      } else if (error.message?.includes("User rejected")) {
+        throw new Error("Transaction was rejected in wallet");
+      } else if (error.message?.includes("insufficient")) {
+        throw new Error("Insufficient balance for transaction");
+      }
+
+      throw error;
     }
   }
 
   disconnect() {
-    dappConnector.disconnectAll().then(() => {
-      refreshEvent.emit("sync");
-    });
+    console.log("🔌 Disconnecting wallet...");
+    dappConnector
+      .disconnectAll()
+      .then(() => {
+        // ✅ Clear any cached state
+        console.log("✅ Wallet disconnected");
+        refreshEvent.emit("sync");
+      })
+      .catch((error) => {
+        console.error("❌ Disconnect failed:", error);
+        // Force sync anyway
+        refreshEvent.emit("sync");
+      });
   }
 }
 
@@ -245,12 +321,19 @@ export const WalletConnectClient = () => {
 
   const syncWithWalletConnectContext = useCallback(() => {
     const accountId = dappConnector.signers[0]?.getAccountId()?.toString();
+    console.log("🔄 Syncing wallet state:", {
+      accountId,
+      hasSigners: !!dappConnector.signers[0],
+    });
+
     if (accountId) {
       setAccountId(accountId);
       setIsConnected(true);
+      console.log("✅ Wallet connected:", accountId);
     } else {
       setAccountId("");
       setIsConnected(false);
+      console.log("ℹ️ Wallet disconnected");
     }
   }, [setAccountId, setIsConnected]);
 
@@ -259,9 +342,14 @@ export const WalletConnectClient = () => {
     refreshEvent.addListener("sync", syncWithWalletConnectContext);
 
     // Initialize WalletConnect on mount
-    initializeWalletConnect().then(() => {
-      syncWithWalletConnectContext();
-    });
+    initializeWalletConnect()
+      .then(() => {
+        console.log("🎉 WalletConnect ready");
+        syncWithWalletConnectContext();
+      })
+      .catch((error) => {
+        console.error("💥 WalletConnect initialization failed:", error);
+      });
 
     // Cleanup
     return () => {

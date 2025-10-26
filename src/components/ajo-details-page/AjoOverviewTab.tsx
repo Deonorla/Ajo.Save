@@ -29,10 +29,10 @@ const AjoOverviewTab = ({ ajo }: { ajo: AjoInfo | null | undefined }) => {
   //   const { getAllMembersDetails } = useAjoMembers(ajo ? ajo?.ajoMembers : "");
   const {
     totalMembers,
-    // activeToken,
-    // totalCollateralUSDC,
-    // contractBalanceUSDC,
-    // contractBalanceHBAR,
+    activeToken,
+    totalCollateralUSDC,
+    contractBalanceUSDC,
+    contractBalanceHBAR,
     ajoId,
   } = useAjoDetailsStore();
   const [demoData, setDemoData] = useState<{
@@ -139,7 +139,7 @@ const AjoOverviewTab = ({ ajo }: { ajo: AjoInfo | null | undefined }) => {
             )}
           </h3>
 
-          {/* {ajoId ? (
+          {ajoId ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="space-y-3">
                 <div className="flex justify-between">
@@ -161,7 +161,7 @@ const AjoOverviewTab = ({ ajo }: { ajo: AjoInfo | null | undefined }) => {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Active Members:</span>
                   <span className="font-semibold text-primary">
-                    {activeMembers}
+                    {totalMembers}
                   </span>
                 </div>
 
@@ -207,7 +207,7 @@ const AjoOverviewTab = ({ ajo }: { ajo: AjoInfo | null | undefined }) => {
               <Database className="w-12 h-12 mx-auto mb-2 opacity-50" />
               <p>Loading contract data...</p>
             </div>
-          )} */}
+          )}
         </div>
         <div className="bg-gradient-to-br from-primary to-accent rounded-xl shadow-lg p-6 text-primary-foreground border border-primary/30">
           <h3 className="text-lg font-bold mb-4 flex items-center space-x-2">

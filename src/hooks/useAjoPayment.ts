@@ -536,6 +536,41 @@ const useAjoPayment = (ajoPaymentAddress: string) => {
     [ajoPaymentAddress]
   );
 
+  /**
+   * Get current cycle dashboard
+   */
+  const getCurrentCycleDashboard = useCallback(async () => {
+    try {
+      const provider = new ethers.providers.JsonRpcProvider(
+        import.meta.env.VITE_HEDERA_JSON_RPC_RELAY_URL ||
+          "https://testnet.hashio.io/api"
+      );
+      const ajoPaymentContract = new ethers.Contract(
+        ajoPaymentAddress,
+        AjoPaymentABI.abi,
+        provider
+      );
+      const dashboard = await ajoPaymentContract.getCurrentCycleDashboard();
+      const cycleDashboard = {
+        currentCycle: dashboard.currentCycle.toString(),
+        nextPayoutPosition: dashboard.nextPayoutPosition.toString(),
+        nextRecipient: dashboard.nextRecipient,
+        expectedPayout: dashboard.expectedPayout.toString(),
+        totalPaidThisCycle: dashboard.totalPaidThisCycle.toString(),
+        remainingToPay: dashboard.remainingToPay.toString(),
+        membersPaid: dashboard.membersPaid,
+        membersUnpaid: dashboard.membersUnpaid,
+        isPayoutReady: dashboard.isPayoutReady,
+        hasScheduledPayment: dashboard.hasScheduledPayment,
+        scheduledPaymentAddress: dashboard.scheduledPaymentAddress,
+      };
+      // console.log("Cycle Dashboard:", cycleDashboard);
+      return cycleDashboard;
+    } catch (err) {
+      console.log("Error getting cycle dashboard :", err);
+    }
+  }, []);
+
   return {
     loading,
     processPayment,
@@ -545,6 +580,7 @@ const useAjoPayment = (ajoPaymentAddress: string) => {
     getCurrentCycle,
     needsToPayThisCycle,
     getCyclePaymentStatus,
+    getCurrentCycleDashboard,
   };
 };
 
