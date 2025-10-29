@@ -155,7 +155,7 @@ const Dashboard = () => {
               </div>
             </div>
 
-            <div className="bg-card p-6 rounded-xl shadow-sm border border-border hover:shadow-md transition-all hover:scale-105 hover:border-accent/30">
+            {/* <div className="bg-card p-6 rounded-xl shadow-sm border border-border hover:shadow-md transition-all hover:scale-105 hover:border-accent/30">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-muted-foreground text-sm">
@@ -167,7 +167,7 @@ const Dashboard = () => {
                 </div>
                 <Users className="h-8 w-8 text-accent" />
               </div>
-            </div>
+            </div> */}
 
             <div className="bg-card p-6 rounded-xl shadow-sm border border-border hover:shadow-md transition-all hover:scale-105 hover:border-secondary/30">
               <div className="flex items-center justify-between">

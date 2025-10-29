@@ -5,7 +5,7 @@ import { useAjoStore } from "@/store/ajoStore";
 import { useMemberStore } from "@/store/memberInfoStore";
 import { useTokenStore } from "@/store/tokenStore";
 import { members } from "@/temp-data";
-import formatCurrency from "@/utils/formatCurrency";
+import formatCurrency, { formatCurrencyUSD } from "@/utils/formatCurrency";
 import { formatAddress } from "@/utils/utils";
 import {
   Check,
@@ -78,7 +78,7 @@ const AjoDetailsStatsGrid = ({ isVisible }: AjoDetailsStatsGridProps) => {
           <span className="text-xs text-muted-foreground">Monthly</span>
         </div>
         <div className="text-lg md:text-2xl font-bold text-card-foreground">
-          {formatCurrency(monthlyPayment * nairaRate)}
+          {formatCurrencyUSD(monthlyPayment)}
           {/* {formatCurrency(50 * nairaRate)} */}
         </div>
         <div className="text-sm text-muted-foreground">Payment Amount</div>
@@ -105,9 +105,8 @@ const AjoDetailsStatsGrid = ({ isVisible }: AjoDetailsStatsGridProps) => {
           <span className="text-xs text-muted-foreground">Total</span>
         </div>
         <div className="text-lg md:text-2xl font-bold text-card-foreground">
-          {formatCurrency(
-            (formattedTotalCollateralHBAR + formattedTotalCollateralUSDC) *
-              nairaRate
+          {formatCurrencyUSD(
+            formattedTotalCollateralHBAR + formattedTotalCollateralUSDC
           )}
         </div>
         <div className="text-sm text-muted-foreground">Pool Value</div>

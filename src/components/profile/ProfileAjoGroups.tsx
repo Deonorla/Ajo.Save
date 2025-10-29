@@ -2,21 +2,23 @@
 import { useAjoStore } from "@/store/ajoStore";
 import { useTokenStore } from "@/store/tokenStore";
 import formatCurrency from "@/utils/formatCurrency";
-import { formatTimestamp } from "@/utils/utils";
+import { convertToEvmAddress, formatTimestamp } from "@/utils/utils";
 import { Coins, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useWallet } from "@/auth/WalletContext"; // ✅ assuming you have wallet context
 import { Button } from "../ui/button";
+import { useWalletInterface } from "@/services/wallets/useWalletInterface";
 
 const ProfileAjoGroups = () => {
   const navigate = useNavigate();
   const { nairaRate } = useTokenStore();
   const { ajoInfos } = useAjoStore();
-  const { address } = useWallet(); // logged-in user’s wallet
+  const { accountId } = useWalletInterface(); // logged-in user’s wallet
 
   // Filter only Ajos created by the logged-in user
   const userAjos = ajoInfos.filter(
-    (ajo) => ajo.creator.toLowerCase() === address?.toLowerCase()
+    (ajo) =>
+      ajo.creator.toLowerCase() ===
+      convertToEvmAddress(accountId ? accountId : "")?.toLowerCase()
   );
   const handleRoute = () => {
     navigate("/ajo/create-ajo");

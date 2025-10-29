@@ -1,7 +1,7 @@
 import { useMembersStore } from "@/store/ajoMembersStore";
 import { useTokenStore } from "@/store/tokenStore";
 import { formatAddress, useAjoDetails } from "@/utils/utils";
-import formatCurrency from "@/utils/formatCurrency";
+import formatCurrency, { formatCurrencyUSD } from "@/utils/formatCurrency";
 import { Users, Star, Database } from "lucide-react";
 import useAjoMembers from "@/hooks/useAjoMembers";
 import { useCallback, useEffect, useState } from "react";
@@ -144,8 +144,8 @@ const AjoMembers = ({ ajo }: { ajo: AjoInfo | null | undefined }) => {
                 <div className="text-primary-foreground/70 mb-1">
                   Collateral Locked:{" "}
                   <span className="text-[#3DB569] font-semibold">
-                    {formatCurrency(
-                      (Number(member.collateralLocked) / 1_000_000) * nairaRate
+                    {formatCurrencyUSD(
+                      Number(member.collateralLocked) / 1_000_000
                     )}{" "}
                     ✓
                   </span>

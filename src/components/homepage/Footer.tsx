@@ -22,7 +22,7 @@ const Footer = () => {
               </span>
             </div>
             <p className=" text-sm sm:text-xl  text-muted-foreground mb-6 max-w-md">
-              Ajo has been at the heart of Nigerian communities for generations.
+              Ajo has been at the heart of African communities for generations.
               We’re bringing that trust to the blockchain.
             </p>
             <div className="flex space-x-4">

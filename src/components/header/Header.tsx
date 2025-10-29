@@ -164,6 +164,15 @@ const Header = () => {
     }
   };
 
+  // Handle create ajo route
+  const handleCreateAjoRoute = () => {
+    if (accountId) {
+      navigate("/ajo/create-ajo");
+    } else {
+      toast.info("Connect wallet to create an ajo");
+    }
+  };
+
   // Handle custom mint
   const handleCustomMint = async () => {
     const usdcAmount = parseFloat(customUSDC);
@@ -394,7 +403,7 @@ const Header = () => {
 
                       {/* Actions */}
                       <div className="p-4 border-t border-primary/20 space-y-2">
-                        <button
+                        {/* <button
                           onClick={() => {
                             setShowMintModal(true);
                             setIsWalletDropdownOpen(false);
@@ -411,7 +420,7 @@ const Header = () => {
                           ) : (
                             <span>Mint Tokens</span>
                           )}
-                        </button>
+                        </button> */}
                         <button
                           onClick={handleDisconnect}
                           className="w-full flex items-center justify-center gap-2 bg-red-600/10 hover:bg-red-600/20 text-red-600 border border-red-600/30 px-4 py-2 rounded-lg font-semibold transition-all duration-300"
@@ -606,7 +615,7 @@ const Header = () => {
       <div className="fixed bottom-6 right-6 z-40 cursor-pointer">
         <Whisper placement="auto" speaker={<Tooltip>Create Ajo</Tooltip>}>
           <button
-            onClick={() => navigate("/ajo/create-ajo")}
+            onClick={handleCreateAjoRoute}
             className="bg-gradient-to-r from-primary to-accent text-white p-4 rounded-full shadow-2xl hover:shadow-primary/50 transition-all duration-300 hover:scale-110 group"
           >
             <Coins className="h-6 w-6 group-hover:rotate-180 transition-transform duration-300" />

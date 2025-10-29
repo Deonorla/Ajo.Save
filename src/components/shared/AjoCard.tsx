@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { useWalletInterface } from "@/services/wallets/useWalletInterface";
 import type { AjoInfo } from "@/store/ajoStore";
 import { useTokenStore } from "@/store/tokenStore";
-import formatCurrency from "@/utils/formatCurrency";
+import formatCurrency, { formatCurrencyUSD } from "@/utils/formatCurrency";
 import { formatAddress, formatTimestamp } from "@/utils/utils";
 import {
   Calendar,
@@ -14,6 +15,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 interface AjoCardProps {
   ajo: AjoInfo;
@@ -23,6 +25,13 @@ interface AjoCardProps {
 const AjoCard = ({ ajo, isVisible }: AjoCardProps) => {
   const navigate = useNavigate();
   const { nairaRate } = useTokenStore();
+  const { accountId } = useWalletInterface();
+
+  const handleAjoRoute = () => {
+    if (accountId) {
+      navigate(`/ajo/${ajo.ajoId}/${ajo.ajoCore}`);
+    } else toast.info("Connect your wallet to view ajo");
+  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -117,7 +126,7 @@ const AjoCard = ({ ajo, isVisible }: AjoCardProps) => {
           <div className="flex justify-between items-center">
             <div className="text-xs text-muted-foreground">Monthly Payment</div>
             <div className="text-lg font-bold text-primary">
-              {formatCurrency(nairaRate * 50)}
+              {formatCurrencyUSD(50)}
             </div>
           </div>
 
@@ -140,7 +149,7 @@ const AjoCard = ({ ajo, isVisible }: AjoCardProps) => {
           <div className="flex justify-between items-center">
             <div className="text-xs text-muted-foreground">Expected Payout</div>
             <div className="text-lg font-bold text-primary">
-              {formatCurrency(nairaRate * 500)}
+              {formatCurrencyUSD(50 * 10)}
             </div>
           </div>
 
@@ -192,7 +201,7 @@ const AjoCard = ({ ajo, isVisible }: AjoCardProps) => {
 
         {/* Action Button */}
         <button
-          onClick={() => navigate(`/ajo/${ajo.ajoId}/${ajo.ajoCore}`)}
+          onClick={handleAjoRoute}
           className="w-full bg-primary text-primary-foreground px-4 py-3 rounded-lg font-semibold transition-all hover:scale-105 hover:shadow-lg flex items-center justify-center space-x-2 group border border-primary/20 shadow-md cursor-pointer"
         >
           <span>

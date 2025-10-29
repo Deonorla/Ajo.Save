@@ -14,8 +14,8 @@ const Testimonials = () => {
             The Community Speaks
           </h2>
           <p className="text-sm lg:text-lg text-muted-foreground max-w-2xl mx-auto">
-            From Lagos to Kano, Nigerians are using Ajo.Save to hold each other
-            accountable, save transparently, and celebrate our culture.
+            From Capetown to Kampala, Africans are using Ajo.Save to hold each
+            other accountable, save transparently, and celebrate our culture.
           </p>
         </div>
 
@@ -64,18 +64,18 @@ export default Testimonials;
 
 const testimonials = [
   {
-    text: "Finally, a platform wey fit stop all those backdoor runs. With Ajo.Save, everything dey transparent for blockchain.",
+    text: "Finally, a platform that can stop all those backdoor runs. With Ajo.Save, everything looks transparent via blockchain.",
     author: "Kemi O.",
+    location: "Accra",
+  },
+  {
+    text: "Our Ajo group has saved over ₦2 million without any issue. The trust and accountability is real.",
+    author: "Chidi A.",
     location: "Lagos",
   },
   {
-    text: "Our Ajo group don save over ₦2 million without single wahala. The trust and accountability sweet us die.",
-    author: "Chidi A.",
-    location: "Abuja",
-  },
-  {
-    text: "The cultural NFTs no be just vibes. Na real way to celebrate who we be as Nigerians while stacking wealth.",
+    text: "The cultural NFTs aren't just vibes. It is the real way to celebrate who we be as africans while stacking wealth.",
     author: "Aisha M.",
-    location: "Kano",
+    location: "Johannesburg",
   },
 ];

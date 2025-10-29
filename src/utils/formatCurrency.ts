@@ -13,5 +13,5 @@ export const formatCurrencyUSD = (amount: number) => {
     style: "currency",
     currency: "USD",
     minimumFractionDigits: 2,
-  }).format(amount / 1000000); // Convert from 6 decimal USDC to USD
+  }).format(amount); // Convert from 6 decimal USDC to USD
 };

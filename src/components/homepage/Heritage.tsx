@@ -49,8 +49,8 @@ const Heritage = () => {
               Wazobia Unity Collection
             </h3>
             <p className="text-muted-foreground text-sm lg:text-lg">
-              Digital art celebrating Igbo, Yoruba, and Hausa culture. A symbol
-              of unity in diversity, and wealth in community.
+              Digital art celebrating african culture. A symbol of unity in
+              diversity, and wealth in community.
             </p>
           </div>
 
@@ -63,7 +63,7 @@ const Heritage = () => {
               Cultural Meme Drops
             </h3>
             <p className="text-muted-foreground text-sm lg:text-lg">
-              Own iconic Nigerian sayings like “Dey Play” and “Problem no dey
+              Own iconic african sayings like “Dey Play” and “Problem no dey
               finish” as fun cultural NFTs that live forever on-chain.
             </p>
           </div>

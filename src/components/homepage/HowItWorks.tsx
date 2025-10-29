@@ -27,8 +27,8 @@ const HowItWorks = () => {
               Mobile-First Simplicity
             </h3>
             <p className="text-muted-foreground leading-relaxed text-sm lg:text-lg">
-              Whether you’re in Lagos, Kano, or Aba—our platform is built for
-              smartphones first. Easy to join, simple to contribute.
+              Whether you’re in Luanda, Kano, or Kigali—our platform is built
+              for smartphones first. Easy to join, simple to contribute.
             </p>
           </div>
 

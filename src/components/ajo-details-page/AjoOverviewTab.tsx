@@ -6,7 +6,7 @@ import { useMembersStore } from "@/store/ajoMembersStore";
 import { type AjoInfo } from "@/store/ajoStore";
 import { useMemberStore } from "@/store/memberInfoStore";
 import { useTokenStore } from "@/store/tokenStore";
-import formatCurrency from "@/utils/formatCurrency";
+import formatCurrency, { formatCurrencyUSD } from "@/utils/formatCurrency";
 import {
   CheckCircle,
   Coins,
@@ -179,8 +179,8 @@ const AjoOverviewTab = ({ ajo }: { ajo: AjoInfo | null | undefined }) => {
                     Total Collateral:
                   </span>
                   <span className="font-semibold text-white">
-                    {formatCurrency(
-                      Number(Number(totalCollateralUSDC) / 1000000) * nairaRate
+                    {formatCurrencyUSD(
+                      Number(Number(totalCollateralUSDC) / 1000000)
                     )}
                   </span>
                 </div>
@@ -189,17 +189,15 @@ const AjoOverviewTab = ({ ajo }: { ajo: AjoInfo | null | undefined }) => {
                     Contract Balance:
                   </span>
                   <span className="font-semibold text-primary">
-                    {formatCurrency(
-                      Number(Number(contractBalanceUSDC) / 1000000) * nairaRate
-                    )}
+                    {Number(totalCollateralUSDC) / 1000000} USDC
                   </span>
                 </div>
-                <div className="flex justify-between">
+                {/* <div className="flex justify-between">
                   <span className="text-muted-foreground">HBAR Balance:</span>
                   <span className="font-semibold text-card-foreground">
                     {contractBalanceHBAR} HBAR
                   </span>
-                </div>
+                </div> */}
               </div>
             </div>
           ) : (
@@ -219,7 +217,7 @@ const AjoOverviewTab = ({ ajo }: { ajo: AjoInfo | null | undefined }) => {
             <div className="flex items-center space-x-2">
               <CheckCircle className="w-4 h-4 text-green-400" />
               <span className="font-semibold text-green-400">
-                Get USDC from faucet (1000 tokens)
+                Get USDC from Circle faucet (10 tokens)
               </span>
             </div>
             <div className="flex items-center space-x-2">
@@ -319,9 +317,7 @@ const AjoOverviewTab = ({ ajo }: { ajo: AjoInfo | null | undefined }) => {
                         {pos}
                       </td>
                       <td className="p-2 text-white">
-                        {formatCurrency(
-                          Number(demoData.collaterals[idx]) * nairaRate
-                        )}
+                        {formatCurrencyUSD(Number(demoData.collaterals[idx]))}
                       </td>
                     </tr>
                   ))}
