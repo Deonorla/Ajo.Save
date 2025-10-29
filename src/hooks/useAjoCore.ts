@@ -12,7 +12,7 @@ import { ethers } from "ethers";
 import { useWalletInterface } from "@/services/wallets/useWalletInterface";
 import { dappConnector } from "@/services/wallets/walletconnect/walletConnectClient";
 import { ContractFunctionParameterBuilder } from "@/services/wallets/contractFunctionParameterBuilder";
-import AjoCoreABI from "@/abi/AjoCore.json";
+import AjoCoreABI from "@/abi/ajoCore.json";
 import { toast } from "sonner";
 import { BigNumber } from "ethers";
 import { useMemberStore } from "@/store/memberInfoStore";

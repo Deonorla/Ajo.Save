@@ -9,7 +9,7 @@ import {
 import { ethers } from "ethers";
 import { useWalletInterface } from "@/services/wallets/useWalletInterface";
 import { ContractFunctionParameterBuilder } from "@/services/wallets/contractFunctionParameterBuilder";
-import AjoFactoryABI from "@/abi/AjoFactory.json";
+import AjoFactoryABI from "@/abi/ajoFactory.json";
 import { toast } from "sonner";
 import { useAjoStore } from "@/store/ajoStore";
 import { appConfig } from "@/config";
