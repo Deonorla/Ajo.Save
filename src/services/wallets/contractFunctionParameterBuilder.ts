@@ -1,7 +1,5 @@
+/* contractFunctionParameterBuilder.ts */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// Reason: We need to build HAPI contract functions params
-// And we want the string contract function params that ethers exepects
-// This is an opportunity for the adapter pattern.
 
 import { ContractFunctionParameters } from "@hashgraph/sdk";
 
@@ -21,58 +19,80 @@ export class ContractFunctionParameterBuilder {
     return this;
   }
 
-  // Purpose: Build the ABI function parameters
-  // Reason: The abi function parameters are required to construct the ethers.Contract object for calling a contract function using ethers
   public buildAbiFunctionParams(): string {
     return this.params.map((param) => `${param.type} ${param.name}`).join(", ");
   }
 
-  // Purpose: Build the ethers compatible contract function call params
-  // Reason: An array of strings is required to call a contract function using ethers
   public buildEthersParams(): string[] {
     return this.params.map((param) => param.value.toString());
   }
 
-  // Purpose: Build the HAPI compatible contract function params
-  // Reason: An instance of ContractFunctionParameters is required to call a contract function using Hedera wallets
   public buildHAPIParams(): ContractFunctionParameters {
     const contractFunctionParams = new ContractFunctionParameters();
+
     for (const param of this.params) {
-      // make sure type only contains alphanumeric characters (no spaces, no special characters, no whitespace), make sure it does not start with a number
-      const alphanumericIdentifier: RegExp = /^[a-zA-Z][a-zA-Z0-9]*$/;
-      if (!param.type.match(alphanumericIdentifier)) {
-        throw new Error(
-          `Invalid type: ${param.type}. Type must only contain alphanumeric characters.`
-        );
+      const type = param.type.trim();
+
+      // ——— Special: tuple and tuple[] ———
+      if (type === "tuple" || type === "tuple[]") {
+        console.log(`Encoding ${type}:`, param.value);
+        const jsonString = JSON.stringify(param.value);
+        const encoder = new TextEncoder();
+        const bytes = encoder.encode(jsonString);
+        contractFunctionParams.addBytes(bytes);
+        continue;
       }
-      // Special handling for int64
-      if (param.type.toLowerCase() === "int64") {
+
+      // ——— Special: int64 ———
+      if (type === "int64") {
         let int64Value = param.value;
         if (typeof param.value === "bigint") {
           const MAX_INT64 = BigInt("9223372036854775807");
           const MIN_INT64 = BigInt("-9223372036854775808");
-
           if (param.value > MAX_INT64 || param.value < MIN_INT64) {
             throw new Error(
               `int64 value ${param.value} is outside safe int64 range`
             );
           }
-
           int64Value = Number(param.value);
         }
-
         contractFunctionParams.addInt64(int64Value);
         continue;
       }
-      // captitalize the first letter of the type
-      const type = param.type.charAt(0).toUpperCase() + param.type.slice(1);
-      const functionName = `add${type}`;
-      if (functionName in contractFunctionParams) {
-        (contractFunctionParams as any)[functionName](param.value);
-      } else {
+
+      // ——— Handle arrays: uint256[], address[], etc. ———
+      const isArray = type.endsWith("[]");
+      const baseType = isArray ? type.slice(0, -2) : type;
+
+      // Validate base type is alphanumeric
+      const alphanumericIdentifier: RegExp = /^[a-zA-Z][a-zA-Z0-9]*$/;
+      if (!baseType.match(alphanumericIdentifier)) {
         throw new Error(
-          `Invalid type: ${param.type}. Could not find function ${functionName} in ContractFunctionParameters class.`
+          `Invalid base type: ${baseType}. Must be alphanumeric (e.g. uint256, address).`
         );
+      }
+
+      const functionName = `add${
+        baseType.charAt(0).toUpperCase() + baseType.slice(1)
+      }`;
+
+      if (!(functionName in contractFunctionParams)) {
+        throw new Error(
+          `Unsupported type: ${baseType}. No method ${functionName} in ContractFunctionParameters.`
+        );
+      }
+
+      if (isArray) {
+        if (!Array.isArray(param.value)) {
+          throw new Error(
+            `Expected array for type ${type}, got ${typeof param.value}`
+          );
+        }
+        for (const item of param.value) {
+          (contractFunctionParams as any)[functionName](item);
+        }
+      } else {
+        (contractFunctionParams as any)[functionName](param.value);
       }
     }
 

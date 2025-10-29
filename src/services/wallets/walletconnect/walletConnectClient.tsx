@@ -57,6 +57,42 @@ const dappConnector = new DAppConnector(
   [HederaChainId.Testnet]
 );
 
+/**
+ * Helper: Convert SignerSignature to hex string
+ * Handles various signature formats from different wallets
+ */
+function signatureToHex(signature: any): string {
+  // Case 1: Uint8Array (most common)
+  if (signature instanceof Uint8Array) {
+    return (
+      "0x" +
+      Array.from(signature)
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("")
+    );
+  }
+
+  // Case 2: Already a hex string
+  if (typeof signature === "string") {
+    return signature.startsWith("0x") ? signature : "0x" + signature;
+  }
+
+  // Case 3: Object with signature property
+  if (signature && typeof signature === "object") {
+    const sigBytes = signature.signature || signature;
+    if (sigBytes instanceof Uint8Array) {
+      return (
+        "0x" +
+        Array.from(sigBytes)
+          .map((b) => b.toString(16).padStart(2, "0"))
+          .join("")
+      );
+    }
+  }
+
+  throw new Error(`Unable to convert signature to hex: ${typeof signature}`);
+}
+
 // Ensure WalletConnect initializes only once
 let walletConnectInitPromise: Promise<void> | undefined = undefined;
 
@@ -109,6 +145,42 @@ class WalletConnectWallet implements WalletInterface {
       throw new Error("No signer available");
     }
     return AccountId.fromString(signer.getAccountId().toString());
+  }
+
+  /**
+   * Sign a message using WalletConnect/HashPack
+   * This is needed for HCS voting signatures
+   */
+  async signMessage(message: Uint8Array): Promise<{ signature: string }> {
+    const signer = this.getSigner();
+    if (!signer) {
+      throw new Error("No signer available");
+    }
+
+    try {
+      console.log("📝 Requesting signature from wallet...");
+
+      // Sign the message using DAppSigner
+      const signatureResponse = await signer.sign([message]);
+
+      // Convert the first signature to hex string
+      const signatureHex = signatureToHex(signatureResponse[0]);
+
+      console.log("✅ Signature received:", signatureHex.slice(0, 20) + "...");
+      console.log("   Signature length:", signatureHex.length, "chars");
+
+      return {
+        signature: signatureHex,
+      };
+    } catch (error: any) {
+      console.error("❌ Message signing failed:", error);
+
+      if (error.message?.includes("User rejected")) {
+        throw new Error("Signature request was rejected in wallet");
+      }
+
+      throw new Error(`Failed to sign message: ${error.message}`);
+    }
   }
 
   async transferHBAR(toAddress: AccountId, amount: number) {
@@ -211,6 +283,56 @@ class WalletConnectWallet implements WalletInterface {
     } catch (error) {
       console.error("Token association failed:", error);
       return null;
+    }
+  }
+
+  async sendTransaction(
+    transaction: any // Hedera SDK Transaction (e.g. TransferTransaction, ContractExecuteTransaction, …)
+  ): Promise<string | null> {
+    const signer = this.getSigner();
+    if (!signer) {
+      throw new Error("No signer available");
+    }
+
+    try {
+      console.log("Freezing generic transaction with WalletConnect signer...");
+
+      // ---- 1. Freeze ------------------------------------------------
+      const freezePromise = transaction.freezeWithSigner(signer);
+      const freezeTimeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Freeze timeout after 60s")), 60000)
+      );
+      const frozenTx = await Promise.race([freezePromise, freezeTimeout]);
+      console.log("Transaction frozen");
+
+      // ---- 2. Execute -----------------------------------------------
+      console.log("Executing transaction...");
+      const execPromise = (frozenTx as any).executeWithSigner(signer);
+      const execTimeout = new Promise((_, reject) =>
+        setTimeout(
+          () => reject(new Error("Execution timeout after 90s")),
+          90000
+        )
+      );
+      const txResponse = await Promise.race([execPromise, execTimeout]);
+
+      const txId = txResponse.transactionId.toString();
+      console.log("Transaction executed:", txId);
+      return txId;
+    } catch (error: any) {
+      console.error("sendTransaction failed:", error);
+
+      if (error.message?.includes("timeout")) {
+        throw new Error("Transaction timed out. Please try again.");
+      }
+      if (error.message?.includes("User rejected")) {
+        throw new Error("Transaction rejected in wallet.");
+      }
+      if (error.message?.includes("insufficient")) {
+        throw new Error("Insufficient balance for transaction.");
+      }
+
+      throw error; // re-throw for caller handling
     }
   }
 

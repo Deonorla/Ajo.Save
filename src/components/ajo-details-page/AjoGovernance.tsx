@@ -15,8 +15,12 @@ import {
   ThumbsDown,
   MinusCircle,
   Database,
+  Zap,
+  TrendingUp,
 } from "lucide-react";
 import { useAjoGovernance, VoteSupport } from "@/hooks/useAjoGovernance";
+import { useHcsVoting } from "@/hooks/useHcsVoting";
+import type { HcsVote } from "@/hooks/useHcsVoting";
 import type { AjoInfo } from "@/store/ajoStore";
 import { toast } from "sonner";
 import { formatAddress } from "@/utils/utils";
@@ -27,6 +31,7 @@ interface AjoGovernanceProps {
 
 const AjoGovernance = ({ ajo }: AjoGovernanceProps) => {
   const governance = useAjoGovernance(ajo?.ajoGovernance || "");
+  const hcsVoting = useHcsVoting(ajo?.ajoGovernance || "");
 
   // State
   const [activeProposals, setActiveProposals] = useState<string[]>([]);
@@ -39,6 +44,15 @@ const AjoGovernance = ({ ajo }: AjoGovernanceProps) => {
   const [votingStates, setVotingStates] = useState<{ [key: string]: boolean }>(
     {}
   );
+  const [hcsTopicId, setHcsTopicId] = useState<string | null>(null);
+  const [votingMode, setVotingMode] = useState<"onchain" | "hcs">("hcs");
+  const [creatingProposal, setCreatingProposal] = useState(false);
+
+  // HCS-specific state
+  const [pendingHcsVotes, setPendingHcsVotes] = useState<{
+    [proposalId: number]: HcsVote[];
+  }>({});
+  const [tallyingProposal, setTallyingProposal] = useState<number | null>(null);
 
   // Modal states
   const [showCreateProposal, setShowCreateProposal] = useState(false);
@@ -46,21 +60,40 @@ const AjoGovernance = ({ ajo }: AjoGovernanceProps) => {
     boolean | null
   >(null);
 
-  // Helper to delay between requests
   const delay = (ms: number) =>
     new Promise((resolve) => setTimeout(resolve, ms));
+
+  // Load HCS topic ID
+  useEffect(() => {
+    const loadHcsTopicId = async () => {
+      if (ajo?.hcsTopicId) {
+        // console.log("hcsTopicId:::", ajo?.hcsTopicId);
+        setHcsTopicId(ajo.hcsTopicId);
+      } else {
+        const topicId = await hcsVoting.getHcsTopicId();
+        setHcsTopicId(topicId);
+        console.log("hcsTopicId 2", topicId);
+      }
+    };
+    loadHcsTopicId();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ajo?.hcsTopicId, hcsVoting]);
+
+  // Setup Hedera client on mount
+  useEffect(() => {
+    hcsVoting.setupHederaClient();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Load initial data
   const loadGovernanceData = useCallback(async () => {
     if (!ajo?.ajoGovernance) {
-      console.error("No governance address provided");
       setError("No governance address configured for this Ajo");
       setLoading(false);
       return;
     }
 
     if (!governance.accountId) {
-      console.error("Wallet not connected");
       setError("Please connect your wallet to view governance data");
       setLoading(false);
       return;
@@ -71,13 +104,13 @@ const AjoGovernance = ({ ajo }: AjoGovernanceProps) => {
       setError(null);
 
       const settings = await governance.getGovernanceSettings();
-      await delay(300);
+      console.log("Governance settings:", settings);
 
       const season = await governance.getSeasonStatus();
-      await delay(300);
+      console.log("Season status:", season);
 
       const power = await governance.getVotingPower(governance.accountId);
-      await delay(300);
+      console.log("Voting Power:", power);
 
       const proposals = await governance.getActiveProposals();
 
@@ -103,7 +136,33 @@ const AjoGovernance = ({ ajo }: AjoGovernanceProps) => {
             console.error(`Failed to load proposal ${id}:`, error);
           }
         }
+        console.log("Proposal details:", details);
         setProposalDetails(details);
+
+        // Load HCS votes for each proposal
+        console.log("topic id - mirror node:", ajo?.hcsTopicId);
+        if (ajo?.hcsTopicId) {
+          for (const proposalId of proposals) {
+            try {
+              const votes = await hcsVoting.fetchVotesFromMirrorNode(
+                ajo?.hcsTopicId,
+                Number(proposalId)
+              );
+              console.log("Hsc votes from mirror node:", votes);
+              if (votes.length > 0) {
+                setPendingHcsVotes((prev) => ({
+                  ...prev,
+                  [Number(proposalId)]: votes,
+                }));
+              }
+            } catch (error) {
+              console.error(
+                `Failed to fetch HCS votes for proposal ${proposalId}:`,
+                error
+              );
+            }
+          }
+        }
       }
     } catch (error: any) {
       console.error("Failed to load governance data:", error);
@@ -116,20 +175,54 @@ const AjoGovernance = ({ ajo }: AjoGovernanceProps) => {
     } finally {
       setLoading(false);
     }
-  }, [ajo?.ajoGovernance, governance.accountId]);
+  }, [ajo?.ajoGovernance]);
 
   useEffect(() => {
     loadGovernanceData();
   }, [loadGovernanceData]);
 
-  // Voting handlers
-  const handleVote = async (proposalId: number, support: VoteSupport) => {
+  // HCS Vote handler
+  const handleHcsVote = async (proposalId: number, support: VoteSupport) => {
+    if (!hcsTopicId) {
+      toast.error("HCS Topic ID not found");
+      return;
+    }
+
+    const key = `${proposalId}-${support}-hcs`;
+    setVotingStates((prev) => ({ ...prev, [key]: true }));
+
+    try {
+      const vote = await hcsVoting.castHcsVote(proposalId, support, hcsTopicId);
+
+      if (vote) {
+        // Add vote to pending votes
+        setPendingHcsVotes((prev) => ({
+          ...prev,
+          [proposalId]: [...(prev[proposalId] || []), vote],
+        }));
+
+        toast.success(`Vote submitted to HCS! Cost: ~$0.0001`, {
+          description: "Your vote is stored off-chain and ready to be tallied.",
+        });
+      }
+    } catch (error) {
+      console.error("Failed to cast HCS vote:", error);
+    } finally {
+      setVotingStates((prev) => ({ ...prev, [key]: false }));
+    }
+  };
+
+  // On-chain vote handler (original)
+  const handleOnChainVote = async (
+    proposalId: number,
+    support: VoteSupport
+  ) => {
     const key = `${proposalId}-${support}`;
     setVotingStates((prev) => ({ ...prev, [key]: true }));
 
     try {
       await governance.castVote(proposalId, support);
-      toast.success("Vote cast successfully!");
+      toast.success("Vote cast on-chain!");
       await loadGovernanceData();
     } catch (error) {
       console.error("Failed to cast vote:", error);
@@ -138,7 +231,40 @@ const AjoGovernance = ({ ajo }: AjoGovernanceProps) => {
     }
   };
 
-  // Proposal handlers
+  // Tally HCS votes
+  const handleTallyHcsVotes = async (proposalId: number) => {
+    const votes = pendingHcsVotes[proposalId];
+    if (!votes || votes.length === 0) {
+      toast.error("No HCS votes to tally for this proposal");
+      return;
+    }
+
+    setTallyingProposal(proposalId);
+    try {
+      const result = await hcsVoting.tallyVotesFromHCS(proposalId, votes);
+
+      if (result) {
+        toast.success(`Tallied ${votes.length} votes!`, {
+          description: `For: ${result.forVotes}, Against: ${result.againstVotes}, Gas: ${result.gasUsed}`,
+        });
+
+        // Clear pending votes for this proposal
+        setPendingHcsVotes((prev) => {
+          const updated = { ...prev };
+          delete updated[proposalId];
+          return updated;
+        });
+
+        await loadGovernanceData();
+      }
+    } catch (error) {
+      console.error("Failed to tally votes:", error);
+    } finally {
+      setTallyingProposal(null);
+    }
+  };
+
+  // Proposal handlers (same as before)
   const handleProposeNewMember = async (
     memberAddress: string,
     description: string
@@ -152,13 +278,19 @@ const AjoGovernance = ({ ajo }: AjoGovernanceProps) => {
     }
   };
 
-  const handleProposeSeasonCompletion = async (description: string) => {
+  const handleProposeSeasonCompletion = async () => {
     try {
-      await governance.proposeSeasonCompletion(description);
+      setCreatingProposal(true);
+      await governance.proposeSeasonCompletion(
+        "Complete this season and prepare for next season"
+      );
       setShowCreateProposal(false);
+
       await loadGovernanceData();
     } catch (error) {
       console.error("Failed to create proposal:", error);
+    } finally {
+      setCreatingProposal(false);
     }
   };
 
@@ -251,8 +383,52 @@ const AjoGovernance = ({ ajo }: AjoGovernanceProps) => {
 
   return (
     <div className="space-y-6">
+      {/* HCS Info Banner */}
+      {/* <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-xl p-6">
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <h3 className="text-lg font-bold text-card-foreground mb-2 flex items-center space-x-2">
+              <Zap className="w-5 h-5 text-yellow-500" />
+              <span>HCS Off-Chain Voting Enabled</span>
+            </h3>
+            <p className="text-sm text-muted-foreground mb-3">
+              Vote off-chain via Hedera Consensus Service for ~$0.0001 per vote
+              (90%+ cost reduction). Anyone can tally votes on-chain with
+              signature verification.
+            </p>
+            {hcsTopicId && (
+              <div className="text-xs text-muted-foreground font-mono">
+                Topic ID: {hcsTopicId}
+              </div>
+            )}
+          </div>
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => setVotingMode("hcs")}
+              className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                votingMode === "hcs"
+                  ? "bg-blue-600 text-white"
+                  : "bg-background/50 text-muted-foreground hover:bg-background"
+              }`}
+            >
+              HCS Mode
+            </button>
+            <button
+              onClick={() => setVotingMode("onchain")}
+              className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                votingMode === "onchain"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-background/50 text-muted-foreground hover:bg-background"
+              }`}
+            >
+              On-Chain
+            </button>
+          </div>
+        </div>
+      </div> */}
+
       {/* Season Participation Banner */}
-      {seasonStatus && !seasonStatus.isSeasonCompleted && (
+      {/* {seasonStatus && !seasonStatus.isSeasonCompleted && (
         <div className="bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/20 rounded-xl p-6">
           <div className="flex items-center justify-between">
             <div className="flex-1">
@@ -303,10 +479,10 @@ const AjoGovernance = ({ ajo }: AjoGovernanceProps) => {
             )}
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Governance Stats */}
-      <div className="grid md:grid-cols-3 gap-6">
+      {/* <div className="grid md:grid-cols-3 gap-6">
         <div className="bg-card rounded-xl shadow-lg p-6 border border-border">
           <h4 className="text-lg font-bold text-card-foreground mb-4 flex items-center space-x-2">
             <Vote className="w-5 h-5 text-primary" />
@@ -387,7 +563,7 @@ const AjoGovernance = ({ ajo }: AjoGovernanceProps) => {
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* Active Proposals */}
       <div className="bg-card rounded-xl shadow-lg p-6 border border-border">
@@ -396,20 +572,40 @@ const AjoGovernance = ({ ajo }: AjoGovernanceProps) => {
             <Vote className="w-6 h-6 text-primary" />
             <span>Active Proposals</span>
           </h3>
-          <button
-            onClick={() => setShowCreateProposal(true)}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg font-semibold transition-all flex items-center space-x-2"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Create Proposal</span>
-          </button>
+          {proposalDetails.length !== 0 && (
+            <button
+              onClick={() => setShowCreateProposal(true)}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg font-semibold transition-all flex items-center space-x-2"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Create Proposal</span>
+            </button>
+          )}
         </div>
 
         {proposalDetails.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
+          <div className="flex items-center justify-center flex-col text-center py-12 text-muted-foreground">
             <AlertCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
-            <p>No active proposals</p>
-            <p className="text-sm mt-2">Create a proposal to get started</p>
+
+            <button
+              onClick={handleProposeSeasonCompletion}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg font-semibold transition-all flex items-center space-x-2"
+            >
+              {creatingProposal ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+                  <span>creating</span>
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4" />
+                  <span>Create Proposal</span>
+                </>
+              )}
+            </button>
+            <p className="text-sm mt-2">
+              Create a proposal to decide next season participation
+            </p>
           </div>
         ) : (
           <div className="space-y-6">
@@ -433,6 +629,17 @@ const AjoGovernance = ({ ajo }: AjoGovernanceProps) => {
               const isProposer =
                 governance.accountId?.toLowerCase() ===
                 proposal.proposer?.toLowerCase();
+
+              const hcsVotes = pendingHcsVotes[Number(proposal.id)] || [];
+              const hcsForVotes = hcsVotes.filter(
+                (v) => v.support === 1
+              ).length;
+              const hcsAgainstVotes = hcsVotes.filter(
+                (v) => v.support === 0
+              ).length;
+              const hcsAbstainVotes = hcsVotes.filter(
+                (v) => v.support === 2
+              ).length;
 
               return (
                 <div
@@ -474,9 +681,14 @@ const AjoGovernance = ({ ajo }: AjoGovernanceProps) => {
                             Passing
                           </div>
                         )}
-                        {proposal.hasUserVoted && (
+                        {proposal.hasUserVoted && votingMode === "onchain" && (
                           <div className="px-3 py-1 rounded-full text-xs font-medium bg-blue-600/20 text-blue-400">
                             You Voted
+                          </div>
+                        )}
+                        {hcsVotes.length > 0 && (
+                          <div className="px-3 py-1 rounded-full text-xs font-medium bg-yellow-600/20 text-yellow-400">
+                            {hcsVotes.length} HCS Votes Pending
                           </div>
                         )}
                       </div>
@@ -499,11 +711,11 @@ const AjoGovernance = ({ ajo }: AjoGovernanceProps) => {
                     </div>
                   </div>
 
-                  {/* Voting Results */}
+                  {/* On-Chain Voting Results */}
                   <div className="space-y-3 mb-4">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">
-                        Voting Results
+                        On-Chain Results
                       </span>
                       <span className="text-card-foreground">
                         {totalVotes} votes cast
@@ -530,68 +742,179 @@ const AjoGovernance = ({ ajo }: AjoGovernanceProps) => {
                     />
                   </div>
 
+                  {/* HCS Pending Votes */}
+                  {hcsVotes.length > 0 && (
+                    <div className="space-y-3 mb-4 p-4 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-yellow-400 font-semibold flex items-center space-x-2">
+                          <TrendingUp className="w-4 h-4" />
+                          <span>Pending HCS Votes (Off-Chain)</span>
+                        </span>
+                        <span className="text-card-foreground">
+                          {hcsVotes.length} votes (~$
+                          {(hcsVotes.length * 0.0001).toFixed(4)})
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-3 text-sm">
+                        <div>
+                          <span className="text-green-400">For: </span>
+                          <span className="font-semibold">{hcsForVotes}</span>
+                        </div>
+                        <div>
+                          <span className="text-red-400">Against: </span>
+                          <span className="font-semibold">
+                            {hcsAgainstVotes}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-gray-400">Abstain: </span>
+                          <span className="font-semibold">
+                            {hcsAbstainVotes}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Actions */}
                   <div className="flex items-center space-x-3 pt-4 border-t border-border flex-wrap gap-2">
                     {proposal.isActive &&
                       !proposal.executed &&
                       !proposal.canceled && (
                         <>
-                          {!proposal.hasUserVoted && (
-                            <div className="flex items-center space-x-2">
-                              <button
-                                onClick={() =>
-                                  handleVote(
-                                    Number(proposal.id),
-                                    VoteSupport.For
-                                  )
-                                }
-                                disabled={
-                                  votingStates[
-                                    `${proposal.id}-${VoteSupport.For}`
-                                  ]
-                                }
-                                className="bg-green-600 hover:bg-green-700 disabled:bg-green-600/50 text-white px-4 py-2 rounded-lg font-semibold transition-all flex items-center space-x-2"
-                              >
-                                <ThumbsUp className="w-4 h-4" />
-                                <span>Vote For</span>
-                              </button>
-                              <button
-                                onClick={() =>
-                                  handleVote(
-                                    Number(proposal.id),
-                                    VoteSupport.Against
-                                  )
-                                }
-                                disabled={
-                                  votingStates[
-                                    `${proposal.id}-${VoteSupport.Against}`
-                                  ]
-                                }
-                                className="bg-red-600 hover:bg-red-700 disabled:bg-red-600/50 text-white px-4 py-2 rounded-lg font-semibold transition-all flex items-center space-x-2"
-                              >
-                                <ThumbsDown className="w-4 h-4" />
-                                <span>Vote Against</span>
-                              </button>
-                              <button
-                                onClick={() =>
-                                  handleVote(
-                                    Number(proposal.id),
-                                    VoteSupport.Abstain
-                                  )
-                                }
-                                disabled={
-                                  votingStates[
-                                    `${proposal.id}-${VoteSupport.Abstain}`
-                                  ]
-                                }
-                                className="bg-gray-600 hover:bg-gray-700 disabled:bg-gray-600/50 text-white px-4 py-2 rounded-lg font-semibold transition-all flex items-center space-x-2"
-                              >
-                                <MinusCircle className="w-4 h-4" />
-                                <span>Abstain</span>
-                              </button>
-                            </div>
+                          {/* {votingMode === "hcs" ? ( */}
+                          {/* // HCS Voting Buttons */}
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() =>
+                                handleHcsVote(
+                                  Number(proposal.id),
+                                  VoteSupport.For
+                                )
+                              }
+                              disabled={
+                                votingStates[
+                                  `${proposal.id}-${VoteSupport.For}-hcs`
+                                ]
+                              }
+                              className="bg-green-600 hover:bg-green-700 disabled:bg-green-600/50 text-white px-4 py-2 rounded-lg font-semibold transition-all flex items-center space-x-2"
+                            >
+                              <ThumbsUp className="w-4 h-4" />
+                              <span>Vote For (HCS)</span>
+                            </button>
+                            <button
+                              onClick={() =>
+                                handleHcsVote(
+                                  Number(proposal.id),
+                                  VoteSupport.Against
+                                )
+                              }
+                              disabled={
+                                votingStates[
+                                  `${proposal.id}-${VoteSupport.Against}-hcs`
+                                ]
+                              }
+                              className="bg-red-600 hover:bg-red-700 disabled:bg-red-600/50 text-white px-4 py-2 rounded-lg font-semibold transition-all flex items-center space-x-2"
+                            >
+                              <ThumbsDown className="w-4 h-4" />
+                              <span>Vote Against (HCS)</span>
+                            </button>
+                            <button
+                              onClick={() =>
+                                handleHcsVote(
+                                  Number(proposal.id),
+                                  VoteSupport.Abstain
+                                )
+                              }
+                              disabled={
+                                votingStates[
+                                  `${proposal.id}-${VoteSupport.Abstain}-hcs`
+                                ]
+                              }
+                              className="bg-gray-600 hover:bg-gray-700 disabled:bg-gray-600/50 text-white px-4 py-2 rounded-lg font-semibold transition-all flex items-center space-x-2"
+                            >
+                              <MinusCircle className="w-4 h-4" />
+                              <span>Abstain (HCS)</span>
+                            </button>
+                          </div>
+                          {/* ) : (
+                            // On-Chain Voting Buttons
+                            !proposal.hasUserVoted && (
+                              <div className="flex items-center space-x-2">
+                                <button
+                                  onClick={() =>
+                                    handleOnChainVote(
+                                      Number(proposal.id),
+                                      VoteSupport.For
+                                    )
+                                  }
+                                  disabled={
+                                    votingStates[
+                                      `${proposal.id}-${VoteSupport.For}`
+                                    ]
+                                  }
+                                  className="bg-green-600 hover:bg-green-700 disabled:bg-green-600/50 text-white px-4 py-2 rounded-lg font-semibold transition-all flex items-center space-x-2"
+                                >
+                                  <ThumbsUp className="w-4 h-4" />
+                                  <span>Vote For</span>
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    handleOnChainVote(
+                                      Number(proposal.id),
+                                      VoteSupport.Against
+                                    )
+                                  }
+                                  disabled={
+                                    votingStates[
+                                      `${proposal.id}-${VoteSupport.Against}`
+                                    ]
+                                  }
+                                  className="bg-red-600 hover:bg-red-700 disabled:bg-red-600/50 text-white px-4 py-2 rounded-lg font-semibold transition-all flex items-center space-x-2"
+                                >
+                                  <ThumbsDown className="w-4 h-4" />
+                                  <span>Vote Against</span>
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    handleOnChainVote(
+                                      Number(proposal.id),
+                                      VoteSupport.Abstain
+                                    )
+                                  }
+                                  disabled={
+                                    votingStates[
+                                      `${proposal.id}-${VoteSupport.Abstain}`
+                                    ]
+                                  }
+                                  className="bg-gray-600 hover:bg-gray-700 disabled:bg-gray-600/50 text-white px-4 py-2 rounded-lg font-semibold transition-all flex items-center space-x-2"
+                                >
+                                  <MinusCircle className="w-4 h-4" />
+                                  <span>Abstain</span>
+                                </button>
+                              </div>
+                            ) */}
+                          {/* )} */}
+                          {/* Tally HCS Votes Button */}
+                          {hcsVotes.length > 0 && (
+                            <button
+                              onClick={() =>
+                                handleTallyHcsVotes(Number(proposal.id))
+                              }
+                              disabled={
+                                tallyingProposal === Number(proposal.id)
+                              }
+                              className="bg-yellow-600 hover:bg-yellow-700 disabled:bg-yellow-600/50 text-white px-4 py-2 rounded-lg font-semibold transition-all flex items-center space-x-2"
+                            >
+                              <Zap className="w-4 h-4" />
+                              <span>
+                                {tallyingProposal === Number(proposal.id)
+                                  ? "Tallying..."
+                                  : `Tally ${hcsVotes.length} HCS Votes`}
+                              </span>
+                            </button>
                           )}
-
                           {proposal.isPassing && proposal.hasQuorum && (
                             <button
                               onClick={() =>
@@ -603,7 +926,6 @@ const AjoGovernance = ({ ajo }: AjoGovernanceProps) => {
                               <span>Execute</span>
                             </button>
                           )}
-
                           {isProposer && (
                             <button
                               onClick={() =>
@@ -639,7 +961,7 @@ const AjoGovernance = ({ ajo }: AjoGovernanceProps) => {
         <CreateProposalModal
           onClose={() => setShowCreateProposal(false)}
           onSubmitNewMember={handleProposeNewMember}
-          onSubmitSeasonCompletion={handleProposeSeasonCompletion}
+          // onSubmitSeasonCompletion={handleProposeSeasonCompletion}
           onSubmitSeasonParameters={handleProposeUpdateSeasonParameters}
         />
       )}
@@ -696,12 +1018,12 @@ const VotingBar = ({
 const CreateProposalModal = ({
   onClose,
   onSubmitNewMember,
-  onSubmitSeasonCompletion,
+  // onSubmitSeasonCompletion,
   onSubmitSeasonParameters,
 }: {
   onClose: () => void;
   onSubmitNewMember: (address: string, description: string) => void;
-  onSubmitSeasonCompletion: (description: string) => void;
+  // onSubmitSeasonCompletion: (description: string) => void;
   onSubmitSeasonParameters: (
     description: string,
     duration: number,
@@ -717,8 +1039,9 @@ const CreateProposalModal = ({
   const handleSubmit = () => {
     if (proposalType === "newMember") {
       onSubmitNewMember(memberAddress, description);
-    } else if (proposalType === "seasonCompletion") {
-      onSubmitSeasonCompletion(description);
+      // } else if (proposalType === "seasonCompletion") {
+      //   onSubmitSeasonCompletion(description);
+      // }
     } else if (proposalType === "seasonParameters") {
       onSubmitSeasonParameters(description, Number(duration), monthlyPayment);
     }
