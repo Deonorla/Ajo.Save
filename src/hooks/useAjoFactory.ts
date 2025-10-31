@@ -9,7 +9,11 @@ import {
 import { ethers } from "ethers";
 import { useWalletInterface } from "@/services/wallets/useWalletInterface";
 import { ContractFunctionParameterBuilder } from "@/services/wallets/contractFunctionParameterBuilder";
+<<<<<<< HEAD
 import AjoFactoryABI from "@/abi/ajoFactory.json";
+=======
+import AjoFactoryABI from "@/abi/AjoFactory.json";
+>>>>>>> repoB/wallectconnect-Integration
 import { toast } from "sonner";
 import { useAjoStore } from "@/store/ajoStore";
 import { appConfig } from "@/config";
@@ -1225,7 +1229,10 @@ export const useAjoFactory = (ajoFactoryAddress?: string) => {
             hcsTopicId: info.hcsTopicId,
             usesScheduledPayments: info.usesScheduledPayments,
             scheduledPaymentsCount: info.scheduledPaymentsCount.toNumber(),
+<<<<<<< HEAD
             ajoMonthlyPaymentUSDC: info.ajoMonthlyPaymentUSDC.toNumber(),
+=======
+>>>>>>> repoB/wallectconnect-Integration
           })),
           hasMore,
         };

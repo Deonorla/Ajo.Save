@@ -17,9 +17,13 @@ type ERC20Contract = Contract & {
 };
 
 export const useTokenContract = (tokenAddress: string) => {
+<<<<<<< HEAD
   const { address } = useWallet();
 
   const provider = new ethers.providers.Web3Provider((window as any).ethereum);
+=======
+  const { provider, address } = useWallet();
+>>>>>>> repoB/wallectconnect-Integration
 
   const contract = useMemo(() => {
     if (!provider || !tokenAddress) return null;

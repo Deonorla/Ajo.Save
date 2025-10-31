@@ -7,7 +7,11 @@
     "module": "ESNext",
     "skipLibCheck": true,
     "baseUrl": ".",
+<<<<<<< HEAD
 
+=======
+    "ignoreDeprecations": "6.0",
+>>>>>>> repoB/wallectconnect-Integration
     "paths": {
       "@/*": ["src/*"]
     },
@@ -22,8 +26,13 @@
 
     /* Linting */
     "strict": true,
+<<<<<<< HEAD
     "noUnusedLocals": false,
     "noUnusedParameters": false,
+=======
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+>>>>>>> repoB/wallectconnect-Integration
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true

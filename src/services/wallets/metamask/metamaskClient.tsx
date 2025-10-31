@@ -77,12 +77,15 @@ export const connectToMetamask = async () => {
 };
 
 class MetaMaskWallet implements WalletInterface {
+<<<<<<< HEAD
   signMessage(message: Uint8Array): Promise<{ signature: string }> {
     throw new Error("Method not implemented.");
   }
   sendTransaction(transaction: any): Promise<string | null> {
     throw new Error("Method not implemented.");
   }
+=======
+>>>>>>> repoB/wallectconnect-Integration
   private convertAccountIdToSolidityAddress(accountId: AccountId): string {
     const accountIdString =
       accountId.evmAddress !== null
