@@ -568,10 +568,12 @@ cd ajo-save
 
 ```bash
 # Install all dependencies
-npm install
+npm install --legacy-peer-deps
+
+use --legacy-peer-deps while installing node modules.
 
 # If using yarn
-yarn install
+yarn install --legacy-peer-deps
 ```
 
 ### Step 3: Configure Environment Variables
