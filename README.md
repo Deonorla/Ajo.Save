@@ -9,9 +9,9 @@
 ---
 
 ## 📋 Table of Contents
-
+- [Project Links](#project-links)
 - [Project Overview](#project-overview)
-- [Hedera Integration Summary](#hedera-integration-summary)
+- [Hedera Integration Summary](##hedera-integration-summary)
 - [Architecture Diagram](#architecture-diagram)
 - [Key Features](#key-features)
 - [Deployed Hedera IDs](#deployed-hedera-ids)
@@ -22,6 +22,12 @@
 - [Economic Model](#economic-model)
 - [Project Links](#project-links)
 - [Team](#team)
+
+---
+##  Project Links
+
+**Hedera Certification link:** [Certificate](https://certs.hashgraphdev.com/d08c2eba-177f-45bb-82f9-6547fae39cb0.pdf)
+**Pitch Deck link:** [Pitch deck](https://www.canva.com/design/DAG0d1jQ7_c/Yq8DAVK2hGs0xhpd_xfmWQ/view?utm_content=DAG0d1jQ7_c&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=hc7f6fc03ab)
 
 ---
 
