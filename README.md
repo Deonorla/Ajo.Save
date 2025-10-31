@@ -501,8 +501,7 @@ const { ajoId } = await createHtsAjo(ajoFactory, deployer, hederaClient, {
 
 ### Testnet Deployment (Latest)
 
-**Network:** Hedera Testnet  
-**Deployment Date:** [Your deployment date]  
+**Network:** Hedera Testnet 
 **RPC URL:** https://testnet.hashio.io/api  
 **Mirror Node:** https://testnet.mirrornode.hedera.com
 
@@ -566,17 +565,17 @@ const { ajoId } = await createHtsAjo(ajoFactory, deployer, hederaClient, {
 ### Step 1: Clone Repository
 
 ```bash
-git clone https://github.com/[your-org]/ajo-save.git
-cd ajo-save
+git clone https://github.com/Deonorla/Ajo.Save.git
+cd ajo.save
 ```
 
 ### Step 2: Install Dependencies
 
+use --legacy-peer-deps while installing node modules.
+
 ```bash
 # Install all dependencies
 npm install --legacy-peer-deps
-
-use --legacy-peer-deps while installing node modules.
 
 # If using yarn
 yarn install --legacy-peer-deps
@@ -639,7 +638,7 @@ VITE_PROJECT_ID=YOUR_WALLETCONNECT_PROJECT_ID
    - Create free testnet account
    - Copy Account ID (0.0.XXXXX) and Private Key
 
-2. **WalletConnect Project ID (Optional):**
+2. **WalletConnect Project ID :**
    - Visit [WalletConnect Cloud](https://cloud.walletconnect.com)
    - Create free project
    - Copy Project ID
@@ -1149,7 +1148,7 @@ For a 10-member Ajo with $50 monthly contribution:
 - **GitHub Repository:** https://github.com/Deonorla/Ajo.Save
 - **Pitch Deck:** [Link to pitch deck Slides](https://www.canva.com/design/DAG0d1jQ7_c/Yq8DAVK2hGs0xhpd_xfmWQ/view?utm_content=DAG0d1jQ7_c&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=hc7f6fc03ab)
 - **Video Demo:** [Link to YouTube demo](https://youtu.be/VGMedbGJmy0)
-- **Certification:** [Link to Hedera certification]()
+- **Certification:** [Link to Hedera certification](https://certs.hashgraphdev.com/d08c2eba-177f-45bb-82f9-6547fae39cb0.pdf)
 
 ### Live Links
 
