@@ -71,6 +71,44 @@
         {
           "indexed": true,
           "internalType": "address",
+          "name": "disabler",
+          "type": "address"
+        }
+      ],
+      "name": "AjoAutomationDisabled",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "ajoId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "enabler",
+          "type": "address"
+        }
+      ],
+      "name": "AjoAutomationEnabled",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "ajoId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
           "name": "creator",
           "type": "address"
         },
@@ -286,6 +324,25 @@
       "inputs": [
         {
           "indexed": false,
+          "internalType": "uint256[]",
+          "name": "ajoIds",
+          "type": "uint256[]"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "relayerAddress",
+          "type": "address"
+        }
+      ],
+      "name": "BatchAutomationSetup",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
           "internalType": "uint256",
           "name": "successCount",
           "type": "uint256"
@@ -317,6 +374,25 @@
         }
       ],
       "name": "CallResponseEvent",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "oldRelayer",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "newRelayer",
+          "type": "address"
+        }
+      ],
+      "name": "DefenderRelayerSet",
       "type": "event"
     },
     {
@@ -449,68 +525,6 @@
         {
           "indexed": true,
           "internalType": "address",
-          "name": "tokenAddress",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "string",
-          "name": "name",
-          "type": "string"
-        },
-        {
-          "indexed": false,
-          "internalType": "string",
-          "name": "symbol",
-          "type": "string"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint8",
-          "name": "decimals",
-          "type": "uint8"
-        }
-      ],
-      "name": "HtsTokenCreated",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "string",
-          "name": "tokenName",
-          "type": "string"
-        },
-        {
-          "indexed": false,
-          "internalType": "int64",
-          "name": "responseCode",
-          "type": "int64"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "tokenAddress",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "bool",
-          "name": "success",
-          "type": "bool"
-        }
-      ],
-      "name": "HtsTokenCreationAttempt",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
           "name": "usdcToken",
           "type": "address"
         },
@@ -522,25 +536,6 @@
         }
       ],
       "name": "HtsTokensConfigured",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "usdcToken",
-          "type": "address"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "hbarToken",
-          "type": "address"
-        }
-      ],
-      "name": "HtsTokensCreatedWithAutoAssociation",
       "type": "event"
     },
     {
@@ -838,6 +833,25 @@
       "type": "function"
     },
     {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "ajoAutomationEnabled",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
       "inputs": [],
       "name": "ajoCollateralImplementation",
       "outputs": [
@@ -1047,6 +1061,65 @@
     {
       "inputs": [
         {
+          "internalType": "uint256[]",
+          "name": "ajoIds",
+          "type": "uint256[]"
+        }
+      ],
+      "name": "batchEnableAutomation",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256[]",
+          "name": "ajoIds",
+          "type": "uint256[]"
+        }
+      ],
+      "name": "checkAutomationStatus",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "ajoId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bool",
+              "name": "enabled",
+              "type": "bool"
+            },
+            {
+              "internalType": "bool",
+              "name": "shouldRun",
+              "type": "bool"
+            },
+            {
+              "internalType": "uint256",
+              "name": "defaultersCount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "string",
+              "name": "reason",
+              "type": "string"
+            }
+          ],
+          "internalType": "struct AjoFactory.AutomationStatus[]",
+          "name": "statuses",
+          "type": "tuple[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
           "internalType": "address",
           "name": "user",
           "type": "address"
@@ -1118,24 +1191,6 @@
       "type": "function"
     },
     {
-      "inputs": [],
-      "name": "createHtsTokens",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "usdcToken",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "hbarToken",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "payable",
-      "type": "function"
-    },
-    {
       "inputs": [
         {
           "internalType": "address",
@@ -1173,6 +1228,32 @@
       "type": "function"
     },
     {
+      "inputs": [],
+      "name": "defenderRelayerAddress",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "ajoId",
+          "type": "uint256"
+        }
+      ],
+      "name": "disableAjoAutomation",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
       "inputs": [
         {
           "internalType": "uint256",
@@ -1193,55 +1274,21 @@
           "type": "uint256"
         }
       ],
-      "name": "enableScheduledPaymentsForAjo",
+      "name": "enableAjoAutomation",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
     },
     {
-      "inputs": [],
-      "name": "factoryTokensMinted",
-      "outputs": [
-        {
-          "internalType": "bool",
-          "name": "",
-          "type": "bool"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
       "inputs": [
         {
-          "internalType": "address",
-          "name": "user",
-          "type": "address"
-        },
-        {
-          "internalType": "int64",
-          "name": "usdcAmount",
-          "type": "int64"
-        },
-        {
-          "internalType": "int64",
-          "name": "hbarAmount",
-          "type": "int64"
+          "internalType": "uint256",
+          "name": "ajoId",
+          "type": "uint256"
         }
       ],
-      "name": "fundUserWithHtsTokens",
-      "outputs": [
-        {
-          "internalType": "bool",
-          "name": "usdcSuccess",
-          "type": "bool"
-        },
-        {
-          "internalType": "bool",
-          "name": "hbarSuccess",
-          "type": "bool"
-        }
-      ],
+      "name": "enableScheduledPaymentsForAjo",
+      "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
     },
@@ -1335,6 +1382,21 @@
             {
               "internalType": "uint256",
               "name": "scheduledPaymentsCount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "ajoCycleDuration",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "ajoMonthlyPaymentUSDC",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "ajoMonthlyPaymentHBAR",
               "type": "uint256"
             }
           ],
@@ -1548,6 +1610,19 @@
       "type": "function"
     },
     {
+      "inputs": [],
+      "name": "getAjosWithAutomation",
+      "outputs": [
+        {
+          "internalType": "uint256[]",
+          "name": "ajoIds",
+          "type": "uint256[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
       "inputs": [
         {
           "internalType": "uint256",
@@ -1642,6 +1717,21 @@
             {
               "internalType": "uint256",
               "name": "scheduledPaymentsCount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "ajoCycleDuration",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "ajoMonthlyPaymentUSDC",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "ajoMonthlyPaymentHBAR",
               "type": "uint256"
             }
           ],
@@ -1872,6 +1962,19 @@
           "type": "bytes"
         }
       ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_relayerAddress",
+          "type": "address"
+        }
+      ],
+      "name": "setDefenderRelayer",
+      "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
     },

@@ -83,6 +83,31 @@
         {
           "indexed": true,
           "internalType": "uint256",
+          "name": "newCycle",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "advancer",
+          "type": "address"
+        }
+      ],
+      "name": "CycleForceAdvanced",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
           "name": "cycle",
           "type": "uint256"
         },
@@ -638,6 +663,13 @@
     },
     {
       "inputs": [],
+      "name": "forceAdvanceCycle",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "getActivePaymentToken",
       "outputs": [
         {
@@ -812,6 +844,39 @@
       "type": "function"
     },
     {
+      "inputs": [],
+      "name": "getDefaultStatus",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "isPastDeadline",
+          "type": "bool"
+        },
+        {
+          "internalType": "uint256",
+          "name": "defaultersCount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address[]",
+          "name": "defaulters",
+          "type": "address[]"
+        },
+        {
+          "internalType": "uint256",
+          "name": "currentCycleNum",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "deadlineTimestamp",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
       "inputs": [
         {
           "internalType": "address",
@@ -852,6 +917,19 @@
           "internalType": "struct PaymentStatus[]",
           "name": "",
           "type": "tuple[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getMembersInDefault",
+      "outputs": [
+        {
+          "internalType": "address[]",
+          "name": "defaulters",
+          "type": "address[]"
         }
       ],
       "stateMutability": "view",
@@ -1117,6 +1195,24 @@
       "name": "initialize",
       "outputs": [],
       "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "isDeadlinePassed",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "isPastDeadline",
+          "type": "bool"
+        },
+        {
+          "internalType": "uint256",
+          "name": "secondsOverdue",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
       "type": "function"
     },
     {

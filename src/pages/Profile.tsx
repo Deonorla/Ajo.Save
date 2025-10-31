@@ -22,8 +22,7 @@ const Profile = () => {
   const [activeTab, setActiveTab] = useState("ajo");
   const { hbar, usdc, loading, address } = useTokenStore();
   const [copied, setCopied] = useState(false);
-  const [balanceInNGN, setBalanceInNGN] = useState<number | null>(null);
-  const [usdcBalanceInNGN, setUsdcBalanceInNGN] = useState<number | null>(null);
+  const [hbarPrice, setHbarPrice] = useState<number | null>(null);
 
   useEffect(() => {
     setIsVisible(true);
@@ -33,29 +32,34 @@ const Profile = () => {
   useEffect(() => {
     const fetchPrices = async () => {
       try {
-        const [hbarRes, usdcRes] = await Promise.all([
+        const [hbarRes, hbarUsdRes, usdcRes] = await Promise.all([
           fetch(
             "https://api.coingecko.com/api/v3/simple/price?ids=hedera-hashgraph&vs_currencies=ngn"
+          ),
+          fetch(
+            "https://api.coingecko.com/api/v3/simple/price?ids=hedera-hashgraph&vs_currencies=usd"
           ),
           fetch(
             "https://api.coingecko.com/api/v3/simple/price?ids=usd-coin&vs_currencies=ngn"
           ),
         ]);
 
-        const [hbarData, usdcData] = await Promise.all([
+        const [hbarData, hbarUsdData, usdcData] = await Promise.all([
           hbarRes.json(),
+          hbarUsdRes.json(),
           usdcRes.json(),
         ]);
 
         const hbarPrice = hbarData?.["hedera-hashgraph"]?.ngn ?? 0;
+        const hbarUsdPrice = hbarUsdData?.["hedera-hashgraph"]?.usd ?? 0;
         const usdcPrice = usdcData?.["usd-coin"]?.ngn ?? 0;
 
-        console.log("HBAR Price NGN:", hbarPrice);
-        console.log("USDC Price NGN:", usdcPrice);
+        // console.log("HBAR Price NGN:", hbarPrice);
+        // console.log("HBAR Price USD:", hbarUsdPrice);
+        // console.log("USDC Price NGN:", usdcPrice);
 
         // if you already have balances
-        if (hbar) setBalanceInNGN(parseFloat(hbar) * hbarPrice);
-        if (usdc) setUsdcBalanceInNGN(parseFloat(usdc) * usdcPrice);
+        if (hbar) setHbarPrice(parseFloat(hbarUsdPrice));
       } catch (error) {
         console.error("Failed to fetch prices:", error);
       }
@@ -89,9 +93,8 @@ const Profile = () => {
           isVisible={isVisible}
           hbar={hbar}
           usdc={usdc}
+          hbarPrice={hbarPrice}
           loading={loading}
-          balanceInNGN={balanceInNGN}
-          usdcBalanceInNGN={usdcBalanceInNGN}
           copied={copied}
           handleCopy={handleCopy}
         />

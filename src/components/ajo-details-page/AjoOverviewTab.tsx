@@ -99,7 +99,9 @@ const AjoOverviewTab = ({ ajo }: { ajo: AjoInfo | null | undefined }) => {
               <div
                 className="bg-gradient-to-r from-primary to-accent h-3 rounded-full transition-all duration-1000"
                 style={{
-                  width: `${(cycleCount / 10) * 100}%`,
+                  width: `${
+                    ((cycleCount === 0 ? 0 : cycleCount - 1) / 10) * 100
+                  }%`,
                 }}
               ></div>
             </div>
@@ -107,7 +109,7 @@ const AjoOverviewTab = ({ ajo }: { ajo: AjoInfo | null | undefined }) => {
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
                 <div className="text-2xl font-bold text-primary">
-                  {cycleCount}
+                  {cycleCount === 0 ? 0 : cycleCount - 1}
                 </div>
                 <div className="text-sm text-muted-foreground">Completed</div>
               </div>

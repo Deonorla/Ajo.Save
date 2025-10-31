@@ -1225,6 +1225,7 @@ export const useAjoFactory = (ajoFactoryAddress?: string) => {
             hcsTopicId: info.hcsTopicId,
             usesScheduledPayments: info.usesScheduledPayments,
             scheduledPaymentsCount: info.scheduledPaymentsCount.toNumber(),
+            ajoMonthlyPaymentUSDC: info.ajoMonthlyPaymentUSDC.toNumber(),
           })),
           hasMore,
         };

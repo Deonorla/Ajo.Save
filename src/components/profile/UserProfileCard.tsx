@@ -1,4 +1,4 @@
-import formatCurrency from "@/utils/formatCurrency";
+import formatCurrency, { formatCurrencyUSD } from "@/utils/formatCurrency";
 import {
   Check,
   Copy,
@@ -14,11 +14,10 @@ interface UserProfileCardProps {
   address?: string | null;
   network?: string | null;
   hbar?: string | null;
+  hbarPrice: number | null;
   usdc?: string | null;
   loading?: boolean;
   copied?: boolean;
-  balanceInNGN?: number | null;
-  usdcBalanceInNGN?: number | null;
   handleCopy?: () => void;
   onRefresh?: () => void;
 }
@@ -31,8 +30,7 @@ const UserProfileCard = ({
   usdc,
   loading,
   copied,
-  balanceInNGN,
-  usdcBalanceInNGN,
+  hbarPrice,
   handleCopy,
   onRefresh,
 }: UserProfileCardProps) => {
@@ -46,9 +44,9 @@ const UserProfileCard = ({
       setTimeout(() => setRefreshing(false), 1000);
     }
   };
-
-  // Calculate total balance in NGN (if available)
-  const totalBalanceNGN = (balanceInNGN || 0) + (usdcBalanceInNGN || 0);
+  const hbarInUsd = Number(hbar) * (hbarPrice ?? 0);
+  // Calculate total balance in USD (if available)
+  const totalBalanceUSD = (Number(usdc) || 0) + (hbarInUsd || 0);
 
   return (
     <div
@@ -170,9 +168,9 @@ const UserProfileCard = ({
                     </>
                   )}
                 </div>
-                {usdcBalanceInNGN !== null && (
+                {usdc !== null && (
                   <p className="text-white/50 text-xs mt-2">
-                    ≈{formatCurrency(usdcBalanceInNGN ? usdcBalanceInNGN : 0)}
+                    ≈{formatCurrencyUSD(usdc ? Number(usdc) : 0)}
                   </p>
                 )}
               </div>
@@ -209,25 +207,26 @@ const UserProfileCard = ({
                     </>
                   )}
                 </div>
-                {balanceInNGN !== null && (
+                {hbar !== null && (
                   <p className="text-white/50 text-xs mt-2">
-                    ≈ {formatCurrency(balanceInNGN ? balanceInNGN : 0)}
+                    ≈ {formatCurrencyUSD(hbar ? hbarInUsd : 0)}
                   </p>
                 )}
               </div>
             </div>
 
             {/* Total Balance (if NGN values available) */}
-            {totalBalanceNGN > 0 && (
+            {totalBalanceUSD > 0 && (
               <div className="mt-4 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-4">
                 <p className="text-white/60 text-xs font-medium mb-1">
                   Total Portfolio Value
                 </p>
                 <p className="text-white text-2xl sm:text-3xl font-bold">
-                  ₦
-                  {totalBalanceNGN.toLocaleString("en-NG", {
+                  {totalBalanceUSD.toLocaleString("en-US", {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
+                    style: "currency",
+                    currency: "USD",
                   })}
                 </p>
               </div>

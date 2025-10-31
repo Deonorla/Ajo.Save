@@ -126,7 +126,7 @@ const AjoCard = ({ ajo, isVisible }: AjoCardProps) => {
           <div className="flex justify-between items-center">
             <div className="text-xs text-muted-foreground">Monthly Payment</div>
             <div className="text-lg font-bold text-primary">
-              {formatCurrencyUSD(50)}
+              {formatCurrencyUSD(Number(ajo.ajoMonthlyPaymentUSDC) / 1000000)}
             </div>
           </div>
 
@@ -149,7 +149,9 @@ const AjoCard = ({ ajo, isVisible }: AjoCardProps) => {
           <div className="flex justify-between items-center">
             <div className="text-xs text-muted-foreground">Expected Payout</div>
             <div className="text-lg font-bold text-primary">
-              {formatCurrencyUSD(50 * 10)}
+              {formatCurrencyUSD(
+                (Number(ajo.ajoMonthlyPaymentUSDC) / 1000000) * 10
+              )}
             </div>
           </div>
 

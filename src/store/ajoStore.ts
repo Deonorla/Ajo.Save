@@ -21,6 +21,9 @@ export interface AjoInfo {
   hcsTopicId: string;
   usesScheduledPayments: boolean;
   scheduledPaymentsCount: string;
+  ajoCycleDuration: string;
+  ajoMonthlyPaymentUSDC: string;
+  ajoMonthlyPaymentHBAR: string;
 }
 
 interface AjoStore {
@@ -39,6 +42,18 @@ const mapAjoStruct = (ajo: any[], index: number): AjoInfo => {
     ? ajo[15].toString()
     : String(ajo[15]);
 
+  const ajoCycleDurationValue = BigNumber.isBigNumber(ajo[16])
+    ? ajo[16].toString()
+    : String(ajo[16]);
+
+  const ajoMonthlyPaymentUSDCValue = BigNumber.isBigNumber(ajo[17])
+    ? ajo[17].toString()
+    : String(ajo[17]);
+
+  const ajoMonthlyPaymentHBARValue = BigNumber.isBigNumber(ajo[18])
+    ? ajo[18].toString()
+    : String(ajo[18]);
+
   return {
     ajoId: index + 1,
     ajoCore: ajo[0],
@@ -56,7 +71,10 @@ const mapAjoStruct = (ajo: any[], index: number): AjoInfo => {
     hbarToken: ajo[12], // Index 12
     hcsTopicId: ajo[13], // Index 13
     usesScheduledPayments: ajo[14], // Index 14
-    scheduledPaymentsCount: scheduledPaymentsCountValue, // Index 15
+    scheduledPaymentsCount: scheduledPaymentsCountValue,
+    ajoCycleDuration: ajoCycleDurationValue,
+    ajoMonthlyPaymentUSDC: ajoMonthlyPaymentUSDCValue,
+    ajoMonthlyPaymentHBAR: ajoMonthlyPaymentHBARValue,
   };
 };
 
