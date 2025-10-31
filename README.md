@@ -1,5 +1,5 @@
 # 🏦 AJO.SAVE - Decentralized ROSCA Protocol on Hedera
-
+# Track - Onchain Finance & Real-World Assets (RWA)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Hedera](https://img.shields.io/badge/Hedera-Testnet-purple.svg)](https://hedera.com)
 [![Track](https://img.shields.io/badge/Track-DeFi-brightgreen.svg)]()
@@ -9,9 +9,9 @@
 ---
 
 ## 📋 Table of Contents
-
+- [Project Links](#project-links)
 - [Project Overview](#project-overview)
-- [Hedera Integration Summary](#hedera-integration-summary)
+- [Hedera Integration Summary](##hedera-integration-summary)
 - [Architecture Diagram](#architecture-diagram)
 - [Key Features](#key-features)
 - [Deployed Hedera IDs](#deployed-hedera-ids)
@@ -24,10 +24,16 @@
 - [Team](#team)
 
 ---
+##  Project Links
+
+**Hedera Certification link:** [Certificate](https://certs.hashgraphdev.com/d08c2eba-177f-45bb-82f9-6547fae39cb0.pdf)
+**Pitch Deck link:** [Pitch deck](https://www.canva.com/design/DAG0d1jQ7_c/Yq8DAVK2hGs0xhpd_xfmWQ/view?utm_content=DAG0d1jQ7_c&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=hc7f6fc03ab)
+
+---
 
 ## 🎯 Project Overview
 
-**Track:** DeFi / Emerging Markets Financial Inclusion
+**Track:** Onchain Finance & Real-World Assets (RWA)
 
 **Problem:** Traditional African savings circles (ROSCAs) rely on trust and face scalability issues. Existing blockchain solutions are too expensive (Ethereum gas fees) or require complex infrastructure.
 
@@ -495,8 +501,7 @@ const { ajoId } = await createHtsAjo(ajoFactory, deployer, hederaClient, {
 
 ### Testnet Deployment (Latest)
 
-**Network:** Hedera Testnet  
-**Deployment Date:** [Your deployment date]  
+**Network:** Hedera Testnet 
 **RPC URL:** https://testnet.hashio.io/api  
 **Mirror Node:** https://testnet.mirrornode.hedera.com
 
@@ -560,18 +565,20 @@ const { ajoId } = await createHtsAjo(ajoFactory, deployer, hederaClient, {
 ### Step 1: Clone Repository
 
 ```bash
-git clone https://github.com/[your-org]/ajo-save.git
-cd ajo-save
+git clone https://github.com/Deonorla/Ajo.Save.git
+cd ajo.save
 ```
 
 ### Step 2: Install Dependencies
 
+use --legacy-peer-deps while installing node modules.
+
 ```bash
 # Install all dependencies
-npm install
+npm install --legacy-peer-deps
 
 # If using yarn
-yarn install
+yarn install --legacy-peer-deps
 ```
 
 ### Step 3: Configure Environment Variables
@@ -631,7 +638,7 @@ VITE_PROJECT_ID=YOUR_WALLETCONNECT_PROJECT_ID
    - Create free testnet account
    - Copy Account ID (0.0.XXXXX) and Private Key
 
-2. **WalletConnect Project ID (Optional):**
+2. **WalletConnect Project ID :**
    - Visit [WalletConnect Cloud](https://cloud.walletconnect.com)
    - Create free project
    - Copy Project ID
@@ -736,8 +743,8 @@ REPORT_GAS=true npx hardhat test
 #### Start Development Server
 
 ```bash
-# Install frontend dependencies (if separate)
-cd frontend && npm install
+# Install frontend dependencies
+cd ajo.save && npm install --legacy-peer-deps
 
 # Start dev server
 npm run dev
@@ -749,12 +756,11 @@ npm run dev
 
 **Access Application:**
 - **Frontend:** http://localhost:5173
-- **Wallet Required:** HashPack or MetaMask
+- **Wallet Required:** HashPack 
 
 #### Connect Wallet
 
 1. Install [HashPack](https://www.hashpack.app/) (Recommended for Hedera)
-2. Or use MetaMask with Hedera JSON-RPC
 3. Connect to Testnet
 4. Import test account or use operator account
 
@@ -763,7 +769,6 @@ npm run dev
 1. Navigate to "Create Ajo" page
 2. Fill in details:
    - **Name:** "My First Ajo"
-   - **Members:** 10
    - **Cycle Duration:** 30 days
    - **Monthly Payment:** 50 USDC
 3. Click "Create" (5 transactions for 5 phases)
@@ -773,12 +778,11 @@ npm run dev
 #### Join as Member
 
 1. Navigate to "Join Ajo" page
-2. Enter Ajo ID
-3. Select position (1-10)
-4. Approve USDC for collateral (~$270 for position 1)
-5. Approve USDC for payments (~$50)
-6. Click "Join Ajo"
-7. Wait for confirmation
+2. click Join Ajo
+3. Approve USDC for collateral (~$270 for position 1)
+4. Approve USDC for payments (~$50)
+5. Click "Join Ajo"
+6. Wait for confirmation
 
 ---
 
@@ -1141,51 +1145,33 @@ For a 10-member Ajo with $50 monthly contribution:
 
 ### Documentation & Resources
 
-- **GitHub Repository:** https://github.com/[your-org]/ajo-save
-- **Pitch Deck:** [Link to pitch deck PDF/Slides]
-- **Video Demo:** [Link to Loom/YouTube demo]
-- **Certification:** [Link to Hedera certification]
+- **GitHub Repository:** https://github.com/Deonorla/Ajo.Save
+- **Pitch Deck:** [Link to pitch deck Slides](https://www.canva.com/design/DAG0d1jQ7_c/Yq8DAVK2hGs0xhpd_xfmWQ/view?utm_content=DAG0d1jQ7_c&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=hc7f6fc03ab)
+- **Video Demo:** [Link to YouTube demo](https://youtu.be/VGMedbGJmy0)
+- **Certification:** [Link to Hedera certification](https://certs.hashgraphdev.com/d08c2eba-177f-45bb-82f9-6547fae39cb0.pdf)
 
 ### Live Links
 
-- **Frontend Demo:** [Deployed frontend URL]
-- **Block Explorer:** [HashScan link to factory contract]
+- **Frontend Demo:** [Deployed frontend URL](https://ajo-save.vercel.app)
 - **Mirror Node API:** https://testnet.mirrornode.hedera.com
 
 ### Social & Community
 
-- **Twitter/X:** [@AjoSaveProtocol]
-- **Discord:** [Discord server invite]
-- **Telegram:** [Telegram group]
-- **Email:** team@ajo.save
+- **Twitter/X:** [@Ajo__Save](https://x.com/@ajo_save)
 
+x
 ---
 
 ## 👥 Team
 
 ### Core Contributors
 
-**[Your Name]** - Full Stack Developer & Smart Contract Engineer
-- GitHub: [@your-username]
-- Twitter: [@your-handle]
+**[Olaoluwa Marvellous]** - Full Stack Developer & Smart Contract Engineer
 - Role: Architecture, smart contracts, Hedera integration
 
-**[Team Member 2]** - Frontend Developer
-- GitHub: [@member2]
+**[Oluleye Emmanuel]** - Frontend Developer
 - Role: React app, wallet integration, UI/UX
 
-**[Team Member 3]** - Business & Operations
-- Role: Market research, tokenomics, go-to-market strategy
-
-### Advisors
-
-**[Advisor Name]** - DeFi Expert
-- Background: [Previous projects/companies]
-- Contribution: Smart contract security, DeFi mechanisms
-
-**[Advisor Name]** - Emerging Markets Finance
-- Background: [Experience in African fintech]
-- Contribution: User research, regulatory guidance
 
 ---
 
@@ -1267,49 +1253,13 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 Found a bug? Have a feature request?
 
-1. Check [existing issues](https://github.com/[your-org]/ajo-save/issues)
+1. Check [existing issues](https://github.com/Deonorla/Ajo.Save/issues)
 2. Create a new issue with:
    - Clear title and description
    - Steps to reproduce (for bugs)
    - Expected vs actual behavior
    - Screenshots/logs if applicable
    - Environment details (network, wallet, browser)
-
----
-
-## 🤝 Contributing
-
-We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-**Quick Start:**
-
-```bash
-# Fork the repo
-git clone https://github.com/YOUR-USERNAME/ajo-save.git
-
-# Create feature branch
-git checkout -b feature/amazing-feature
-
-# Make changes and test
-npm test
-
-# Commit with clear message
-git commit -m "Add amazing feature"
-
-# Push and create PR
-git push origin feature/amazing-feature
-```
-
----
-
-## 📞 Support
-
-Need help? Reach out:
-
-- **GitHub Issues:** [Create an issue](https://github.com/[your-org]/ajo-save/issues)
-- **Discord:** [Join our server]
-- **Email:** support@ajo.save
-- **Documentation:** [Full docs site]
 
 ---
 
@@ -1338,7 +1288,6 @@ Need help? Reach out:
 *Empowering 500M+ unbanked through blockchain-enabled traditional finance*
 
 ---
-
-**Last Updated:** [Current Date]  
+  
 **Version:** 1.0.0-beta  
 **Status:** Hackathon Prototype - Testnet Only
