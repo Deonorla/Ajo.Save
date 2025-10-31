@@ -734,8 +734,4 @@ contract AjoMembers is IAjoMembers, Ownable, Initializable, LockableContract {
             return 1;
         }
     }
-    
-    // ============ EVENTS ============
-    
-    // Events are defined in the interface
 }
