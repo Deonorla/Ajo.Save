@@ -1149,51 +1149,33 @@ For a 10-member Ajo with $50 monthly contribution:
 
 ### Documentation & Resources
 
-- **GitHub Repository:** https://github.com/[your-org]/ajo-save
-- **Pitch Deck:** [Link to pitch deck PDF/Slides]
-- **Video Demo:** [Link to Loom/YouTube demo]
-- **Certification:** [Link to Hedera certification]
+- **GitHub Repository:** https://github.com/Deonorla/Ajo.Save
+- **Pitch Deck:** [Link to pitch deck Slides](https://www.canva.com/design/DAG0d1jQ7_c/Yq8DAVK2hGs0xhpd_xfmWQ/view?utm_content=DAG0d1jQ7_c&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=hc7f6fc03ab)
+- **Video Demo:** [Link to YouTube demo](https://youtu.be/VGMedbGJmy0)
+- **Certification:** [Link to Hedera certification]()
 
 ### Live Links
 
-- **Frontend Demo:** [Deployed frontend URL]
-- **Block Explorer:** [HashScan link to factory contract]
+- **Frontend Demo:** [Deployed frontend URL](https://ajo-save.vercel.app)
 - **Mirror Node API:** https://testnet.mirrornode.hedera.com
 
 ### Social & Community
 
-- **Twitter/X:** [@AjoSaveProtocol]
-- **Discord:** [Discord server invite]
-- **Telegram:** [Telegram group]
-- **Email:** team@ajo.save
+- **Twitter/X:** [@Ajo__Save](https://x.com/@ajo_save)
 
+x
 ---
 
 ## 👥 Team
 
 ### Core Contributors
 
-**[Your Name]** - Full Stack Developer & Smart Contract Engineer
-- GitHub: [@your-username]
-- Twitter: [@your-handle]
+**[Olaoluwa Marvellous]** - Full Stack Developer & Smart Contract Engineer
 - Role: Architecture, smart contracts, Hedera integration
 
-**[Team Member 2]** - Frontend Developer
-- GitHub: [@member2]
+**[Oluleye Emmanuel]** - Frontend Developer
 - Role: React app, wallet integration, UI/UX
 
-**[Team Member 3]** - Business & Operations
-- Role: Market research, tokenomics, go-to-market strategy
-
-### Advisors
-
-**[Advisor Name]** - DeFi Expert
-- Background: [Previous projects/companies]
-- Contribution: Smart contract security, DeFi mechanisms
-
-**[Advisor Name]** - Emerging Markets Finance
-- Background: [Experience in African fintech]
-- Contribution: User research, regulatory guidance
 
 ---
 
@@ -1275,49 +1257,13 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 Found a bug? Have a feature request?
 
-1. Check [existing issues](https://github.com/[your-org]/ajo-save/issues)
+1. Check [existing issues](https://github.com/Deonorla/Ajo.Save/issues)
 2. Create a new issue with:
    - Clear title and description
    - Steps to reproduce (for bugs)
    - Expected vs actual behavior
    - Screenshots/logs if applicable
    - Environment details (network, wallet, browser)
-
----
-
-## 🤝 Contributing
-
-We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-**Quick Start:**
-
-```bash
-# Fork the repo
-git clone https://github.com/YOUR-USERNAME/ajo-save.git
-
-# Create feature branch
-git checkout -b feature/amazing-feature
-
-# Make changes and test
-npm test
-
-# Commit with clear message
-git commit -m "Add amazing feature"
-
-# Push and create PR
-git push origin feature/amazing-feature
-```
-
----
-
-## 📞 Support
-
-Need help? Reach out:
-
-- **GitHub Issues:** [Create an issue](https://github.com/[your-org]/ajo-save/issues)
-- **Discord:** [Join our server]
-- **Email:** support@ajo.save
-- **Documentation:** [Full docs site]
 
 ---
 
@@ -1346,7 +1292,6 @@ Need help? Reach out:
 *Empowering 500M+ unbanked through blockchain-enabled traditional finance*
 
 ---
-
-**Last Updated:** [Current Date]  
+  
 **Version:** 1.0.0-beta  
 **Status:** Hackathon Prototype - Testnet Only
