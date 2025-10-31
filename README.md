@@ -33,7 +33,7 @@
 
 ## 🎯 Project Overview
 
-**Track:** DeFi / Emerging Markets Financial Inclusion
+**Track:** Onchain Finance & Real-World Assets (RWA)
 
 **Problem:** Traditional African savings circles (ROSCAs) rely on trust and face scalability issues. Existing blockchain solutions are too expensive (Ethereum gas fees) or require complex infrastructure.
 
