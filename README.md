@@ -744,8 +744,8 @@ REPORT_GAS=true npx hardhat test
 #### Start Development Server
 
 ```bash
-# Install frontend dependencies (if separate)
-cd frontend && npm install
+# Install frontend dependencies
+cd ajo.save && npm install --legacy-peer-deps
 
 # Start dev server
 npm run dev
@@ -757,12 +757,11 @@ npm run dev
 
 **Access Application:**
 - **Frontend:** http://localhost:5173
-- **Wallet Required:** HashPack or MetaMask
+- **Wallet Required:** HashPack 
 
 #### Connect Wallet
 
 1. Install [HashPack](https://www.hashpack.app/) (Recommended for Hedera)
-2. Or use MetaMask with Hedera JSON-RPC
 3. Connect to Testnet
 4. Import test account or use operator account
 
@@ -771,7 +770,6 @@ npm run dev
 1. Navigate to "Create Ajo" page
 2. Fill in details:
    - **Name:** "My First Ajo"
-   - **Members:** 10
    - **Cycle Duration:** 30 days
    - **Monthly Payment:** 50 USDC
 3. Click "Create" (5 transactions for 5 phases)
@@ -781,12 +779,11 @@ npm run dev
 #### Join as Member
 
 1. Navigate to "Join Ajo" page
-2. Enter Ajo ID
-3. Select position (1-10)
-4. Approve USDC for collateral (~$270 for position 1)
-5. Approve USDC for payments (~$50)
-6. Click "Join Ajo"
-7. Wait for confirmation
+2. click Join Ajo
+3. Approve USDC for collateral (~$270 for position 1)
+4. Approve USDC for payments (~$50)
+5. Click "Join Ajo"
+6. Wait for confirmation
 
 ---
 
