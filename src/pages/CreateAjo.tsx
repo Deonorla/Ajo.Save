@@ -91,7 +91,7 @@ const CreateAjo = () => {
     const cycleDays = parseInt(formData.cycleDuration);
     if (isNaN(cycleDays) || cycleDays < 1) {
       errors.cycleDuration = "Cycle duration must be at least 1 day";
-    } else if (cycleDays > 3650) {
+    } else if (cycleDays > 365) {
       errors.cycleDuration = "Cycle duration cannot exceed 365 days";
     }
 
@@ -391,7 +391,7 @@ const CreateAjo = () => {
 
                     <div>
                       <label className="block text-sm font-medium text-card-foreground mb-2">
-                        Cycle Duration (Seconds) *
+                        Cycle Duration (days) *
                       </label>
                       <input
                         type="number"
@@ -400,7 +400,7 @@ const CreateAjo = () => {
                         onChange={handleInputChange}
                         placeholder="30"
                         min="1"
-                        max="36500"
+                        max="365"
                         className={`w-full px-4 py-3 bg-background border rounded-lg focus:ring-0 outline-none focus:ring-primary focus:border-primary transition-colors text-foreground ${
                           formErrors.cycleDuration
                             ? "border-destructive"
